@@ -1,0 +1,83 @@
+#
+# NOTE: THIS FILE IS GENERATED VIA "update.sh"
+#
+# PLEASE DO NOT EDIT IT DIRECTLY.
+#
+FROM openjdk:8-jdk
+
+ARG CREATED
+ARG REVISION
+ARG JANUS_VERSION=0.3.1
+
+ENV JANUS_VERSION=${JANUS_VERSION} \
+    JANUS_HOME=/opt/janusgraph \
+    JANUS_CONFIG_DIR=/etc/opt/janusgraph \
+    JANUS_DATA_DIR=/var/lib/janusgraph \
+    JANUS_STORAGE_TIMEOUT=60 \
+    JANUS_PROPS_TEMPLATE=cql \
+    janusgraph.storage.directory=/var/lib/janusgraph/data \
+    gremlinserver.graph=/etc/opt/janusgraph/janusgraph.properties \
+    gremlinserver.threadPoolWorker=1 \
+    gremlinserver.gremlinPool=8
+
+
+RUN groupadd -r janusgraph --gid=999 && \
+    useradd -r -g janusgraph --uid=999 janusgraph && \
+    curl -fSL https://github.com/JanusGraph/janusgraph/releases/download/v${JANUS_VERSION}/janusgraph-${JANUS_VERSION}-hadoop2.zip -o janusgraph.zip && \
+    curl -fSL https://github.com/JanusGraph/janusgraph/releases/download/v${JANUS_VERSION}/janusgraph-${JANUS_VERSION}-hadoop2.zip.asc -o janusgraph.zip.asc && \
+    export GNUPGHOME="$(mktemp -d)" && \
+    for gpgkey in \
+        41802BA8 \
+        D3C95553EE39B05E350D959CA39CC3ADAEAEF36E \
+    ; do \
+        found=''; \
+        for server in \
+            ha.pool.sks-keyservers.net \
+            hkp://keyserver.ubuntu.com:80 \
+            hkp://p80.pool.sks-keyservers.net:80 \
+            pgp.mit.edu \
+        ; do \
+            echo "Fetching GPG key $gpgkey from $server"; \
+            gpg --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$gpgkey" && found=yes && break; \
+        done; \
+        test -z "$found" && echo >&2 "error: failed to fetch GPG key $gpgkey" && exit 1; \
+    done; \
+    gpg --batch --verify janusgraph.zip.asc janusgraph.zip && \
+    unzip janusgraph.zip && \
+    mv janusgraph-${JANUS_VERSION}-hadoop2 /opt/janusgraph && \
+    rm janusgraph.zip && \
+    rm janusgraph.zip.asc && \
+    rm -rf ${JANUS_HOME}/elasticsearch && \
+    rm -rf ${JANUS_HOME}/javadocs && \
+    rm -rf ${JANUS_HOME}/log && \
+    rm -rf ${JANUS_HOME}/examples
+
+RUN mkdir -p /var/lib/janusgraph && \
+    mkdir -p /etc/opt/janusgraph
+
+COPY conf/gremlin-server.yaml /etc/opt/janusgraph/gremlin-server.yaml
+COPY janusgraph.properties /etc/opt/janusgraph/janusgraph.properties
+COPY docker-entrypoint.sh /usr/local/bin/
+COPY conf/janusgraph-cql-server.properties conf/log4j-server.properties ${JANUS_HOME}/conf/gremlin-server/
+COPY scripts/remote-connect.groovy ${JANUS_HOME}/scripts/
+
+RUN chmod 755 /usr/local/bin/docker-entrypoint.sh && \
+    chown -R janusgraph:janusgraph ${JANUS_HOME}
+
+EXPOSE 8182
+
+WORKDIR ${JANUS_HOME}
+
+ENTRYPOINT [ "docker-entrypoint.sh" ]
+CMD [ "janusgraph" ]
+
+LABEL org.opencontainers.image.title="JanusGraph Docker Image" \
+      org.opencontainers.image.description="Official JanusGraph Docker image" \
+      org.opencontainers.image.url="https://janusgraph.org/" \
+      org.opencontainers.image.documentation="https://docs.janusgraph.org/${JANUS_VERSION}/index.html" \
+      org.opencontainers.image.revision=${REVISION} \
+      org.opencontainers.image.source="https://github.com/JanusGraph/janusgraph-docker/" \
+      org.opencontainers.image.vendor="JanusGraph" \
+      org.opencontainers.image.version=${JANUS_VERSION} \
+      org.opencontainers.image.created=${CREATED} \
+      org.opencontainers.image.license="Apache-2.0"
