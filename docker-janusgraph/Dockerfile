@@ -1,8 +1,3 @@
-#
-# NOTE: THIS FILE IS GENERATED VIA "update.sh"
-#
-# PLEASE DO NOT EDIT IT DIRECTLY.
-#
 FROM openjdk:8-jdk
 
 ARG CREATED
@@ -72,12 +67,12 @@ ENTRYPOINT [ "docker-entrypoint.sh" ]
 CMD [ "janusgraph" ]
 
 LABEL org.opencontainers.image.title="JanusGraph Docker Image" \
-      org.opencontainers.image.description="Official JanusGraph Docker image" \
-      org.opencontainers.image.url="https://janusgraph.org/" \
+      org.opencontainers.image.description="Ubirch-flavored janusgraph docker image" \
+      org.opencontainers.image.url="https://ubirch.com" \
       org.opencontainers.image.documentation="https://docs.janusgraph.org/${JANUS_VERSION}/index.html" \
       org.opencontainers.image.revision=${REVISION} \
       org.opencontainers.image.source="https://github.com/JanusGraph/janusgraph-docker/" \
-      org.opencontainers.image.vendor="JanusGraph" \
+      org.opencontainers.image.vendor="Ubirch" \
       org.opencontainers.image.version=${JANUS_VERSION} \
       org.opencontainers.image.created=${CREATED} \
       org.opencontainers.image.license="Apache-2.0"

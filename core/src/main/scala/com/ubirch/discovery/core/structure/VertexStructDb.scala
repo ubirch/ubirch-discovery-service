@@ -18,7 +18,7 @@ class VertexStructDb(val id: String, val g: TraversalSource) {
   var vertex: Vertex = g.V.has(Id, id).headOption() match {
     case Some(x) => x
     case None => null
-  } //getOrElse(null)
+  }
 
   def exist: Boolean = if (vertex == null) false else true
 

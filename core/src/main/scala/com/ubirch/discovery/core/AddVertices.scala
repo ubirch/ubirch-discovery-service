@@ -9,32 +9,36 @@ class AddVertices(implicit val gc: GremlinConnector) {
 
   private val ID: Key[String] = Key[String]("IdAssigned")
 
-  def addTwoVertices(id1: String, p1: List[KeyValue[String]])
-                    (id2: String, p2: List[KeyValue[String]])
+  def addTwoVertices(id1: String, p1: List[KeyValue[String]], l1: String = label)
+                    (id2: String, p2: List[KeyValue[String]], l2: String = label)
                     (pE: List[KeyValue[String]]): String = {
     if (id1 == id2) throw new IllegalArgumentException("id1 should not be equal to id2")
     val v1: VertexStructDb = new VertexStructDb(id1, gc.g)
     val v2: VertexStructDb = new VertexStructDb(id2, gc.g)
     howMany(v1, v2) match {
-      case 0 => noneExist(v1, v2, p1, p2, pE)
-      case 1 => oneExist(v1, v2, p1, p2, pE)
+      case 0 => noneExist(v1, p1, l1)(v2, p2, l2)(pE)
+      case 1 => oneExist(v1, p1, l1)(v2, p2, l2)(pE)
       case 2 => twoExist(v1, v2, pE)
     }
     "OK BB"
   }
 
-  private def noneExist(v1: VertexStructDb, v2: VertexStructDb, p1: List[KeyValue[String]], p2: List[KeyValue[String]], pE: List[KeyValue[String]]): Unit = {
-    v1.addVertex(p1, label, gc.b)
-    v2.addVertex(p2, label, gc.b)
+  private def noneExist(v1: VertexStructDb, p1: List[KeyValue[String]], l1: String)
+                       (v2: VertexStructDb,  p2: List[KeyValue[String]], l2: String)
+                       (pE: List[KeyValue[String]]): Unit = {
+    v1.addVertex(p1, l1, gc.b)
+    v2.addVertex(p2, l2, gc.b)
     createEdge(v1, v2, pE)
   }
 
-  private def oneExist(v1: VertexStructDb, v2: VertexStructDb, p1: List[KeyValue[String]], p2: List[KeyValue[String]], pE: List[KeyValue[String]]): Unit = {
+  private def oneExist(v1: VertexStructDb,  p1: List[KeyValue[String]], l1: String)
+                      (v2: VertexStructDb,  p2: List[KeyValue[String]], l2: String)
+                      (pE: List[KeyValue[String]]): Unit = {
     if (v1.exist) {
-      v2.addVertex(p2, "aLabel", gc.b)
+      v2.addVertex(p2, l2, gc.b)
       createEdge(v1, v2, pE)
     } else {
-      v1.addVertex(p1, "aLabel", gc.b)
+      v1.addVertex(p1, l1, gc.b)
       createEdge(v1, v2, pE)
     }
   }

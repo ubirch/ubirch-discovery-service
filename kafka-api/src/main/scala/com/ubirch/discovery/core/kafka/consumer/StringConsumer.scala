@@ -14,12 +14,13 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.postfixOps
+//import com.ubirch.util.Boot
 
-object StringConsumer extends App {
+object StringConsumer {
 
   def log: Logger = LoggerFactory.getLogger(this.getClass)
 
-  val topics = Set("test")
+  val topics: Set[String] = Set("test")
 
   val configs = Configs(
     bootstrapServers = "localhost:9092",
@@ -29,12 +30,15 @@ object StringConsumer extends App {
     maxPollRecords = 500
   )
 
-  val myController = new ConsumerRecordsController[String, String] {
+  val myController: ConsumerRecordsController[String, String] {
+    type A = ProcessResult[String, String]
+  } = new ConsumerRecordsController[String, String] {
 
     override type A = ProcessResult[String, String]
 
     override def process(consumerRecord: Vector[ConsumerRecord[String, String]]): Future[ProcessResult[String, String]] = {
       consumerRecord.foreach { cr =>
+        log.info(cr.value())
         path(cr.value())
       }
 
@@ -56,25 +60,26 @@ object StringConsumer extends App {
     consumerImp
   }
 
-  consumerConfigured.startPolling()
-  while (true) {
 
-  }
+  //consumerConfigured.startPolling()
+/*  while (true) {
+
+  }*/
+
+
+
+  //consumerConfigured.start()
 
   def path(data: String): Unit = {
     implicit val formats: DefaultFormats.type = DefaultFormats
-    val requestType = data.substring(0, 9)
 
     val result = try {
-      parse(data.substring(9))
+      parse(data)
     } catch {
-      case _: Throwable => log.error("error")
+      case e: Throwable => log.error("error", e.getMessage)
     }
     result match {
-      case x: JValue =>
-        requestType match {
-          case "addVertex" => addVertices(x)
-        }
+      case x: JValue => addVertices(x)
       case _ =>
     }
 
@@ -82,7 +87,7 @@ object StringConsumer extends App {
 
   case class AddV(v1: Vertounet, v2: Vertounet, edge: Edgounet)
 
-  case class Vertounet(id: String, properties: Map[String, String])
+  case class Vertounet(id: String, properties: Map[String, String], label: String = "aLabel")
 
   case class Edgounet(properties: Map[String, String])
 
@@ -116,20 +121,30 @@ object StringConsumer extends App {
     * @param req The parsed JSON
     * @return
     */
-  def addVertices(req: JValue) = {
+  def addVertices(req: JValue): String = {
     implicit val formats: DefaultFormats.type = DefaultFormats
-    val addVertexounet = req.extract[AddV]
-    val id1 = addVertexounet.v1.id
-    val p1 = mapToListKeyValues(addVertexounet.v1.properties)
-    val id2 = addVertexounet.v2.id
-    val p2 = mapToListKeyValues(addVertexounet.v1.properties)
-    val pE = mapToListKeyValues(addVertexounet.edge.properties)
-    new AddVertices().addTwoVertices(id1, p1)(id2, p2)(pE)
+    try {
+      val addVertexounet = req.extract[AddV]
+      val id1 = addVertexounet.v1.id
+      val p1 = mapToListKeyValues(addVertexounet.v1.properties)
+      val l1 = addVertexounet.v1.label
+      val id2 = addVertexounet.v2.id
+      val p2 = mapToListKeyValues(addVertexounet.v2.properties)
+      val l2 = addVertexounet.v2.label
+      val pE = mapToListKeyValues(addVertexounet.edge.properties)
+      new AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE)
+    } catch {
+      case e: Throwable => log.error("could not parse request", e.toString)
+        "NOK"
+    }
   }
 
-  def getVertices(req: JValue): Unit = {
-    implicit val formats: DefaultFormats.type = DefaultFormats
 
+  def main(args: Array[String]): Unit = {
+    consumerConfigured.startPolling()
+    while(true) {
+
+    }
   }
 
 }
