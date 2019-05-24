@@ -40,6 +40,7 @@ public class VertexStructFastImport {
         if (exist) {
             throw new InstantiationError("Vertex already exist in the database");
         }
+        logger.info("Adding vetex with key= " + id );
         this.vertex = g.addV(b.of("label", label)).property("keyy", b.of("keyy", id)).next();
 
         for (Map.Entry<String, String> entry : properties.entrySet()) {

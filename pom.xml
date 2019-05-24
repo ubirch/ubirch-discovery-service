@@ -175,19 +175,19 @@
 
         <dependency>
             <groupId>org.scalatra</groupId>
-            <artifactId>scalatra-scalatest_2.12</artifactId>
+            <artifactId>scalatra-scalatest_${scala.compat.version}</artifactId>
             <version>${scalatest.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.scalactic</groupId>
-            <artifactId>scalactic_2.12</artifactId>
+            <artifactId>scalactic_${scala.compat.version}</artifactId>
             <version>${scalactic.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.scalatra</groupId>
-            <artifactId>scalatra-swagger_2.12</artifactId>
+            <artifactId>scalatra-swagger_${scala.compat.version}</artifactId>
             <version>${scalatraSwagger.version}</version>
         </dependency>
 
@@ -217,13 +217,13 @@
 
         <dependency>
             <groupId>org.json4s</groupId>
-            <artifactId>json4s-native_2.12</artifactId>
+            <artifactId>json4s-native_${scala.compat.version}</artifactId>
             <version>${json4s.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.json4s</groupId>
-            <artifactId>json4s-jackson_2.12</artifactId>
+            <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
             <version>${json4s.version}</version>
         </dependency>
 
@@ -233,7 +233,7 @@
 
         <dependency>
             <groupId>com.michaelpollmeier</groupId>
-            <artifactId>gremlin-scala_2.12</artifactId>
+            <artifactId>gremlin-scala_${scala.compat.version}</artifactId>
             <version>${gremlinScala.version}</version>
         </dependency>
 

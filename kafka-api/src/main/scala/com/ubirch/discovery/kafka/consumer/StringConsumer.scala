@@ -1,7 +1,8 @@
-package com.ubirch.discovery.core.kafka.consumer
+package com.ubirch.discovery.kafka.consumer
 
 import java.util.UUID
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.{AddVertices, GremlinConnector}
 import com.ubirch.kafka.consumer.{Configs, ConsumerRecordsController, ProcessResult, StringConsumer, WithMetrics}
 import gremlin.scala.{Key, KeyValue}
@@ -9,16 +10,13 @@ import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetResetStrategy}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.json4s._
 import org.json4s.native.JsonMethods._
-import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.postfixOps
-//import com.ubirch.util.Boot
 
-object StringConsumer {
+object StringConsumer extends LazyLogging{
 
-  def log: Logger = LoggerFactory.getLogger(this.getClass)
 
   val topics: Set[String] = Set("test")
 
@@ -38,7 +36,7 @@ object StringConsumer {
 
     override def process(consumerRecord: Vector[ConsumerRecord[String, String]]): Future[ProcessResult[String, String]] = {
       consumerRecord.foreach { cr =>
-        log.info(cr.value())
+        logger.info(cr.value())
         path(cr.value())
       }
 
@@ -76,7 +74,7 @@ object StringConsumer {
     val result = try {
       parse(data)
     } catch {
-      case e: Throwable => log.error("error", e.getMessage)
+      case e: Throwable => logger.error("error", e.getMessage)
     }
     result match {
       case x: JValue => addVertices(x)
@@ -99,6 +97,7 @@ object StringConsumer {
     * Entry should be formatted as the following:
     * {"v1":{
     * "id": "ID"
+    * "label": "label" OPTIONAL
     * "properties": {
     * "prop1Name": "prop1Value",
     * ...
@@ -106,6 +105,7 @@ object StringConsumer {
     * }
     * "v2":{
     * "id": "ID"
+    * "label": "label" OPTIONAL
     * "properties": {
     * "prop1Name": "prop1Value",
     * ...
@@ -134,17 +134,15 @@ object StringConsumer {
       val pE = mapToListKeyValues(addVertexounet.edge.properties)
       new AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE)
     } catch {
-      case e: Throwable => log.error("could not parse request", e.toString)
+      case e: Throwable => logger.error("could not parse request", e.toString)
         "NOK"
     }
   }
 
 
-  def main(args: Array[String]): Unit = {
-    consumerConfigured.startPolling()
-    while(true) {
 
-    }
+  def start(): Unit = {
+    consumerConfigured.start()
   }
 
 }

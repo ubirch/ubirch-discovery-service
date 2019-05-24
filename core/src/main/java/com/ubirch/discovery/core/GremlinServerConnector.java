@@ -40,7 +40,7 @@ class GremlinServerConnector {
     private GraphTraversalSource getTraversal(Graph graph) {
         GraphTraversalSource g = null;
         try {
-            g = graph.traversal().withRemote("configuration/remote-graph.properties");
+            g = graph.traversal().withRemote("core/src/main/ressources/remote-graph.properties");
         } catch (Exception e) {
             logger.error("", e);
         }

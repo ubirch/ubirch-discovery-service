@@ -22,7 +22,10 @@ public class FastImport {
     private static final String OUT_V = "outV";
     private static final String IN_V = "inV";
     private static final ArrayList<String> LIST_NAME_BLOCKCHAIN = new ArrayList<>(
-            Arrays.asList("blockchain_tx_id", "ETHEREUM_TESTNET_RINKEBY_TESTNET_NETWORK")
+            Arrays.asList("blockchain_tx_id",
+                    "ETHEREUM_TESTNET_RINKEBY_TESTNET_NETWORK",
+                    "IOTA_TESTNET_IOTA_TESTNET_NETWORK"
+            )
     );
     private static final ArrayList<String> LIST_NAME_TREE = new ArrayList<>(
             Arrays.asList("slave-tree-id")
@@ -45,9 +48,9 @@ public class FastImport {
     private static Bindings b;
 
     public static void main(String[] args) {
-        String csvFile = args[0];
+        String csvFile = "db.csv";
         String csvSplitBy;
-        if (args.length == 1) {
+        if (args.length <= 1) {
             csvSplitBy = ";";
             logger.info("using default split command: \";\"");
         } else {
@@ -90,13 +93,13 @@ public class FastImport {
                 e.put("category", data[CATEGORY]);
                 e.put("name", data[NAME]);
 
-
                 String id1 = data[KEY];
                 String id2 = data[VALUE];
 
                 switch (howMany(id1, id2)) {
                     case 0: {
                         case0(id1, pTo, id2, pFrom, e);
+                        break;
                     }
                     case 1: {
                         case1(id1, pFrom, id2, pTo, e);
@@ -108,7 +111,7 @@ public class FastImport {
                     }
                 }
 
-                logger.info("i");
+                logger.info("------------------------------");
                 i++;
             }
             sCon.closeConnection();
@@ -154,7 +157,8 @@ public class FastImport {
      * @param e     HashMap containing the properties of the edge.
      */
     private static void case1(String id1, HashMap<String, String> pTo, String id2, HashMap<String, String> pFrom, HashMap<String, String> e) {
-        if (listV.containsKey(id1)) { //first one
+        logger.info("case1");
+        if (listV.containsKey(id1)) {
             VertexStructFastImport v2 = new VertexStructFastImport(id2, g, pFrom, b, getLabelFrom());
             listV.put(id2, v2);
             createEdge(listV.get(id1), v2, e);
@@ -199,10 +203,13 @@ public class FastImport {
         HashMap<String, String> pTo = new HashMap<>();
         pTo.put("keyy", data[KEY]);
         if (LIST_NAME_BLOCKCHAIN.contains(data[NAME])) {
+            logger.info("label= blockchain, data[NAME]= " +  data[NAME]);
             return "blockchain";
         } else if (LIST_NAME_DEVICEID.contains(data[NAME])) {
+            logger.info("label= device-ID, data[NAME]= " +  data[NAME]);
             return "device-id";
         } else if (LIST_NAME_TREE.contains(data[NAME])) {
+            logger.info("label= TREE, data[NAME]= " +  data[NAME]);
             return "tree";
         }
         return "generic";

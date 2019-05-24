@@ -100,7 +100,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ubirch.lookup.Service</mainClass>
+                            <mainClass>com.ubirch.discovery.kafka.consumer.StringConsumer</mainClass>
                             <useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                     </archive>
