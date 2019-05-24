@@ -8,7 +8,7 @@ import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
 
 class GremlinConnector {
 
-  val cluster: Cluster = Cluster.open("core/src/main/ressources/remote-objects.yaml")
+  val cluster: Cluster = Cluster.open("core/src/main/resources/remote-objects.yaml")
 
   implicit val graph: ScalaGraph = EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
   val g: TraversalSource = graph.traversal

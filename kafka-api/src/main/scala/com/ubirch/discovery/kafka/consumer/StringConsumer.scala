@@ -59,15 +59,6 @@ object StringConsumer extends LazyLogging{
   }
 
 
-  //consumerConfigured.startPolling()
-/*  while (true) {
-
-  }*/
-
-
-
-  //consumerConfigured.start()
-
   def path(data: String): Unit = {
     implicit val formats: DefaultFormats.type = DefaultFormats
 
@@ -77,7 +68,7 @@ object StringConsumer extends LazyLogging{
       case e: Throwable => logger.error("error", e.getMessage)
     }
     result match {
-      case x: JValue => addVertices(x)
+      case x: JValue => findPath(x)
       case _ =>
     }
 
@@ -121,22 +112,40 @@ object StringConsumer extends LazyLogging{
     * @param req The parsed JSON
     * @return
     */
-  def addVertices(req: JValue): String = {
+  def findPath(req: JValue): Unit = {
     implicit val formats: DefaultFormats.type = DefaultFormats
-    try {
-      val addVertexounet = req.extract[AddV]
-      val id1 = addVertexounet.v1.id
-      val p1 = mapToListKeyValues(addVertexounet.v1.properties)
-      val l1 = addVertexounet.v1.label
-      val id2 = addVertexounet.v2.id
-      val p2 = mapToListKeyValues(addVertexounet.v2.properties)
-      val l2 = addVertexounet.v2.label
-      val pE = mapToListKeyValues(addVertexounet.edge.properties)
-      new AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE)
+    val didItWork = try {
+      listAddV(req.extract[List[AddV]])
+      true
     } catch {
-      case e: Throwable => logger.error("could not parse request", e.toString)
-        "NOK"
+      case e: Throwable =>
+        logger.info("not a list of stuff")
+        false
     }
+    if (!didItWork) {
+      req.extract[AddV] match {
+        case null => "error"
+        case x =>
+          addV(x)
+          "okidoki"
+      }
+    }
+
+  }
+
+  def addV(req: AddV): Unit = {
+    val id1 = req.v1.id
+    val p1 = mapToListKeyValues(req.v1.properties)
+    val l1 = req.v1.label
+    val id2 = req.v2.id
+    val p2 = mapToListKeyValues(req.v2.properties)
+    val l2 = req.v2.label
+    val pE = mapToListKeyValues(req.edge.properties)
+    new AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE)
+  }
+
+  def listAddV(l: List[AddV]): Unit = {
+    l foreach (x => addV(x))
   }
 
 

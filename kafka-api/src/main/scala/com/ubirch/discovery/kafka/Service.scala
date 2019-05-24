@@ -12,6 +12,10 @@ object Service extends Boot {
 
     consumer.start()
 
+    while(true) {
+
+    }
+
   }
 
 }
