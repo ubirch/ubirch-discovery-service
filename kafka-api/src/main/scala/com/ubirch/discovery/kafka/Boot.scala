@@ -3,7 +3,7 @@ package com.ubirch.discovery.kafka
 
 trait WithJVMHooks {
 
-  private def bootJVMHook(): JVMHook = DefaultJVMHook
+  private def bootJVMHook(): JVMHook = JVMHook.get
 
   bootJVMHook()
 

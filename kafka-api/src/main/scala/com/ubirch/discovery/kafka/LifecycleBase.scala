@@ -21,6 +21,10 @@ trait Lifecycle {
 
 }
 
+object Lifecycle {
+  def get: Lifecycle = DefaultLifecycle
+}
+
 /**
   * It represents the default implementation for the LifeCycle Component.
   * It actually executes or clears StopHooks.
@@ -60,6 +64,10 @@ trait JVMHook {
   protected def registerShutdownHooks(): Unit
 }
 
+object JVMHook {
+  def get: JVMHook = DefaultJVMHook
+}
+
 /**
   * Default Implementation of the JVMHook.
   * It takes LifeCycle stop hooks and adds a corresponding shut down hook.
@@ -69,7 +77,7 @@ object DefaultJVMHook extends JVMHook with LazyLogging {
 
   protected def registerShutdownHooks() {
 
-    def lifecycle = DefaultLifecycle
+    def lifecycle: Lifecycle = Lifecycle.get
 
     logger.info("Registering Shutdown Hooks")
 
@@ -85,12 +93,5 @@ object DefaultJVMHook extends JVMHook with LazyLogging {
   }
 
   registerShutdownHooks()
-
-}
-
-
-
-
-class LifecycleBase {
 
 }

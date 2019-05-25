@@ -9,12 +9,7 @@ object Service extends Boot {
 
     val consumer = StringConsumer
 
-
     consumer.start()
-
-    while(true) {
-
-    }
 
   }
 
