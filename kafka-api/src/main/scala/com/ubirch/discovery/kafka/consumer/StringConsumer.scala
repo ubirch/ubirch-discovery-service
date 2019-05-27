@@ -3,6 +3,7 @@ package com.ubirch.discovery.kafka.consumer
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.Lifecycle
 import com.ubirch.discovery.kafka.models.{AddV, Store}
@@ -12,24 +13,23 @@ import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetResetStrategy}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.json4s._
 
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.postfixOps
 
+
 object StringConsumer extends LazyLogging {
 
-  //TODO: THESE NEED TO BE IN A CONF KEY
-  val topics: Set[String] = Set("com.ubirch.eventlog.discovery")
-  val bootstrapServers = "localhost:9092"
-  val groupId = "my group id"
-  val maxPollRecords = 500
+  val conf: Config = ConfigFactory.load("application.conf")
+  val topics: Set[String] =  conf.getStringList("kafkaApi.kafkaConsumer.topic").asScala.toSet
 
   val configs = Configs(
-    bootstrapServers = bootstrapServers,
-    groupId = groupId,
+    bootstrapServers = conf.getString("kafkaApi.kafkaConsumer.bootstrapServers"),
+    groupId = conf.getString("kafkaApi.kafkaConsumer.groupId"),
     enableAutoCommit = false,
     autoOffsetReset = OffsetResetStrategy.EARLIEST,
-    maxPollRecords = maxPollRecords
+    maxPollRecords = conf.getInt("kafkaApi.kafkaConsumer.maxPoolRecords")
   )
 
   val myController: ConsumerRecordsController[String, String] = new ConsumerRecordsController[String, String] {
