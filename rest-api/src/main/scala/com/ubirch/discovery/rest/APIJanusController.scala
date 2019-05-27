@@ -1,8 +1,10 @@
 package com.ubirch.discovery.rest
 
+import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.discovery.core.GremlinConnector
+import com.ubirch.discovery.core.operation.{AddVertices, GetVertices}
 import com.ubirch.discovery.core.structure.VertexStruct
 import com.ubirch.discovery.core.util.Util.arrayVertexToJson
-import com.ubirch.discovery.core.{AddVertices, GetVertices, GremlinConnector}
 import gremlin.scala.{Key, KeyValue}
 import org.json4s.JsonAST.JNothing
 import org.json4s.jackson.Serialization
@@ -10,14 +12,12 @@ import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
 import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupport, SwaggerSupportSyntax}
 import org.scalatra.{CorsSupport, ScalatraServlet}
-import org.slf4j.{Logger, LoggerFactory}
 
 import scala.language.postfixOps
 
 class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
-  with NativeJsonSupport with SwaggerSupport with CorsSupport {
+  with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging {
 
-  def log: Logger = LoggerFactory.getLogger(this.getClass)
 
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
@@ -44,16 +44,16 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Add two to JanusGraph"
       schemes "http" // Force swagger ui to use http instead of https, only need to say it once
       description "Still not implemented. Does not work right now as it should now support dynamic properties addition"
-      parameters(
-      pathParam[Int]("id1").description("id of the first vertex"),
-      queryParam[Option[Map[String, String]]]("properties1").
+      parameters (
+        pathParam[Int]("id1").description("id of the first vertex"),
+        queryParam[Option[Map[String, String]]]("properties1").
         description("Properties of the second vertex"),
-      pathParam[Int]("id2").description("id of the second vertex"),
-      queryParam[Option[Map[String, String]]]("properties2").
+        pathParam[Int]("id2").description("id of the second vertex"),
+        queryParam[Option[Map[String, String]]]("properties2").
         description("Properties of the second vertex"),
-      queryParam[Option[Map[String, String]]]("propertiesEdge").
+        queryParam[Option[Map[String, String]]]("propertiesEdge").
         description("Properties of the edge that link the two vertexes")
-    ))
+      ))
 
   post("/addVertexToJG/:id1/:id2", operation(addToJanus)) {
     println(params.get("properties1"))
@@ -67,7 +67,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
         if (jValue == JNothing) {
           Map.empty[String, String]
         } else {
-          log.info(jValue.extract[Map[String, String]].mkString(", "))
+          logger.info(jValue.extract[Map[String, String]].mkString(", "))
           jValue.extract[Map[String, String]]
         }
 
@@ -81,9 +81,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     val propE = propertiesToKeyValuesList("propertiesEdge")
     val id1 = params("id1").toString
     val id2 = params("id2").toString
-    //implicit val gc: GremlinConnector = new GremlinConnector
     val res = new AddVertices().addTwoVertices(id1, prop1)(id2, prop2)(propE)
-    //gc.closeConnection()
     res
   }
 
@@ -98,14 +96,14 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
   get("/getVertex", operation(getVertexesJanusGraph)) {
     params.get("id") match {
       case Some(id) =>
-        val vertex = GetVertices.getVertexByPublicId(id)
+        val vertex = new GetVertices().getVertexByPublicId(id)
         if (vertex == null) {
           halt(404, s"404: Can't find vertex with the ID: $id")
         } else {
           vertex.toJson
         }
       case None =>
-        val listVertexes = GetVertices.getAllVertices(100)
+        val listVertexes = new GetVertices().getAllVertices(100)
         arrayVertexToJson(listVertexes.toArray)
     }
   }
@@ -121,7 +119,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
 
   get("/getVertexesDepth", operation(getVertexesWithDepth)) {
 
-    val neighbors = GetVertices.getVertexDepth(params.get("id").get, params.get("depth").get.toInt)
+    val neighbors = new GetVertices().getVertexDepth(params.get("id").get, params.get("depth").get.toInt)
     if (neighbors == null) {
       halt(404, s"404: Can't find vertex with the provided ID")
     } else {

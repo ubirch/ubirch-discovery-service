@@ -1,5 +1,6 @@
-package com.ubirch.discovery.core
+package com.ubirch.discovery.core.operation
 
+import com.ubirch.discovery.core.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStructDb
 import gremlin.scala.{Key, KeyValue}
 
@@ -10,8 +11,8 @@ class AddVertices(implicit val gc: GremlinConnector) {
   private val ID: Key[String] = Key[String]("IdAssigned")
 
   def addTwoVertices(id1: String, p1: List[KeyValue[String]], l1: String = label)
-                    (id2: String, p2: List[KeyValue[String]], l2: String = label)
-                    (pE: List[KeyValue[String]]): String = {
+    (id2: String, p2: List[KeyValue[String]], l2: String = label)
+    (pE: List[KeyValue[String]]): String = {
     if (id1 == id2) throw new IllegalArgumentException("id1 should not be equal to id2")
     val v1: VertexStructDb = new VertexStructDb(id1, gc.g)
     val v2: VertexStructDb = new VertexStructDb(id2, gc.g)
@@ -24,16 +25,16 @@ class AddVertices(implicit val gc: GremlinConnector) {
   }
 
   private def noneExist(v1: VertexStructDb, p1: List[KeyValue[String]], l1: String)
-                       (v2: VertexStructDb,  p2: List[KeyValue[String]], l2: String)
-                       (pE: List[KeyValue[String]]): Unit = {
+    (v2: VertexStructDb, p2: List[KeyValue[String]], l2: String)
+    (pE: List[KeyValue[String]]): Unit = {
     v1.addVertex(p1, l1, gc.b)
     v2.addVertex(p2, l2, gc.b)
     createEdge(v1, v2, pE)
   }
 
-  private def oneExist(v1: VertexStructDb,  p1: List[KeyValue[String]], l1: String)
-                      (v2: VertexStructDb,  p2: List[KeyValue[String]], l2: String)
-                      (pE: List[KeyValue[String]]): Unit = {
+  private def oneExist(v1: VertexStructDb, p1: List[KeyValue[String]], l1: String)
+    (v2: VertexStructDb, p2: List[KeyValue[String]], l2: String)
+    (pE: List[KeyValue[String]]): Unit = {
     if (v1.exist) {
       v2.addVertex(p2, l2, gc.b)
       createEdge(v1, v2, pE)

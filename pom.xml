@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-		 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <!-- parent pom -->
@@ -83,7 +81,6 @@
         <scalactic.version>3.0.5</scalactic.version>
         <scalatraSwagger.version>2.6.5</scalatraSwagger.version>
 
-        <jetty.version>9.4.15.v20190215</jetty.version>
         <javaxServlet.version>3.1.0</javaxServlet.version>
 
         <json4s.version>3.5.2</json4s.version>
@@ -192,16 +189,6 @@
         </dependency>
 
         <!-- /Scalatra -->
-
-        <!-- Jetty -->
-
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-webapp</artifactId>
-            <version>${jetty.version}</version>
-        </dependency>
-
-        <!-- /Jetty -->
 
         <!-- Javax serverlet -->
 
@@ -349,6 +336,7 @@
         <module>kafka-api</module>
         <module>rest-api</module>
         <module>docker-janusgraph</module>
+        <module>cytoscape-api</module>
     </modules>
 
 </project>

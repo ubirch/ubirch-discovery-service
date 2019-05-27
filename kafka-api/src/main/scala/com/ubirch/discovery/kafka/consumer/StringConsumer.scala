@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.kafka.Lifecycle
+import com.ubirch.discovery.core.Lifecycle
 import com.ubirch.discovery.kafka.models.{AddV, Store}
 import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import com.ubirch.kafka.consumer.{Configs, ConsumerRecordsController, ProcessResult, StringConsumer, WithMetrics}
@@ -62,8 +62,16 @@ object StringConsumer extends LazyLogging {
       consumerRecord.foreach { cr =>
         //TODO: WE NEED TO HANDLE ERROR SO WE CAN CONTINUE CONSUMING AFTER ERRORS
         logger.debug("Received value: " + cr.value())
-        val parsed = parseRelations(cr.value())
-        store(parsed)
+        val parsed = try {
+          parseRelations(cr.value())
+        } catch {
+          case _: ParsingException =>
+        }
+        parsed match {
+          case x: Seq[AddV] => store(x)
+          case _ =>
+        }
+
       }
 
       Future.successful(new ProcessResult[String, String] {

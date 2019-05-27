@@ -1,6 +1,7 @@
 package com.ubirch.discovery.core
 
 import com.ubirch.discovery.core.Util.{extractValue, getEdge, getEdgeProperties, recompose}
+import com.ubirch.discovery.core.operation.AddVertices
 import com.ubirch.discovery.core.structure.VertexStructDb
 import gremlin.scala._
 import org.apache.tinkerpop.gremlin.structure.Edge
@@ -54,7 +55,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
 
       // commit
       new AddVertices().addTwoVertices(id1.toString, p1)(id2.toString, p2)(pE)
-      //AddVertices.addTwoVertices(id1.toString, p1, id2.toString, p2, pE)
 
       // analyse
       //    count number of vertices and edges

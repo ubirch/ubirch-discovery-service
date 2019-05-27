@@ -1,7 +1,7 @@
 package com.ubirch.discovery.kafka.models
 
-case class AddV(v1: Vertounet, v2: Vertounet, edge: Edgounet)
+case class AddV(v1: VertexKafkaStruct, v2: VertexKafkaStruct, edge: EdgeKafkaStruct)
 
-case class Vertounet(id: String, properties: Map[String, String], label: String = "aLabel")
+case class VertexKafkaStruct(id: String, properties: Map[String, String], label: String = "aLabel")
 
-case class Edgounet(properties: Map[String, String])
+case class EdgeKafkaStruct(properties: Map[String, String])

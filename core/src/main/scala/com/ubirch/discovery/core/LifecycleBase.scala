@@ -1,5 +1,4 @@
-package com.ubirch.discovery.kafka
-
+package com.ubirch.discovery.core
 
 import java.util.concurrent.ConcurrentLinkedDeque
 

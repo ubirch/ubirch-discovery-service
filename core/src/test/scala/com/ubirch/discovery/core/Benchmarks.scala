@@ -3,6 +3,7 @@ package com.ubirch.discovery.core
 import java.io._
 
 import com.ubirch.discovery.core.Util.{extractValue, recompose}
+import com.ubirch.discovery.core.operation.AddVertices
 import com.ubirch.discovery.core.structure.VertexStructDb
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat

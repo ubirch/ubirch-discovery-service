@@ -1,5 +1,4 @@
-package com.ubirch.discovery.kafka
-
+package com.ubirch.discovery.core
 
 trait WithJVMHooks {
 
@@ -9,10 +8,8 @@ trait WithJVMHooks {
 
 }
 
-
 /**
   * Util that is used when starting the main service.
   */
 abstract class Boot extends WithJVMHooks
-
 
