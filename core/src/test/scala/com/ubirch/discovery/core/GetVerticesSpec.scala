@@ -7,7 +7,6 @@ class GetVerticesSpec extends FeatureSpec with Matchers {
 
   implicit val gc: GremlinConnector = new GremlinConnector
 
-
   feature("get all vertices") {
     scenario("get all") {
 

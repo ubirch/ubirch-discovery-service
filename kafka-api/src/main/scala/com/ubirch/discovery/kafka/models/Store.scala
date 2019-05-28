@@ -4,12 +4,13 @@ import com.ubirch.discovery.core.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
 import gremlin.scala.{Key, KeyValue}
 
+import scala.language.postfixOps
+
 object Store {
 
   implicit val gc: GremlinConnector = new GremlinConnector
 
   def mapToListKeyValues(propMaps: Map[String, String]): List[KeyValue[String]] = propMaps map { x => KeyValue(Key(x._1), x._2) } toList
-
 
   /**
     * Entry should be formatted as the following:
@@ -49,6 +50,5 @@ object Store {
     val pE = mapToListKeyValues(req.edge.properties)
     new AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE)
   }
-
 
 }

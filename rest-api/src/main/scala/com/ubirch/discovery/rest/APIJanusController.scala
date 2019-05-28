@@ -18,7 +18,6 @@ import scala.language.postfixOps
 class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
   with NativeJsonSupport with SwaggerSupport with CorsSupport with LazyLogging {
 
-
   // Allows CORS support to display the swagger UI when using the same network
   options("/*") {
     response.setHeader(

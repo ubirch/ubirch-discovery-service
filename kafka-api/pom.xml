@@ -56,6 +56,9 @@
                         </goals>
                         <configuration>
                             <args>
+                                <arg>-feature</arg>
+                                <arg>-unchecked</arg>
+                                <arg>-deprecation</arg>
                                 <arg>-dependencyfile</arg>
                                 <arg>${project.build.directory}/.scala_dependencies</arg>
                             </args>
@@ -100,7 +103,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ubirch.discovery.kafka.consumer.StringConsumer</mainClass>
+                            <mainClass>com.ubirch.discovery.kafka.consumer.DefaultStringConsumer</mainClass>
                             <useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                     </archive>

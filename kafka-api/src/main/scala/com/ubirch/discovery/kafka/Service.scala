@@ -1,14 +1,13 @@
 package com.ubirch.discovery.kafka
 
 import com.ubirch.discovery.core.Boot
-import com.ubirch.discovery.kafka.consumer.StringConsumer
-
+import com.ubirch.discovery.kafka.consumer.DefaultStringConsumer
 
 object Service extends Boot {
 
   def main(args: Array[String]): Unit = {
 
-    val consumer = StringConsumer
+    val consumer = DefaultStringConsumer
 
     consumer.start()
 

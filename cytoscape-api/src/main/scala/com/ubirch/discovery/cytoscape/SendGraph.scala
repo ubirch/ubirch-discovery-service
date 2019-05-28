@@ -6,5 +6,4 @@ class SendGraph {
 
   implicit val gc: GremlinConnector = new GremlinConnector
 
-
 }
