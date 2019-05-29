@@ -21,7 +21,7 @@ import scala.util.Try
 
 object DefaultStringConsumer extends LazyLogging {
 
-  val conf: Config = ConfigFactory.load("application.conf")
+  val conf: Config = ConfigFactory.load("application.base.conf")
   val topics: Set[String] = conf.getStringList("kafkaApi.kafkaConsumer.topic").asScala.toSet
 
   val configs = Configs(
