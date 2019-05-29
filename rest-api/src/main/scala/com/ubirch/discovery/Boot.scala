@@ -1,5 +1,7 @@
 package com.ubirch.discovery
 
+import java.nio.file.Paths
+
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 
@@ -9,7 +11,8 @@ object Boot {
     val context = new WebAppContext()
     context.setServer(server)
     context.setContextPath("/")
-    context.setWar("/Users/benoit/Documents/PoC-rel-managment/ubirch-discovery-service/rest-api/src/main/webapp")
+    val pathWebbApp = Paths.get("rest-api","src", "main", "webapp")
+    context.setWar(pathWebbApp.toString)
     server.setHandler(context)
 
     try {

@@ -10,7 +10,6 @@ class ScalatraBootstrap extends LifeCycle {
     context.mount(new APIJanusController, "/JG/*", "Janus")
     context.mount(new ResourcesApp, "/api-docs")
     context.initParameters("org.scalatra.cors.allowedOrigins") = "http://0.0.0.0"
-
   }
 }
 
