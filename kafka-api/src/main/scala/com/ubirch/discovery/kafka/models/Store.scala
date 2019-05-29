@@ -31,6 +31,7 @@ object Store {
     * "propNName": "propNValue"
     * }
     * "edge":{
+    * "label": "label" OPTIONAL
     * "properties":{
     * "prop1Name": "prop1Value",
     * ...
@@ -48,7 +49,8 @@ object Store {
     val p2 = mapToListKeyValues(req.v2.properties)
     val l2 = req.v2.label
     val pE = mapToListKeyValues(req.edge.properties)
-    new AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE)
+    val lE = req.edge.label
+    new AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE, lE)
   }
 
 }
