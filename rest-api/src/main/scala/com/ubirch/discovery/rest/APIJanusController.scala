@@ -44,13 +44,21 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
       schemes "http" // Force swagger ui to use http instead of https, only need to say it once
       description "Still not implemented. Does not work right now as it should now support dynamic properties addition"
       parameters (
-        pathParam[Int]("id1").description("id of the first vertex"),
-        queryParam[Option[Map[String, String]]]("properties1").
+      pathParam[String]("id1").
+        description("id of the first vertex"),
+      pathParam[String]("label1").
+        description("label of the first vertex"),
+      queryParam[Option[Map[String, String]]]("properties1").
         description("Properties of the second vertex"),
-        pathParam[Int]("id2").description("id of the second vertex"),
-        queryParam[Option[Map[String, String]]]("properties2").
+      pathParam[String]("id2").
+        description("id of the second vertex"),
+      pathParam[String]("label2").
+        description("label of the second vertex"),
+      queryParam[Option[Map[String, String]]]("properties2").
         description("Properties of the second vertex"),
-        queryParam[Option[Map[String, String]]]("propertiesEdge").
+      pathParam[String]("labelEdge").
+        description("label of the edge"),
+      queryParam[Option[Map[String, String]]]("propertiesEdge").
         description("Properties of the edge that link the two vertexes")
       ))
 
@@ -78,9 +86,12 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     val prop1 = propertiesToKeyValuesList("properties1")
     val prop2 = propertiesToKeyValuesList("properties2")
     val propE = propertiesToKeyValuesList("propertiesEdge")
-    val id1 = params("id1").toString
-    val id2 = params("id2").toString
-    val res = new AddVertices().addTwoVertices(id1, prop1)(id2, prop2)(propE)
+    val id1 = params("id1")
+    val id2 = params("id2")
+    val label1 = params("label1")
+    val label2 = params("label2")
+    val labelEdge = params("labelEdge")
+    val res = new AddVertices().addTwoVertices(id1, prop1, label1)(id2, prop2, label2)(propE, labelEdge)
     res
   }
 
