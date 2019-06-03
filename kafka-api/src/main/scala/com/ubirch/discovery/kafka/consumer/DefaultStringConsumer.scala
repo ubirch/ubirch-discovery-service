@@ -40,7 +40,6 @@ object DefaultStringConsumer extends LazyLogging {
         jackson.parseJson(data).extract[Seq[AddV]]
       } catch {
         case e: Exception =>
-          logger.error("Error parsing data [{}]", e.getMessage)
           throw ParsingException(s"Error parsing data [${e.getMessage}]")
       }
     }

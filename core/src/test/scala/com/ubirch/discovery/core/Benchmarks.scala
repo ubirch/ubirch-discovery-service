@@ -59,7 +59,7 @@ class Benchmarks extends FeatureSpec with Matchers {
 
     //commit
     val t0 = System.nanoTime()
-    new AddVertices().addTwoVertices(id1.toString, p1)(id2.toString, p2)(pE)
+    AddVertices().addTwoVertices(id1.toString, p1)(id2.toString, p2)(pE)
 
     // analyse
     val v1Reconstructed = new VertexStructDb(id1.toString, gc.g)
@@ -89,7 +89,7 @@ class Benchmarks extends FeatureSpec with Matchers {
   }
 
   scenario("add create two new vertex on an empty db, link them, verify that the result is correct") {
-    gc = new GremlinConnector
+    gc = GremlinConnector.get
     for (_ <- 0 to 10) {
       truc()
     }

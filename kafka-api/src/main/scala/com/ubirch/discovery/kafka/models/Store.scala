@@ -8,8 +8,16 @@ import scala.language.postfixOps
 
 object Store {
 
-  implicit val gc: GremlinConnector = new GremlinConnector
+  implicit val gc: GremlinConnector = GremlinConnector.get
 
+  val addVertices = AddVertices()
+
+  /**
+    * Transforms a map[String, String] to a list of KeyValue[String].
+    *
+    * @param propMaps The map that'll be transformed.
+    * @return The List[KeyValue] corresponding to the Map passed as a parameter.
+    */
   def mapToListKeyValues(propMaps: Map[String, String]): List[KeyValue[String]] = propMaps map { x => KeyValue(Key(x._1), x._2) } toList
 
   /**
@@ -50,7 +58,7 @@ object Store {
     val l2 = req.v2.label
     val pE = mapToListKeyValues(req.edge.properties)
     val lE = req.edge.label
-    new AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE, lE)
+    addVertices.addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE, lE)
   }
 
 }

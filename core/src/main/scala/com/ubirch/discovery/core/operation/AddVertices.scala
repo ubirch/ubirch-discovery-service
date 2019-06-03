@@ -1,10 +1,15 @@
 package com.ubirch.discovery.core.operation
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStructDb
+import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList}
+import com.ubirch.discovery.core.util.Util.{extractValue, getEdge, getEdgeProperties, recompose}
 import gremlin.scala.{Key, KeyValue}
 
-class AddVertices(implicit val gc: GremlinConnector) {
+import scala.language.postfixOps
+
+case class AddVertices()(implicit val gc: GremlinConnector) extends LazyLogging {
 
   private val label = "aLabel"
 
@@ -28,8 +33,11 @@ class AddVertices(implicit val gc: GremlinConnector) {
     (v2: VertexStructDb, p2: List[KeyValue[String]], l2: String)
     (pE: List[KeyValue[String]], lE: String): Unit = {
     v1.addVertex(p1, l1, gc.b)
+    verifVertex(v1, p1, l1)
     v2.addVertex(p2, l2, gc.b)
+    verifVertex(v2, p2, l2)
     createEdge(v1, v2, pE, lE)
+    verifEdge(v1.id, v2.id, pE)
   }
 
   private def oneExist(v1: VertexStructDb, p1: List[KeyValue[String]], l1: String)
@@ -37,15 +45,22 @@ class AddVertices(implicit val gc: GremlinConnector) {
     (pE: List[KeyValue[String]], lE: String): Unit = {
     if (v1.exist) {
       v2.addVertex(p2, l2, gc.b)
+      verifVertex(v2, p2, l2)
       createEdge(v1, v2, pE, lE)
+      verifEdge(v1.id, v2.id, pE)
     } else {
       v1.addVertex(p1, l1, gc.b)
+      verifVertex(v1, p1, l1)
       createEdge(v1, v2, pE, lE)
+      verifEdge(v1.id, v2.id, pE)
     }
   }
 
   private def twoExist(v1: VertexStructDb, v2: VertexStructDb, pE: List[KeyValue[String]], lE: String): Unit = {
-    if (!areVertexLinked(v1, v2)) createEdge(v1, v2, pE, lE)
+    if (!areVertexLinked(v1, v2)) {
+      createEdge(v1, v2, pE, lE)
+      verifEdge(v1.id, v2.id, pE)
+    }
   }
 
   private def howMany(v1: VertexStructDb, v2: VertexStructDb): Int = {
@@ -65,6 +80,39 @@ class AddVertices(implicit val gc: GremlinConnector) {
     val oneWay = gc.g.V(v1.vertex).outE().as("e").inV.has(ID, v2.id).select("e").toList
     val otherWay = gc.g.V(v2.vertex).outE().as("e").inV.has(ID, v1.id).select("e").toList
     oneWay.nonEmpty || otherWay.nonEmpty
+  }
+
+  def verifVertex(vertexStruct: VertexStructDb, properties: List[KeyValue[String]], l: String = label): Unit = {
+    if (!vertexStruct.exist) throw new ImportToGremlinException("Vertex wasn't imported to the Gremlin Server")
+
+    val keyList: Array[Key[String]] = properties.map( x => x.key ).toArray :+ ID
+    val propertiesInServer = vertexStruct.getPropertiesMap
+    val idInServer = extractValue[String](propertiesInServer, ID.name)
+    val propertiesInServerAsListKV = try {
+       recompose(propertiesInServer, keyList)
+    } catch {
+      case e: KeyNotInList => throw new ImportToGremlinException(s"Vertex with id = $idInServer wasn't correctly imported to the database: properties are not correct")
+      case x => throw x
+    }
+    if (!(propertiesInServerAsListKV.sortBy(x => x.key.name) == properties.sortBy(x => x.key.name)))
+      throw new ImportToGremlinException(s"Vertex with id = $idInServer wasn't correctly imported to the database: properties are not correct")
+    if (!idInServer.equals(vertexStruct.id))
+      throw new ImportToGremlinException(s"Vertex with id = ${vertexStruct.id} wasn't correctly imported to the database: id is not the same")
+  }
+
+  def verifEdge(idFrom: String, idTo: String, properties: List[KeyValue[String]]): Unit = {
+    val edge = getEdge(gc, idFrom, idTo, ID).head
+
+    if (edge == null) throw new ImportToGremlinException(s"Edge between $idFrom and $idTo wasn't created")
+    val keyList = properties map ( x => x.key ) toArray
+    val propertiesInServer = try {
+      recompose(getEdgeProperties(gc, edge), keyList)
+    } catch {
+      case e: KeyNotInList => throw new ImportToGremlinException(s"Edge between $idFrom and $idTo wasn't correctly created: properties are not correct")
+      case x => throw x
+    }
+    if (!(propertiesInServer.sortBy(x => x.key.name) == properties.sortBy(x => x.key.name)))
+      throw new ImportToGremlinException(s"Edge between $idFrom and $idTo wasn't correctly created: properties are not correct")
   }
 
 }

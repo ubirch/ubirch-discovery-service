@@ -1,7 +1,5 @@
 package com.ubirch.discovery.kafka.consumer
 
-import java.util.concurrent.CountDownLatch
-
 import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.util.PortGiver
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
@@ -12,10 +10,6 @@ class DefaultStringConsumerSpec extends TestBase {
 
   feature("test") {
     scenario("truc") {
-      val maxEntities = 2
-      val counter = new CountDownLatch(maxEntities)
-
-      //val confDefault: Config = ConfigFactory.load("application.base.conf")
 
       implicit val config: EmbeddedKafkaConfig = EmbeddedKafkaConfig(
         kafkaPort = 9092,
@@ -31,7 +25,7 @@ class DefaultStringConsumerSpec extends TestBase {
         val listRequests = source.getLines.toList
         source.close()
 
-        val messages = (0 to maxEntities).map(i => { listRequests(i) }).toList
+        val messages = listRequests.indices.map(i => { listRequests(i) }).toList
         messages.foreach { m =>
           publishStringMessageToKafka(topic, m)
         }
@@ -40,7 +34,7 @@ class DefaultStringConsumerSpec extends TestBase {
 
         consumer.consumerConfigured.start()
 
-        Thread.sleep(5000)
+        Thread.sleep(10000)
 
       }
     }

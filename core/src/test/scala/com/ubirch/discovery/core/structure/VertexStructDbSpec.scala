@@ -1,6 +1,7 @@
 package com.ubirch.discovery.core.structure
 
 import com.ubirch.discovery.core.connector.GremlinConnector
+import com.ubirch.discovery.core.util.Util._
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}

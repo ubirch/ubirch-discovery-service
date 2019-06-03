@@ -2,6 +2,7 @@ package com.ubirch.discovery.core.util
 
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStruct
+import com.ubirch.discovery.core.util.Exceptions.{KeyNotInList, NumberOfEdgesNotCorrect}
 import gremlin.scala.{Key, KeyValue}
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.json4s.JsonDSL._
@@ -73,6 +74,7 @@ object Util {
     val resWithId = theMap map {
       x =>
         val pos = keys.indexOf(Key[String](x._1.asInstanceOf[String]))
+        if (pos == -1) throw KeyNotInList(s"key ${x._1.asInstanceOf[String]} is not contained in the list of keys")
         keys(pos) -> KeyValue(keys(pos), extractValue(theMap, keys(pos).name))
     }
     if (keys.indexOf(Key[String]("IdAssigned")) != -1) {
@@ -95,7 +97,7 @@ object Util {
     val edgeList = gc.g.V().has(key, idFrom).outE().as("e").inV().has(key, idTo).select("e").toList()
     edgeList match {
       case x: List[Edge] =>
-        if (x.size != size) throw new IndexOutOfBoundsException("The required number of edges linked the two vertices is not met")
+        if (x.size != size) throw NumberOfEdgesNotCorrect(s"The required number of edges linked the two vertices is not met: ${x.size}")
         size match {
           case 0 => null
           case _ => x
@@ -108,6 +110,7 @@ object Util {
     val res = gc.g.E(edge).valueMap().toList().head.asScala.toMap.asInstanceOf[Map[Any, Any]]
     res map { x => x._1 -> List(x._2.asInstanceOf[String]) }
   }
+
 
 }
 

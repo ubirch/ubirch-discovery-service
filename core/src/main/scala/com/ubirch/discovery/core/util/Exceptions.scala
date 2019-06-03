@@ -1,0 +1,14 @@
+package com.ubirch.discovery.core.util
+
+object Exceptions {
+
+  /**
+    * Thrown when an element wasn't successfully added to the database
+    * @param message Message explaining the error
+    */
+  class ImportToGremlinException(message: String) extends Exception(message)
+
+  case class KeyNotInList(message: String) extends Exception(message)
+
+  case class NumberOfEdgesNotCorrect(msg: String) extends ImportToGremlinException(message = msg)
+}

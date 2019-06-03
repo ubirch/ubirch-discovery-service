@@ -3,9 +3,8 @@ package com.ubirch.discovery.core
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
 import com.ubirch.discovery.core.structure.VertexStructDb
-import com.ubirch.discovery.core.util.Util.{extractValue, getEdge, getEdgeProperties, recompose}
+import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
-import org.apache.tinkerpop.gremlin.structure.Edge
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.{FeatureSpec, Matchers}
@@ -13,7 +12,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 class AddVerticesSpec extends FeatureSpec with Matchers {
 
-  implicit val gc = GremlinConnector.get
+  implicit val gc: GremlinConnector = GremlinConnector.get
 
   private val dateTimeFormat = ISODateTimeFormat.dateTime()
 
@@ -35,8 +34,8 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
       deleteDatabase()
 
       // prepare
-      val id1 = 1
-      val id2 = 2
+      val id1 = 1.toString
+      val id2 = 2.toString
 
       val now1 = DateTime.now(DateTimeZone.UTC)
       val p1: List[KeyValue[String]] = List(
@@ -55,7 +54,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
       )
 
       // commit
-      new AddVertices().addTwoVertices(id1.toString, p1)(id2.toString, p2)(pE)
+      AddVertices().addTwoVertices(id1, p1)(id2, p2)(pE)
 
       // analyse
       //    count number of vertices and edges
@@ -64,33 +63,19 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
       nbVertices shouldBe 2
       nbEdges shouldBe 1
 
-      //    edges
-      val edge1: Edge = getEdge(gc, id1.toString, id2.toString, IdAssigned).head
-
-      val arrayKeysE = Array(Name, Number)
-
-      val edgeReceived1 = recompose(getEdgeProperties(gc, edge1), arrayKeysE)
-
-      edgeReceived1.sortBy(x => x.key.name) shouldBe pE.sortBy(x => x.key.name)
-
       //    vertices
-      val v1Reconstructed = new VertexStructDb(id1.toString, gc.g)
-      val v2Reconstructed = new VertexStructDb(id2.toString, gc.g)
+      val v1Reconstructed = new VertexStructDb(id1, gc.g)
+      val v2Reconstructed = new VertexStructDb(id2, gc.g)
 
-      val arrayKeysV = Array(IdAssigned, Name, Created, Number)
-
-      val response1 = v1Reconstructed.getPropertiesMap
-      val idGottenBack1 = extractValue[String](response1, IdAssigned.name)
-      val propertiesReceived1 = recompose(response1, arrayKeysV)
-
-      val response2: Map[Any, List[Any]] = v2Reconstructed.getPropertiesMap
-      val idGottenBack2 = extractValue[String](response2, IdAssigned.name)
-      val propertiesReceived2 = recompose(response2, arrayKeysV)
-
-      propertiesReceived1.sortBy(x => x.key.name) shouldBe p1.sortBy(x => x.key.name)
-      propertiesReceived2.sortBy(x => x.key.name) shouldBe p2.sortBy(x => x.key.name)
-      id1.toString shouldBe idGottenBack1
-      id2.toString shouldBe idGottenBack2
+      try {
+        AddVertices().verifVertex(v1Reconstructed, p1)
+        AddVertices().verifVertex(v2Reconstructed, p2)
+        AddVertices().verifEdge(id1, id2, pE)
+      } catch {
+        case e: ImportToGremlinException =>
+          log.error("", e)
+          fail()
+      }
 
     }
 
@@ -99,9 +84,9 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
       deleteDatabase()
 
       // prepare
-      val id1 = 1
-      val id2 = 2
-      val id3 = 3
+      val id1 = 1.toString
+      val id2 = 2.toString
+      val id3 = 3.toString
       val now1 = DateTime.now(DateTimeZone.UTC)
       val p1: List[KeyValue[String]] = List(new KeyValue[String](Created, dateTimeFormat.print(now1)))
       val now2 = DateTime.now(DateTimeZone.UTC)
@@ -115,8 +100,8 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
       )
 
       // commit
-      new AddVertices().addTwoVertices(id1.toString, p1)(id2.toString, p2)(pE)
-      new AddVertices().addTwoVertices(id2.toString, p2)(id3.toString, p3)(pE)
+      AddVertices().addTwoVertices(id1, p1)(id2, p2)(pE)
+      AddVertices().addTwoVertices(id2, p2)(id3, p3)(pE)
 
       // analyse
       //    count number of vertices & edges
@@ -125,44 +110,97 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
       val nbEdges = gc.g.E().count().toSet.head
       nbEdges shouldBe 2
 
-      //    edges
-      val edge1: Edge = getEdge(gc, id1.toString, id2.toString, IdAssigned).head
-      val edge2: Edge = getEdge(gc, id2.toString, id3.toString, IdAssigned).head
-
-      val arrayKeysE = Array(Name, Number)
-
-      val edgeReceived1 = recompose(getEdgeProperties(gc, edge1), arrayKeysE)
-      val edgeReceived2 = recompose(getEdgeProperties(gc, edge2), arrayKeysE)
-
-      edgeReceived1.sortBy(x => x.key.name) shouldBe pE.sortBy(x => x.key.name)
-      edgeReceived2.sortBy(x => x.key.name) shouldBe pE.sortBy(x => x.key.name)
-
-      //    vertices
+      //    reconstruct vertices
       val v1Reconstructed = new VertexStructDb(id1.toString, gc.g)
       val v2Reconstructed = new VertexStructDb(id2.toString, gc.g)
       val v3Reconstructed = new VertexStructDb(id3.toString, gc.g)
 
-      val arrayKeysP = Array(IdAssigned, Created)
-
-      val response1 = v1Reconstructed.getPropertiesMap
-      val idGottenBack1 = extractValue[String](response1, IdAssigned.name)
-      val propertiesReceived1 = recompose(response1, arrayKeysP)
-
-      val response2: Map[Any, List[Any]] = v2Reconstructed.getPropertiesMap
-      val idGottenBack2 = extractValue[String](response2, IdAssigned.name)
-      val propertiesReceived2 = recompose(response2, arrayKeysP)
-
-      val response3: Map[Any, List[Any]] = v3Reconstructed.getPropertiesMap
-      val idGottenBack3 = extractValue[String](response3, IdAssigned.name)
-      val propertiesReceived3 = recompose(response3, arrayKeysP)
-
-      propertiesReceived1.sortBy(x => x.key.name) shouldBe p1.sortBy(x => x.key.name)
-      propertiesReceived2.sortBy(x => x.key.name) shouldBe p2.sortBy(x => x.key.name)
-      propertiesReceived3.sortBy(x => x.key.name) shouldBe p3.sortBy(x => x.key.name)
-      id1.toString shouldBe idGottenBack1
-      id2.toString shouldBe idGottenBack2
-      id3.toString shouldBe idGottenBack3
+      //    verify vertices and edges
+      try {
+        AddVertices().verifVertex(v1Reconstructed, p1)
+        AddVertices().verifVertex(v2Reconstructed, p2)
+        AddVertices().verifVertex(v3Reconstructed, p3)
+        AddVertices().verifEdge(id1, id2, pE)
+        AddVertices().verifEdge(id2, id3, pE)
+      } catch {
+        case e: ImportToGremlinException =>
+          log.error("", e)
+          fail()
+      }
     }
   }
 
+  feature("verify verifier") {
+    scenario("add vertices, verify correct data -> should be TRUE") {
+      // no need to implement it, scenario("add two unlinked vertex") already covers this topic
+    }
+
+    scenario("add vertices, verify incorrect vertex properties data -> should be FALSE") {
+      // clean database
+      deleteDatabase()
+
+      // prepare
+      val id1 = 1.toString
+      val id2 = 2.toString
+
+      val now1 = DateTime.now(DateTimeZone.UTC)
+      val p1: List[KeyValue[String]] = List(
+        new KeyValue[String](Number, "5"),
+        new KeyValue[String](Name, "aName1"),
+        new KeyValue[String](Created, dateTimeFormat.print(now1))
+      )
+      val now2 = DateTime.now(DateTimeZone.UTC)
+      val p2: List[KeyValue[String]] = List(
+        new KeyValue[String](Number, "6"),
+        new KeyValue[String](Name, "aName2"),
+        new KeyValue[String](Created, dateTimeFormat.print(now2))
+      )
+      val pE: List[KeyValue[String]] = List(
+        new KeyValue[String](Name, "edge")
+      )
+
+      // commit
+      AddVertices().addTwoVertices(id1, p1)(id2, p2)(pE)
+
+      // create false data
+      val pFalse: List[KeyValue[String]] = List(new KeyValue[String](Number, "1"))
+
+      // analyse
+      //    count number of vertices and edges
+      val nbVertices = gc.g.V().count().toSet().head
+
+      val nbEdges = gc.g.E.count().toSet().head
+      nbVertices shouldBe 2
+      nbEdges shouldBe 1
+      //    vertices
+      val v1Reconstructed = new VertexStructDb(id1, gc.g)
+
+      try {
+        AddVertices().verifVertex(v1Reconstructed, pFalse)
+        fail
+      } catch {
+        case e: ImportToGremlinException =>
+        case _ => fail
+      }
+
+      try {
+        AddVertices().verifEdge(id1, id2, pFalse)
+        fail
+      } catch {
+        case e: ImportToGremlinException =>
+        case _ => fail
+      }
+
+      try {
+        AddVertices().verifEdge(id1, id1, pFalse)
+        fail
+      } catch {
+        case e: ImportToGremlinException =>
+        case _ => fail
+      }
+    }
+  }
+
+
+    //TODO: make a test for verifEdge and verifVertex
 }
