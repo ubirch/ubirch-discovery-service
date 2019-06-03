@@ -23,6 +23,20 @@
             <artifactId>core</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
+
+        <!-- /Core -->
+
+        <!-- Test -->
+
+        <dependency>
+            <groupId>net.manub</groupId>
+            <artifactId>scalatest-embedded-kafka_${scala.compat.version}</artifactId>
+            <version>${scalatest-embedded-kafka}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- /Test -->
+
     </dependencies>
 
     <properties>
@@ -36,6 +50,8 @@
         <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
         <maven-jar-plugin.version>2.6</maven-jar-plugin.version>
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+        <scalatest-embedded-kafka>2.0.0</scalatest-embedded-kafka>
+
         <!-- plugins -->
 
         <!-- versions -->

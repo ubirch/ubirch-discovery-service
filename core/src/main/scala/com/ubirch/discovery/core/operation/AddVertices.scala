@@ -1,6 +1,6 @@
 package com.ubirch.discovery.core.operation
 
-import com.ubirch.discovery.core.GremlinConnector
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStructDb
 import gremlin.scala.{Key, KeyValue}
 

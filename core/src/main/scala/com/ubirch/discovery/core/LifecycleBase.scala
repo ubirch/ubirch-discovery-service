@@ -31,7 +31,7 @@ object Lifecycle {
 
 object DefaultLifecycle
   extends Lifecycle
-    with LazyLogging {
+  with LazyLogging {
 
   private val hooks = new ConcurrentLinkedDeque[() => Future[_]]()
 

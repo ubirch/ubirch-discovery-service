@@ -2,9 +2,10 @@ package com.ubirch.discovery.core
 
 import java.io._
 
-import com.ubirch.discovery.core.Util.{extractValue, recompose}
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
 import com.ubirch.discovery.core.structure.VertexStructDb
+import com.ubirch.discovery.core.util.Util.{extractValue, recompose}
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
@@ -29,7 +30,7 @@ class Benchmarks extends FeatureSpec with Matchers {
   def log: Logger = LoggerFactory.getLogger(this.getClass)
 
   def deleteDatabase(): Unit = {
-    gc = new GremlinConnector
+    gc = GremlinConnector.get
     gc.g.V().drop().iterate()
     gc.closeConnection()
   }

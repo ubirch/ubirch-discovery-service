@@ -1,7 +1,7 @@
 package com.ubirch.discovery.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.GremlinConnector
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.{AddVertices, GetVertices}
 import com.ubirch.discovery.core.structure.VertexStruct
 import com.ubirch.discovery.core.util.Util.arrayVertexToJson
@@ -44,21 +44,21 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
       schemes "http" // Force swagger ui to use http instead of https, only need to say it once
       description "Still not implemented. Does not work right now as it should now support dynamic properties addition"
       parameters (
-      pathParam[String]("id1").
+        pathParam[String]("id1").
         description("id of the first vertex"),
-      pathParam[String]("label1").
+        pathParam[String]("label1").
         description("label of the first vertex"),
-      queryParam[Option[Map[String, String]]]("properties1").
+        queryParam[Option[Map[String, String]]]("properties1").
         description("Properties of the second vertex"),
-      pathParam[String]("id2").
+        pathParam[String]("id2").
         description("id of the second vertex"),
-      pathParam[String]("label2").
+        pathParam[String]("label2").
         description("label of the second vertex"),
-      queryParam[Option[Map[String, String]]]("properties2").
+        queryParam[Option[Map[String, String]]]("properties2").
         description("Properties of the second vertex"),
-      pathParam[String]("labelEdge").
+        pathParam[String]("labelEdge").
         description("label of the edge"),
-      queryParam[Option[Map[String, String]]]("propertiesEdge").
+        queryParam[Option[Map[String, String]]]("propertiesEdge").
         description("Properties of the edge that link the two vertexes")
       ))
 

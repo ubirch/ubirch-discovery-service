@@ -1,6 +1,6 @@
 package com.ubirch.discovery.cytoscape
 
-import com.ubirch.discovery.core.GremlinConnector
+import com.ubirch.discovery.core.connector.GremlinConnector
 
 class SendGraph {
 

@@ -237,7 +237,7 @@ public class FastImport {
      * @param properties Map containing the properties of the edge.
      */
     protected static void createEdge(VertexStructFastImport vertexFrom, VertexStructFastImport vertexTo, HashMap<String, String> properties) {
-        g.V(b.of(OUT_V, vertexFrom.getVertex())).as("a").V(b.of(IN_V, vertexTo.getVertex())).addE(b.of(LABEL, properties.get("name"))).from("a").iterate(); // add the label // TODO: modify label name
+        g.V(b.of(OUT_V, vertexFrom.getVertex())).as("a").V(b.of(IN_V, vertexTo.getVertex())).addE(b.of(LABEL, properties.get("name"))).from("a").iterate(); // add the label
 
         // add the other properties
         for (HashMap.Entry<String, String> entry : properties.entrySet()) {

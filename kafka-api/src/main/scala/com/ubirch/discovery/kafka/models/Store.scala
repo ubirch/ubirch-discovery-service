@@ -1,6 +1,6 @@
 package com.ubirch.discovery.kafka.models
 
-import com.ubirch.discovery.core.GremlinConnector
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
 import gremlin.scala.{Key, KeyValue}
 

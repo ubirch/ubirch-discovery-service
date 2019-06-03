@@ -1,11 +1,15 @@
 package com.ubirch.discovery.core.util
 
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStruct
+import gremlin.scala.{Key, KeyValue}
+import org.apache.tinkerpop.gremlin.structure.Edge
 import org.json4s.JsonDSL._
 import org.json4s.jackson.Serialization
 import org.json4s.{DefaultFormats, JsonAST}
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
 object Util {
@@ -41,6 +45,68 @@ object Util {
 
     arrayVertexReformated.foreach(v => log.info(v.toString))
     arrayVertexReformated
+  }
+
+  /**
+    * Get the value associated to a map<<String>, List<T>> based on the parameter.
+    *
+    * @param map       The map.
+    * @param nameValue the name on which we want the value.
+    * @tparam T Type of value we're looking for.
+    * @return value of type T.
+    */
+  def extractValue[T](map: Map[Any, List[Any]], nameValue: String): T = {
+    map.get(nameValue) match {
+      case Some(x) => x.head.asInstanceOf[T]
+      case None => throw new IllegalArgumentException("response is null")
+    }
+  }
+
+  /**
+    * Converts a Map<<String>, List<String>> into a List<KeyValues<String>>.
+    *
+    * @param theMap the map containing the data.
+    * @param keys   array of <Key> contained in the map.
+    * @return a List<KeyValues<String>>.
+    */
+  def recompose(theMap: Map[Any, List[Any]], keys: Array[Key[String]]): List[KeyValue[String]] = {
+    val resWithId = theMap map {
+      x =>
+        val pos = keys.indexOf(Key[String](x._1.asInstanceOf[String]))
+        keys(pos) -> KeyValue(keys(pos), extractValue(theMap, keys(pos).name))
+    }
+    if (keys.indexOf(Key[String]("IdAssigned")) != -1) {
+      (resWithId - Key[String]("IdAssigned")).values.toList
+    } else {
+      resWithId.values.toList
+    }
+  }
+
+  /**
+    *
+    * @param gc The gremlin connector
+    * @param idFrom Id of the vertex from where the edge goes
+    * @param idTo Id of the vertex to where the edge goes
+    * @param key The key describing the Id of the vertex
+    * @param size Number of expected edges connecting the vertexes (default: 1)
+    * @return The edge
+    */
+  def getEdge(implicit gc: GremlinConnector, idFrom: String, idTo: String, key: Key[String], size: Int = 1): List[Edge] = {
+    val edgeList = gc.g.V().has(key, idFrom).outE().as("e").inV().has(key, idTo).select("e").toList()
+    edgeList match {
+      case x: List[Edge] =>
+        if (x.size != size) throw new IndexOutOfBoundsException("The required number of edges linked the two vertices is not met")
+        size match {
+          case 0 => null
+          case _ => x
+        }
+      case _ => null
+    }
+  }
+
+  def getEdgeProperties(implicit gc: GremlinConnector, edge: Edge): Map[Any, List[String]] = {
+    val res = gc.g.E(edge).valueMap().toList().head.asScala.toMap.asInstanceOf[Map[Any, Any]]
+    res map { x => x._1 -> List(x._2.asInstanceOf[String]) }
   }
 
 }

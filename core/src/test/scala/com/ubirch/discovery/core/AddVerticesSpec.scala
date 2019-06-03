@@ -1,8 +1,9 @@
 package com.ubirch.discovery.core
 
-import com.ubirch.discovery.core.Util.{extractValue, getEdge, getEdgeProperties, recompose}
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
 import com.ubirch.discovery.core.structure.VertexStructDb
+import com.ubirch.discovery.core.util.Util.{extractValue, getEdge, getEdgeProperties, recompose}
 import gremlin.scala._
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.joda.time.format.ISODateTimeFormat
@@ -12,7 +13,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 class AddVerticesSpec extends FeatureSpec with Matchers {
 
-  implicit val gc: GremlinConnector = new GremlinConnector
+  implicit val gc = GremlinConnector.get
 
   private val dateTimeFormat = ISODateTimeFormat.dateTime()
 
@@ -64,7 +65,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
       nbEdges shouldBe 1
 
       //    edges
-      val edge1: Edge = getEdge(gc, id1.toString, id2.toString, IdAssigned)
+      val edge1: Edge = getEdge(gc, id1.toString, id2.toString, IdAssigned).head
 
       val arrayKeysE = Array(Name, Number)
 
@@ -125,8 +126,8 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
       nbEdges shouldBe 2
 
       //    edges
-      val edge1: Edge = getEdge(gc, id1.toString, id2.toString, IdAssigned)
-      val edge2: Edge = getEdge(gc, id2.toString, id3.toString, IdAssigned)
+      val edge1: Edge = getEdge(gc, id1.toString, id2.toString, IdAssigned).head
+      val edge2: Edge = getEdge(gc, id2.toString, id3.toString, IdAssigned).head
 
       val arrayKeysE = Array(Name, Number)
 
