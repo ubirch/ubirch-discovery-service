@@ -20,6 +20,12 @@
             <organization>ubirch GmbH</organization>
             <organizationUrl>https://ubirch.com/</organizationUrl>
         </developer>
+        <developer>
+            <name>Carlos Sánchez</name>
+            <email>carlos.sanchez@ubirch.com</email>
+            <organization>ubirch GmbH</organization>
+            <organizationUrl>https://ubirch.com/</organizationUrl>
+        </developer>
     </developers>
     <scm>
         <connection>scm:git:git://github.com/ubirch/ubirch-discovery-service.git</connection>
@@ -332,11 +338,10 @@
 
     <!-- sub modules -->
     <modules>
-        <module>core</module>
-        <module>kafka-api</module>
-        <module>rest-api</module>
-        <module>docker-janusgraph</module>
-        <module>cytoscape-api</module>
+        <module>discovery-service-kafka-api</module>
+        <module>discovery-service-core</module>
+        <module>discovery-service-rest-api</module>
+        <module>discovery-service-docker-jg</module>
     </modules>
 
 </project>
