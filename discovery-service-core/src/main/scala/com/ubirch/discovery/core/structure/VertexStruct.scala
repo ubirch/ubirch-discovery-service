@@ -2,7 +2,7 @@ package com.ubirch.discovery.core.structure
 
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 
 case class VertexStruct(label: String, properties: Map[String, String]) {
 

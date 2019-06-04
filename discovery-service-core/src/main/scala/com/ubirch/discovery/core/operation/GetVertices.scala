@@ -3,7 +3,7 @@ package com.ubirch.discovery.core.operation
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStruct
 import gremlin.scala._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.collection.JavaConverters._
 

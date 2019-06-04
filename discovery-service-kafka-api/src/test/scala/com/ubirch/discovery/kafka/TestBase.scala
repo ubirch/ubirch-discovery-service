@@ -2,10 +2,10 @@ package com.ubirch.discovery.kafka
 
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, MustMatchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, MustMatchers }
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 trait TestBase
   extends FeatureSpec

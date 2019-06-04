@@ -1,4 +1,4 @@
-import com.ubirch.discovery.rest.{APIJanusController, ApiSwagger, ResourcesApp}
+import com.ubirch.discovery.rest.{ APIJanusController, ApiSwagger, ResourcesApp }
 import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 

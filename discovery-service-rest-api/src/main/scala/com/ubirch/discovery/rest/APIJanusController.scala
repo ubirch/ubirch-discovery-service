@@ -2,16 +2,16 @@ package com.ubirch.discovery.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.operation.{AddVertices, GetVertices}
+import com.ubirch.discovery.core.operation.{ AddVertices, GetVertices }
 import com.ubirch.discovery.core.structure.VertexStruct
 import com.ubirch.discovery.core.util.Util.arrayVertexToJson
-import gremlin.scala.{Key, KeyValue}
+import gremlin.scala.{ Key, KeyValue }
 import org.json4s.JsonAST.JNothing
 import org.json4s.jackson.Serialization
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.{ DefaultFormats, Formats }
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupport, SwaggerSupportSyntax}
-import org.scalatra.{CorsSupport, ScalatraServlet}
+import org.scalatra.swagger.{ ResponseMessage, Swagger, SwaggerSupport, SwaggerSupportSyntax }
+import org.scalatra.{ CorsSupport, ScalatraServlet }
 
 import scala.language.postfixOps
 

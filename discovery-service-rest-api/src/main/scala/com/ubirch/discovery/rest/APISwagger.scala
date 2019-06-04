@@ -1,7 +1,7 @@
 package com.ubirch.discovery.rest
 
 import org.scalatra.ScalatraServlet
-import org.scalatra.swagger.{ApiInfo, NativeSwaggerBase, Swagger}
+import org.scalatra.swagger.{ ApiInfo, NativeSwaggerBase, Swagger }
 
 class ResourcesApp(implicit val swagger: Swagger) extends ScalatraServlet with NativeSwaggerBase
 

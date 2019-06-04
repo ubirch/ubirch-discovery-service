@@ -3,13 +3,13 @@ package com.ubirch.discovery.kafka.consumer
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.Lifecycle
-import com.ubirch.discovery.kafka.models.{AddV, Store}
-import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
+import com.ubirch.discovery.kafka.models.{ AddV, Store }
+import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.consumer._
-import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetResetStrategy}
+import org.apache.kafka.clients.consumer.{ ConsumerRecord, OffsetResetStrategy }
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.json4s._
 

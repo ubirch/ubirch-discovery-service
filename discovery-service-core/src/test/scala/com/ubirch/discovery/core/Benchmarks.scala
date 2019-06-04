@@ -5,12 +5,12 @@ import java.io._
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
 import com.ubirch.discovery.core.structure.VertexStructDb
-import com.ubirch.discovery.core.util.Util.{extractValue, recompose}
+import com.ubirch.discovery.core.util.Util.{ extractValue, recompose }
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.{DateTime, DateTimeZone}
-import org.scalatest.{FeatureSpec, Matchers}
-import org.slf4j.{Logger, LoggerFactory}
+import org.joda.time.{ DateTime, DateTimeZone }
+import org.scalatest.{ FeatureSpec, Matchers }
+import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.util.Random
 

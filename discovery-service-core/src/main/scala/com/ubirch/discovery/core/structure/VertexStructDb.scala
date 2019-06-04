@@ -2,10 +2,10 @@ package com.ubirch.discovery.core.structure
 
 import java.util
 
-import gremlin.scala.{Key, KeyValue, TraversalSource}
+import gremlin.scala.{ Key, KeyValue, TraversalSource }
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.apache.tinkerpop.gremlin.structure.Vertex
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.collection.JavaConverters._
 

@@ -4,9 +4,9 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.util.Util._
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.{DateTime, DateTimeZone}
-import org.scalatest.{FeatureSpec, Matchers}
-import org.slf4j.{Logger, LoggerFactory}
+import org.joda.time.{ DateTime, DateTimeZone }
+import org.scalatest.{ FeatureSpec, Matchers }
+import org.slf4j.{ Logger, LoggerFactory }
 
 class VertexStructDbSpec extends FeatureSpec with Matchers {
 
