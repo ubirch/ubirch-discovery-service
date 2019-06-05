@@ -1,0 +1,11 @@
+environment: ubirch-dev
+namespace: ubirch-dev
+ingestFQDN: ingest.ubirch.dev.ubirch.com #TOASK
+keyServiceURL: key-svc.core-dev:8095
+kafkaURL: kafka.core-dev:9092
+image:
+  tag: latest
+
+redis:
+  masterURL: "redis-master:6379"
+  slaveURL: "redis-slave:6379"

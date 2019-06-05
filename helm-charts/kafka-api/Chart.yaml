@@ -1,5 +1,0 @@
-apiVersion: v1
-appVersion: "1.0"
-description: Kafka API for the Ubirch Discovery Service
-name: kafka-api
-version: 0.1.0
