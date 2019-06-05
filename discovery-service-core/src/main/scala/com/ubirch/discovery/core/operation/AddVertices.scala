@@ -92,7 +92,7 @@ case class AddVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
       recompose(propertiesInServer, keyList)
     } catch {
       case e: KeyNotInList => throw new ImportToGremlinException(s"Vertex with id = $idInServer wasn't correctly imported to the database: properties are not correct")
-      case x => throw x
+      case x: Throwable => throw x
     }
     if (!(propertiesInServerAsListKV.sortBy(x => x.key.name) == properties.sortBy(x => x.key.name)))
       throw new ImportToGremlinException(s"Vertex with id = $idInServer wasn't correctly imported to the database: properties are not correct")
@@ -109,7 +109,7 @@ case class AddVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
       recompose(getEdgeProperties(gc, edge), keyList)
     } catch {
       case e: KeyNotInList => throw new ImportToGremlinException(s"Edge between $idFrom and $idTo wasn't correctly created: properties are not correct")
-      case x => throw x
+      case x: Throwable => throw x
     }
     if (!(propertiesInServer.sortBy(x => x.key.name) == properties.sortBy(x => x.key.name)))
       throw new ImportToGremlinException(s"Edge between $idFrom and $idTo wasn't correctly created: properties are not correct")

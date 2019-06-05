@@ -2,10 +2,11 @@ package com.ubirch.discovery.kafka.consumer
 
 import com.ubirch.discovery.kafka.models.{ AddV, Store }
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.errorsHandler
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 
 import scala.collection.JavaConverters._
@@ -43,13 +44,11 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
       Try(parseRelations(cr.value())).map(store).recover {
         case e: ParsingException =>
-          //TODO: Add proper error value
-          send(producerErrorTopic, e.getMessage)
-          logger.error("Error Parsing Value [{}]", e.getMessage)
+          send(producerErrorTopic, errorsHandler.generateException(e))
+          logger.error(errorsHandler.generateException(e))
         case e: StoreException =>
-          //TODO: Add proper error value
-          send(producerErrorTopic, e.getMessage)
-          logger.error("Error Storing Relation [{}]", e.getMessage)
+          send(producerErrorTopic,errorsHandler.generateException(e))
+          logger.error(errorsHandler.generateException(e))
       }
 
     }
