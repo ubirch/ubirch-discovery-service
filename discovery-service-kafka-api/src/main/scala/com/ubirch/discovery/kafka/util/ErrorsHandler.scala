@@ -19,8 +19,8 @@ case class StorageError(message: String) extends ErrorsStruct {
   override val messageError: String = message
 }
 
-object errorsHandler {
-  def generateException[T](exception: T): String = {
+object ErrorsHandler {
+  def generateException(exception: Exception): String = {
     val errorsStruct = exception match {
       case e: ParsingException => ParsingError(e.message)
       case e: StoreException => StorageError(e.message)

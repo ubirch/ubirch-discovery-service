@@ -2,7 +2,7 @@ package com.ubirch.discovery.kafka.consumer
 
 import com.ubirch.discovery.kafka.models.{ AddV, Store }
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
-import com.ubirch.discovery.kafka.util.errorsHandler
+import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
@@ -44,11 +44,11 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
       Try(parseRelations(cr.value())).map(store).recover {
         case e: ParsingException =>
-          send(producerErrorTopic, errorsHandler.generateException(e))
-          logger.error(errorsHandler.generateException(e))
+          send(producerErrorTopic, ErrorsHandler.generateException(e))
+          logger.error(ErrorsHandler.generateException(e))
         case e: StoreException =>
-          send(producerErrorTopic,errorsHandler.generateException(e))
-          logger.error(errorsHandler.generateException(e))
+          send(producerErrorTopic,ErrorsHandler.generateException(e))
+          logger.error(ErrorsHandler.generateException(e))
       }
 
     }
