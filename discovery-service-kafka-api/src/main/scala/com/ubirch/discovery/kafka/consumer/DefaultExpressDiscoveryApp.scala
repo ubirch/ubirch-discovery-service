@@ -6,7 +6,7 @@ import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
 
 import scala.collection.JavaConverters._
@@ -47,7 +47,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
           send(producerErrorTopic, ErrorsHandler.generateException(e))
           logger.error(ErrorsHandler.generateException(e))
         case e: StoreException =>
-          send(producerErrorTopic,ErrorsHandler.generateException(e))
+          send(producerErrorTopic, ErrorsHandler.generateException(e))
           logger.error(ErrorsHandler.generateException(e))
       }
 
