@@ -30,9 +30,9 @@ class DefaultStringConsumerSpec extends TestBase {
           publishStringMessageToKafka(topic, m)
         }
 
-        val consumer = DefaultStringConsumer
+        val consumer = new DefaultExpressDiscoveryApp {}
 
-        consumer.consumerConfigured.start()
+        consumer.consumption.start()
 
         Thread.sleep(10000)
 
