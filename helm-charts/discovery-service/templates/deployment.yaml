@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kafka-api.fullname" . }}
+  name: {{ include "discovery-service.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "kafka-api.name" . }}
-    helm.sh/chart: {{ include "kafka-api.chart" . }}
+    app.kubernetes.io/name: {{ include "discovery-service.name" . }}
+    helm.sh/chart: {{ include "discovery-service.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "kafka-api.name" . }}
+      app.kubernetes.io/name: {{ include "discovery-service.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "kafka-api.name" . }}
+        app.kubernetes.io/name: {{ include "discovery-service.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       containers:
@@ -38,8 +38,32 @@ spec:
             initialDelaySeconds: 20
             periodSeconds: 60
           env:
-            - name: EVTL_CS_KEYSPACE
-              value: "{{ .Values.eventLog.cassandra.cluster.keyspace}}"
+            - name: DISC_ENV_KAFKA_CONS_BOOTSTRAP
+              value: STAGE_DISC_ENV_KAFKA_CONS_BOOTSTRAP
+            - name: DISC_ENV_KAFKA_CONS_TOPIC
+              value: STAGE_DISC_ENV_KAFKA_CONS_TOPIC
+            - name: DISC_ENV_KAFKA_CONS_GROUPID
+              value: STAGE_DISC_ENV_KAFKA_CONS_GROUPID
+            - name: DISC_ENV_KAFKA_CONS_ERRORTOPIC
+              value: STAGE_DISC_ENV_KAFKA_CONS_ERRORTOPIC
+            - name: DISC_ENV_KAFKA_CONS_TIMEOUT
+              value: STAGE_DISC_ENV_KAFKA_CONS_TIMEOUT
+            - name: DISC_ENV_KAFKA_CONS_POOLREC
+              value: STAGE_DISC_ENV_KAFKA_CONS_POOLREC
+            - name: DISC_ENV_KAFKA_PROD_BOOTSTRAP
+              value: STAGE_DISC_ENV_KAFKA_PROD_BOOTSTRAP
+            - name: DISC_ENV_KAFKA_PROD_ERRORTOPIC
+              value: STAGE_DISC_ENV_KAFKA_PROD_ERRORTOPIC
+            - name: DISC_ENV_KAFKA_PROD_TOPIC
+              value: STAGE_DISC_ENV_KAFKA_PROD_TOPIC
+            - name: DISC_ENV_KAFKA_PROD_TIMEOUT
+              value: STAGE_DISC_ENV_KAFKA_PROD_TIMEOUT
+            - name: DISC_ENV_KAFKA_PROMETHEUS
+              value: STAGE_DISC_ENV_KAFKA_PROMETHEUS
+            - name: DISC_ENV_CORE_HOSTS
+              value: STAGE_DISC_ENV_CORE_HOSTS
+            - name: DISC_ENV_CORE_PORT
+              value: STAGE_DISC_ENV_CORE_PORT
 
           resources:
     {{- toYaml .Values.resources | nindent 22 }}

@@ -15,6 +15,7 @@
     <name>${project.artifactId}</name>
     <description>Kafka API of the discovery service</description>
     <inceptionYear>2019</inceptionYear>
+    <packaging>jar</packaging>
 
     <dependencies>
         <!-- Core -->
