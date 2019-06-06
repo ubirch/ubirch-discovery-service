@@ -1,23 +1,19 @@
 package com.ubirch.discovery.kafka.consumer
 
-import com.typesafe.config.{ Config, ConfigFactory }
 import com.ubirch.discovery.kafka.models.{ AddV, Store }
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.kafka.consumer.ConsumerRunner
+import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
 
-import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.Try
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
-  override val conf: Config = ConfigFactory.load("application.base.conf")
   override val producerBootstrapServers: String = conf.getString("kafkaApi.kafkaProducer.bootstrapServers")
 
   override val keySerializer: serialization.Serializer[String] = new StringSerializer
