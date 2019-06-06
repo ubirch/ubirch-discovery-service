@@ -29,7 +29,7 @@ object GremlinConnector {
   }
 }
 
-class GremlinConnector() extends LazyLogging with ConfigBase {
+class GremlinConnector private () extends LazyLogging with ConfigBase {
 
   val cluster: Cluster = Cluster.open(GremlinConnector.buildProperties(conf))
 

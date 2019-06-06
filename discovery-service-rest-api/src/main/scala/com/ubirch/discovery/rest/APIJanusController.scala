@@ -25,7 +25,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     )
   }
 
-  implicit val gc: GremlinConnector = new GremlinConnector
+  implicit val gc: GremlinConnector = GremlinConnector.get
 
   // Stops the APIJanusController from being abstract
   protected val applicationDescription = "The API working with JanusGraph, allows add / display of vertexes/edges"

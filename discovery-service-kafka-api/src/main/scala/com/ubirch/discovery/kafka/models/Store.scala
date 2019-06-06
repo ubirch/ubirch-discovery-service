@@ -8,7 +8,7 @@ import scala.language.postfixOps
 
 object Store {
 
-  implicit val gc: GremlinConnector = GremlinConnector.get
+  implicit val gc = GremlinConnector.get
 
   val addVertices = AddVertices()
 

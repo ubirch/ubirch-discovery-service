@@ -9,7 +9,7 @@ import gremlin.scala.{ Key, KeyValue }
 
 import scala.language.postfixOps
 
-case class AddVertices()(implicit val gc: GremlinConnector) extends LazyLogging {
+case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
 
   private val label = "aLabel"
 
@@ -91,7 +91,7 @@ case class AddVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
     val propertiesInServerAsListKV = try {
       recompose(propertiesInServer, keyList)
     } catch {
-      case e: KeyNotInList => throw new ImportToGremlinException(s"Vertex with id = $idInServer wasn't correctly imported to the database: properties are not correct")
+      case _: KeyNotInList => throw new ImportToGremlinException(s"Vertex with id = $idInServer wasn't correctly imported to the database: properties are not correct")
       case x: Throwable => throw x
     }
     if (!(propertiesInServerAsListKV.sortBy(x => x.key.name) == properties.sortBy(x => x.key.name)))
@@ -108,7 +108,7 @@ case class AddVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
     val propertiesInServer = try {
       recompose(getEdgeProperties(gc, edge), keyList)
     } catch {
-      case e: KeyNotInList => throw new ImportToGremlinException(s"Edge between $idFrom and $idTo wasn't correctly created: properties are not correct")
+      case _: KeyNotInList => throw new ImportToGremlinException(s"Edge between $idFrom and $idTo wasn't correctly created: properties are not correct")
       case x: Throwable => throw x
     }
     if (!(propertiesInServer.sortBy(x => x.key.name) == properties.sortBy(x => x.key.name)))
