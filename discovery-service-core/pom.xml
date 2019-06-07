@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.ubirch.discovery</groupId>
         <artifactId>discovery-service</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
     </parent>
 
     <!-- basic info -->
@@ -96,7 +96,6 @@
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
                             <mainClass>com.ubirch.lookup.Service</mainClass>
-                            <useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                     </archive>
                 </configuration>

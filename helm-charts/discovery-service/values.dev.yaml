@@ -4,40 +4,28 @@ image:
   tag: latest # set to your local image tag if needed
 
 # settings for ingest
-discovery-service:
+discoveryservice:
   noHost: true
   ingestFQDN: localhost
   kafkaURL: "kafka.core-dev.svc.cluster.local:9092"
   redisSecretName: "redis-secrets"
   serverUuid: "9d3c78ff-22f3-4441-a5d1-85c636d486ff"
-  env:
-    - name: STAGE_DISC_ENV_KAFKA_CONS_BOOTSTRAP
-      value: "localhost:9092"
-    - name: STAGE_DISC_ENV_KAFKA_CONS_TOPIC
-      value:  "com.ubirch.eventlog.discovery, test"
-    - name: STAGE_DISC_ENV_KAFKA_CONS_GROUPID
-      value: "my group id"
-    - name: STAGE_DISC_ENV_KAFKA_CONS_ERRORTOPIC
-      value: "com.ubirch.eventlog.discovery-error"
-    - name: STAGE_DISC_ENV_KAFKA_CONS_TIMEOUT
-      value: 2
-    - name: STAGE_DISC_ENV_KAFKA_CONS_POOLREC
-      value: 500
-    - name: STAGE_DISC_ENV_KAFKA_PROD_BOOTSTRAP
-      value: "localhost:9092"
-    - name: STAGE_DISC_ENV_KAFKA_PROD_ERRORTOPIC
-      value: "com.ubirch.eventlog.discovery-error"
-    - name: STAGE_DISC_ENV_KAFKA_PROD_TOPIC
-      value: "com.ubirch.eventlog.discovery, test"
-    - name: STAGE_DISC_ENV_KAFKA_PROD_TIMEOUT
-      value: 2
-    - name: STAGE_DISC_ENV_KAFKA_PROMETHEUS
-      value: 4321
-    - name: STAGE_DISC_ENV_CORE_HOSTS
-      value: [192.168.14.161]
-    - name: STAGE_DISC_ENV_CORE_PORT
-      value: 8182
-
+  kafka:
+    bootstrapServers: "kafka.core-dev:9092"
+    timeout: 2
+    consumer:
+      errorTopic: "com.ubirch.eventlog.discovery-error"
+      topics: "com.ubirch.eventlog.discovery, test"
+      group: "discovery-kafka"
+      poolRecords: 500
+    producer:
+      topics: "com.ubirch.eventlog.discovery, test"
+      errorTopic: "com.ubirch.eventlog.discovery-error"
+  prometheus:
+    port: 4321
+  core:
+    hosts: "[192.168.14.161]"
+    port: 8182
 
 redis:
   masterURL: "redis-stable-master.core-dev.svc.cluster.local:6379"

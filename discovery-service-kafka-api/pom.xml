@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.ubirch.discovery</groupId>
         <artifactId>discovery-service</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
     </parent>
 
     <!-- basic info -->
@@ -53,6 +53,7 @@
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
         <scalatest-embedded-kafka>2.0.0</scalatest-embedded-kafka>
         <maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
+        <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
 
         <!-- /plugins -->
 
@@ -113,6 +114,35 @@
                 </executions>
             </plugin>
 
+            <!-- create and/or push the created docker image -->
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>dockerfile-maven-plugin</artifactId>
+                <version>${dockerfile-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>default</id>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>push</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <buildDirectory>${project.build.outputDirectory}</buildDirectory>
+                    <repository>ubirch/${project.artifactId}</repository>
+                    <tag>${build.number}</tag>
+                    <buildArgs>
+                        <VERSION>${project.version}</VERSION>
+                        <BUILD>${build.number}</BUILD>
+                        <SERVICE_NAME>${project.name}</SERVICE_NAME>
+                        <JAR_LIBS>target/lib</JAR_LIBS>
+                        <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>                        <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+
+
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${maven-jar-plugin.version}</version>
@@ -121,8 +151,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.ubirch.discovery.kafka.consumer.DefaultStringConsumer</mainClass>
-                            <useUniqueVersions>false</useUniqueVersions>
+                            <mainClass>com.ubirch.discovery.kafka.Service</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

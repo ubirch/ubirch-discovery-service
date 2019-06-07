@@ -43,31 +43,31 @@ spec:
             periodSeconds: 60
           env:
             - name: DISC_ENV_KAFKA_CONS_BOOTSTRAP
-              value: STAGE_DISC_ENV_KAFKA_CONS_BOOTSTRAP
+              value: {{ .Values.discoveryservice.kafka.bootstrapServers }}
             - name: DISC_ENV_KAFKA_CONS_TOPIC
-              value: STAGE_DISC_ENV_KAFKA_CONS_TOPIC
+              value: {{ .Values.discoveryservice.kafka.consumer.topics }}
             - name: DISC_ENV_KAFKA_CONS_GROUPID
-              value: STAGE_DISC_ENV_KAFKA_CONS_GROUPID
+              value: {{ .Values.discoveryservice.kafka.consumer.group }}
             - name: DISC_ENV_KAFKA_CONS_ERRORTOPIC
-              value: STAGE_DISC_ENV_KAFKA_CONS_ERRORTOPIC
+              value: {{ .Values.discoveryservice.kafka.consumer.errorTopic }}
             - name: DISC_ENV_KAFKA_CONS_TIMEOUT
-              value: STAGE_DISC_ENV_KAFKA_CONS_TIMEOUT
+              value: {{ .Values.discoveryservice.kafka.timeout }}
             - name: DISC_ENV_KAFKA_CONS_POOLREC
-              value: STAGE_DISC_ENV_KAFKA_CONS_POOLREC
+              value: {{ .Values.discoveryservice.kafka.consumer }}
             - name: DISC_ENV_KAFKA_PROD_BOOTSTRAP
-              value: STAGE_DISC_ENV_KAFKA_PROD_BOOTSTRAP
+              value: {{ .Values.discoveryservice.kafka.bootstrapServers }}
             - name: DISC_ENV_KAFKA_PROD_ERRORTOPIC
-              value: STAGE_DISC_ENV_KAFKA_PROD_ERRORTOPIC
+              value: {{ .Values.discoveryservice.kafka.producer.errorTopic }}
             - name: DISC_ENV_KAFKA_PROD_TOPIC
-              value: STAGE_DISC_ENV_KAFKA_PROD_TOPIC
+              value: {{ .Values.discoveryservice.kafka.producer.topics }}
             - name: DISC_ENV_KAFKA_PROD_TIMEOUT
-              value: STAGE_DISC_ENV_KAFKA_PROD_TIMEOUT
+              value:  {{ .Values.discoveryservice.kafka.timeout }}
             - name: DISC_ENV_KAFKA_PROMETHEUS
-              value: STAGE_DISC_ENV_KAFKA_PROMETHEUS
+              value:  {{ .Values.discoveryservice.prometheus.port }}
             - name: DISC_ENV_CORE_HOSTS
-              value: STAGE_DISC_ENV_CORE_HOSTS
+              value:  {{ .Values.discoveryservice.core.hosts }}
             - name: DISC_ENV_CORE_PORT
-              value: STAGE_DISC_ENV_CORE_PORT
+              value:  {{ .Values.discoveryservice.core.port }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
