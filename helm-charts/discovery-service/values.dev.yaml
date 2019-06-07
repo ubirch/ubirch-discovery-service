@@ -7,9 +7,9 @@ image:
 discovery-service:
   noHost: true
   ingestFQDN: localhost
-  kafkaURL: "kafka.core-dev.svc.cluster.local:9092" #TOASK
-  redisSecretName: "redis-secrets" #TOASK
-  serverUuid: "9d3c78ff-22f3-4441-a5d1-85c636d486ff" #TOASK
+  kafkaURL: "kafka.core-dev.svc.cluster.local:9092"
+  redisSecretName: "redis-secrets"
+  serverUuid: "9d3c78ff-22f3-4441-a5d1-85c636d486ff"
   env:
     - name: STAGE_DISC_ENV_KAFKA_CONS_BOOTSTRAP
       value: "localhost:9092"
@@ -40,10 +40,10 @@ discovery-service:
 
 
 redis:
-  masterURL: "redis-stable-master.core-dev.svc.cluster.local:6379" #TOASK
-  slaveURL: "redis-stable-slave.core-dev.svc.cluster.local:6379" #TOASK
+  masterURL: "redis-stable-master.core-dev.svc.cluster.local:6379"
+  slaveURL: "redis-stable-slave.core-dev.svc.cluster.local:6379"
 
-#TOASK
+
 ingress:
   enabled: true
   annotations:

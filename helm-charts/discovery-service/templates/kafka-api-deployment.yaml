@@ -1,32 +1,36 @@
-apiVersion: apps/v1
+apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: {{ include "discovery-service.fullname" . }}
-  labels:
-    app.kubernetes.io/name: {{ include "discovery-service.name" . }}
-    helm.sh/chart: {{ include "discovery-service.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  name: "kafka-api-{{ template "discovery-service.fullname" . }}"
+  namespace: {{ .Values.namespace }}
 spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: {{ include "discovery-service.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "discovery-service.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        app: responder-svc
+        env: {{ .Values.environment }}
     spec:
+      serviceAccountName: ingest
       containers:
-        - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - name: responder-svc
+          image: "ubirch/responder:{{ .Values.image.tag | default "latest" }}"
+          imagePullPolicy: Always
           ports:
+            - containerPort: 8080
             - containerPort: 9010
-            - containerPort: 8182
-            - containerPort: 4321
+          resources:
+            requests:
+              cpu: 0.5
+              memory: 0.3Gi
+            limits:
+              cpu: 1
+              memory: 0.5Gi
           readinessProbe:
             tcpSocket:
               port: 9010
@@ -64,18 +68,6 @@ spec:
               value: STAGE_DISC_ENV_CORE_HOSTS
             - name: DISC_ENV_CORE_PORT
               value: STAGE_DISC_ENV_CORE_PORT
-
-          resources:
-    {{- toYaml .Values.resources | nindent 22 }}
-    {{- with .Values.nodeSelector }}
-    nodeSelector:
-      {{- toYaml . | nindent 8 }}
-    {{- end }}
-    {{- with .Values.affinity }}
-    affinity:
-    {{- toYaml . | nindent 8 }}
-    {{- end }}
-    {{- with .Values.tolerations }}
-    tolerations:
-    {{- toYaml . | nindent 8 }}
-    {{- end }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

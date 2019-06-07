@@ -50,7 +50,7 @@ RUN groupadd -r janusgraph --gid=999 && \
 RUN mkdir -p /var/lib/janusgraph && \
     mkdir -p /etc/opt/janusgraph
 
-COPY conf/gremlin-server.yaml /etc/opt/janusgraph/gremlin-server.yaml
+COPY conf/gremlin-server.yaml ${JANUS_CONFIG_DIR}/gremlin-server.yaml
 COPY janusgraph.properties /etc/opt/janusgraph/janusgraph.properties
 COPY docker-entrypoint.sh /usr/local/bin/
 COPY conf/janusgraph-cql-server.properties conf/log4j-server.properties ${JANUS_HOME}/conf/gremlin-server/
