@@ -179,7 +179,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
         AddVertices().verifVertex(v1Reconstructed, pFalse)
         fail
       } catch {
-        case e: ImportToGremlinException =>
+        case _: ImportToGremlinException =>
         case _ => fail
       }
 
@@ -187,7 +187,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
         AddVertices().verifEdge(id1, id2, pFalse)
         fail
       } catch {
-        case e: ImportToGremlinException =>
+        case _: ImportToGremlinException =>
         case _ => fail
       }
 
@@ -195,7 +195,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers {
         AddVertices().verifEdge(id1, id1, pFalse)
         fail
       } catch {
-        case e: ImportToGremlinException =>
+        case _: ImportToGremlinException =>
         case _ => fail
       }
     }
