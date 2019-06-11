@@ -53,7 +53,7 @@ spec:
             - name: DISC_ENV_KAFKA_CONS_TIMEOUT
               value: {{ .Values.discoveryservice.kafka.timeout }}
             - name: DISC_ENV_KAFKA_CONS_POOLREC
-              value: {{ .Values.discoveryservice.kafka.consumer }}
+              value: {{ .Values.discoveryservice.kafka.consumer.poolRecords }}
             - name: DISC_ENV_KAFKA_PROD_BOOTSTRAP
               value: {{ .Values.discoveryservice.kafka.bootstrapServers }}
             - name: DISC_ENV_KAFKA_PROD_ERRORTOPIC
@@ -61,13 +61,13 @@ spec:
             - name: DISC_ENV_KAFKA_PROD_TOPIC
               value: {{ .Values.discoveryservice.kafka.producer.topics }}
             - name: DISC_ENV_KAFKA_PROD_TIMEOUT
-              value:  {{ .Values.discoveryservice.kafka.timeout }}
+              value: {{ .Values.discoveryservice.kafka.timeout }}
             - name: DISC_ENV_KAFKA_PROMETHEUS
-              value:  {{ .Values.discoveryservice.prometheus.port }}
+              value: {{ .Values.discoveryservice.prometheus.port }}
             - name: DISC_ENV_CORE_HOSTS
-              value:  {{ .Values.discoveryservice.core.hosts }}
+              value: {{ .Values.discoveryservice.core.hosts }}
             - name: DISC_ENV_CORE_PORT
-              value:  {{ .Values.discoveryservice.core.port }}
+              value: {{ .Values.discoveryservice.core.port }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       terminationGracePeriodSeconds: 30

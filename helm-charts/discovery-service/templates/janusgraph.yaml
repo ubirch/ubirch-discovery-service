@@ -1,0 +1,63 @@
+# Default values for JanusGraph chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: gcr.io/cloud-solutions-images/janusgraph
+  tag: v2
+  pullPolicy: IfNotPresent
+
+## The default configuration provided here uses attached storage for db and indexing
+## For a distributed deployment, increase the number of replicas and choose
+## a distributed backend for storage and indexing below (i.e. hbase and elasticsearch)
+replicaCount: 1
+
+## set any pod specific resource requests here
+resources: {}
+
+service:
+  type: ClusterIP  # Change to LoadBalancer if you plan to access JanusGraph outside k8s cluster
+  port: 8182
+  serviceAnnotations:
+    # the following line is ignored unless unless using a LoadBalancer with GCP
+    # cloud.google.com/load-balancer-type: "Internal"
+
+## This chart can deploy the Elasticsearch as a dependency.
+## Use this section to provide elasticsearch chart specific values
+elasticsearch:
+  deploy: false  # change to true if you want to deploy Elasticsearch as a requirement along with this chart
+  rbac:
+    create: true  # required for kubernetes >1.7
+
+
+properties:
+  ## use this section to add or adjust JanusGraph properties as needed
+  ## all uncommented values in this section will be placed in the janusgraph.properties file
+
+  ## see http://docs.janusgraph.org/0.2.0/storage-backends.html, choose the desired storage backend
+  ## (i.e. berkeleyje, cassandra, cassandrathrift, cql, embeddedcassandra, hbase, inmemory )
+  ## for Cloud Bigtable choose hbase
+  storage.hostname: HOSTNAME
+  storage.username: USERNAME
+  storage.password: PASSWORD
+  storage.backend: {{ .Values.janusgraph.properties.storage.backend }}
+  storage.cql.keyspace: {{ .Values.janusgraph.properties.storage.keyspace }}
+  cache.db-cache: {{ .Values.janusgraph.properties.cache.dbCache }}
+  cache.db-cache-clean-wait: {{ .Values.janusgraph.properties.cache.dbCacheCleanWait }}
+  cache.db-cache-time: {{ .Values.janusgraph.properties.cache.dbCacheTime }}
+  cache.db-cache-size: {{ .Values.janusgraph.properties.cache.dbCacheSize }}
+  metrics.jmx.enabled: {{ .Values.janusgraph.properties.metricsJmx.enabled }}
+  metrics.jmx.domain: {{ .Values.janusgraph.properties.metricsJmx.domain }}
+
+
+## when using local storage and indexing, choose whether to persist day
+persistence:
+  enabled: false  # set to false if you are testing and do not want to persist data
+  path: /db
+  accessMode: ReadWriteOnce
+  size: 4Gi  # adjust size as needed depending on the size of local storage and indexing required
+  existingClaim:  # to reattach to previously used storage, provide an existing claim (or use --set)
+
+## To make adjustments to janusgraph.properties and gremlin-server.yaml, provide a
+## custom ConfigMap in your k8s cluster (using the helm created ConfigMap as a base).
+configMapOverrideName: ""

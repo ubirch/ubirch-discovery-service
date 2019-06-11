@@ -32,6 +32,21 @@ janusgraph:
   tag: "0.0.2"
   pullPolicy: IfNotPresent
   replicaCount: 1
+  properties:
+    storage:
+      hostname: 172.17.0.5
+      backend: cql
+      keyspace: janusgraph
+    cache:
+      dbCache: true
+      dbCacheCleanWait: 20
+      dbCacheTime: 1000
+      dbCacheSize: 0.25
+    metricsJmx:
+      enabled: true
+      domain: janusgraph
+  gremlinServer:
+
 
 redis:
   masterURL: "redis-stable-master.core-dev.svc.cluster.local:6379"
