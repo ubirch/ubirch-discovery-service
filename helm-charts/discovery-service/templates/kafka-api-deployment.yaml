@@ -1,7 +1,7 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: "kafka-api-{{ template "discovery-service.fullname" . }}"
+  name: {{ include "discovery-service.fullname" . }}
   namespace: {{ .Values.namespace }}
 spec:
   replicas: 1
@@ -16,7 +16,6 @@ spec:
         app: responder-svc
         env: {{ .Values.environment }}
     spec:
-      serviceAccountName: ingest
       containers:
         - name: responder-svc
           image: "ubirch/responder:{{ .Values.image.tag | default "latest" }}"

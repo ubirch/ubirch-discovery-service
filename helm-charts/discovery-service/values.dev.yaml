@@ -24,28 +24,8 @@ discoveryservice:
   prometheus:
     port: 4321
   core:
-    hosts: "[192.168.14.161]"
+    hosts: "[janusgraph.core-dev]"
     port: 8182
-
-janusgraph:
-  image: ubirch/janusgraph
-  tag: "0.0.2"
-  pullPolicy: IfNotPresent
-  replicaCount: 1
-  properties:
-    storage:
-      hostname: 172.17.0.5
-      backend: cql
-      keyspace: janusgraph
-    cache:
-      dbCache: true
-      dbCacheCleanWait: 20
-      dbCacheTime: 1000
-      dbCacheSize: 0.25
-    metricsJmx:
-      enabled: true
-      domain: janusgraph
-  gremlinServer:
 
 
 redis:
