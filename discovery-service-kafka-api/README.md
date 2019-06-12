@@ -53,7 +53,7 @@ trait that defines some necessary functions as well as which library should be i
 
 All tests begin with the configuration of an embedded kafka server/client/producer
 
-```scala
+```
 implicit val config: EmbeddedKafkaConfig = EmbeddedKafkaConfig(
         kafkaPort = 9092,
         zooKeeperPort = PortGiver.giveMeZookeeperPort

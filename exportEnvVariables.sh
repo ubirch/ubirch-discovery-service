@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-#Script Helper to add EventLog Environment Keys to current session.
+#Script Helper to add Discovery Service Environment Keys to current session.
 #Usage:
 #source exportEnvVariables.sh
 

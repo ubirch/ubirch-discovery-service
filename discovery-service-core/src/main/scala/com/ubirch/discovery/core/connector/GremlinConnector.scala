@@ -13,22 +13,35 @@ import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
 
 import scala.concurrent.Future
 
+/**
+  * Factory that allows a single instance of the graph to be available through the entire program
+  */
 object GremlinConnector {
   private val instance = new GremlinConnector
   def get: GremlinConnector = instance
 
+  /*
+  Loads the properties contained in ressources/application.conf in the cluster
+   */
   def buildProperties(config: Config) = {
     val conf = new PropertiesConfiguration()
     conf.addProperty("hosts", config.getString("core.connector.hosts"))
     conf.addProperty("port", config.getString("core.connector.port"))
     conf.addProperty("serializer.className", config.getString("core.connector.serializer.className"))
-    // no idea why the following line needs to be duplicated. Doesn't work without, cf https://stackoverflow.com/questions/45673861/how-can-i-remotely-connect-to-a-janusgraph-server first answer, second comment ¯\_ツ_/¯
+    // no idea why the following line needs to be duplicated. Doesn't work without
+    // cf https://stackoverflow.com/questions/45673861/how-can-i-remotely-connect-to-a-janusgraph-server first answer, second comment ¯\_ツ_/¯
     conf.addProperty("serializer.config.ioRegistries", config.getAnyRef("core.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
     conf.addProperty("serializer.config.ioRegistries", config.getStringList("core.connector.serializer.config.ioRegistries"))
     conf
   }
 }
 
+/**
+  * Class allowing the connection to the graph contained in the JanusGraph server
+  * graph: the graph
+  * g: the traversal of the graph
+  * cluster: the cluster used by the graph to connect to the janusgraph server
+  */
 class GremlinConnector private () extends LazyLogging with ConfigBase {
 
   val cluster: Cluster = Cluster.open(GremlinConnector.buildProperties(conf))
