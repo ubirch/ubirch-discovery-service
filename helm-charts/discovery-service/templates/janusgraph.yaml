@@ -3,8 +3,8 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: gcr.io/cloud-solutions-images/janusgraph
-  tag: v2
+  repository: ubirch/janusgraph
+  tag: 0.0.2
   pullPolicy: IfNotPresent
 
 ## The default configuration provided here uses attached storage for db and indexing
