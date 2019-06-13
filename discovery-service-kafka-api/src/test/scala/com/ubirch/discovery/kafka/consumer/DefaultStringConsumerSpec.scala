@@ -17,22 +17,26 @@ class DefaultStringConsumerSpec extends TestBase {
   val errorTopic = "com.ubirch.eventlog.discovery-error"
   implicit val Deserializer: StringDeserializer = new StringDeserializer
 
-  feature("test") {
-    scenario("truc") {
+  feature("Verifying valid requests") {
+    scenario("normal") {
       implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
       cleanDb()
       withRunningKafka {
-        val listRequests = readFile("/validRequests.txt")
 
-        listRequests.foreach { m =>
-          publishStringMessageToKafka(topic, m)
-        }
+        val allRequests: Seq[String] = readAllFiles("/valid/requests/")
+        val allExpectedResults: Seq[String] = readAllFiles("/valid/expectedResults/")
+        val mapReqExpected: Map[String, String] = (allRequests zip allExpectedResults)(breakOut): Map[String, String]
 
         val consumer = new DefaultExpressDiscoveryApp {}
         consumer.consumption.start()
 
-        Thread.sleep(10000)
-        howManyElementsInJG shouldBe (8, 4)
+        mapReqExpected.foreach { re =>
+          cleanDb()
+          publishStringMessageToKafka(topic, re._1)
+          Thread.sleep(3000)
+          howManyElementsInJG shouldBe howManyElementsShouldBeInJg(re._2)
+        }
+
       }
     }
   }
@@ -42,22 +46,20 @@ class DefaultStringConsumerSpec extends TestBase {
       implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
       cleanDb()
       withRunningKafka {
-        logger.info("putain")
         val allRequests: Seq[String] = readAllFiles("/invalid/requests/parsing/")
-        val allErrors: Seq[String] = readAllFiles("/invalid/errorMessages/parsing/")
-        val mapReqErr: Map[String, String] = (allRequests zip allErrors)(breakOut): Map[String, String]
+        val allExpectedResults: Seq[String] = readAllFiles("/invalid/expectedResults/parsing/")
+        val mapReqExpected: Map[String, String] = (allRequests zip allExpectedResults)(breakOut): Map[String, String]
 
         val consumer = new DefaultExpressDiscoveryApp {}
         consumer.consumption.start()
 
-        mapReqErr.foreach { re =>
+        mapReqExpected.foreach { re =>
           publishStringMessageToKafka(topic, re._1)
           Thread.sleep(100)
           consumeFirstMessageFrom(errorTopic) shouldBe re._2
         }
 
         howManyElementsInJG shouldBe (0, 0)
-
       }
     }
 
@@ -67,21 +69,19 @@ class DefaultStringConsumerSpec extends TestBase {
       withRunningKafka {
 
         val allRequests: Seq[String] = readAllFiles("/invalid/requests/storing/")
-        val allErrors: Seq[String] = readAllFiles("/invalid/errorMessages/storing/")
-        val mapReqErr: Map[String, String] = (allRequests zip allErrors)(breakOut): Map[String, String]
+        val allExpectedResults: Seq[String] = readAllFiles("/invalid/expectedResults/storing/")
+        val mapReqExpected: Map[String, String] = (allRequests zip allExpectedResults)(breakOut): Map[String, String]
 
         val consumer = new DefaultExpressDiscoveryApp {}
         consumer.consumption.start()
 
-        mapReqErr.foreach { re =>
+        mapReqExpected.foreach { re =>
           cleanDb()
           publishStringMessageToKafka(topic, re._1)
           Thread.sleep(1000)
           consumeFirstMessageFrom(errorTopic) shouldBe re._2
           howManyElementsInJG shouldBe (0, 0)
         }
-
-
       }
     }
   }
@@ -135,6 +135,12 @@ class DefaultStringConsumerSpec extends TestBase {
     val numberOfVertices = gc.g.V().count().toList().head.toInt
     val numberOfEdges = gc.g.E().count().toList().head.toInt
     (numberOfVertices, numberOfEdges)
+  }
+
+  def howManyElementsShouldBeInJg(values: String): (Int, Int) = {
+    val nVertices = values.substring(0, values.indexOf(",")).toInt
+    val nEdges = values.substring(values.indexOf(",") + 1).toInt
+    (nVertices, nEdges)
   }
 
 }
