@@ -2,7 +2,7 @@ package com.ubirch.discovery.kafka.models
 
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
-import gremlin.scala.{ Key, KeyValue }
+import gremlin.scala.{Key, KeyValue}
 
 import scala.language.postfixOps
 
@@ -24,26 +24,26 @@ object Store {
     * Entry should be formatted as the following:
     * {"v1":{
     * "id": "ID"
-    * "label": "label" OPTIONAL
     * "properties": {
     * "prop1Name": "prop1Value",
     * ...
     * "propNName": "propNValue"
+    * "label": "label" OPTIONAL
     * }
     * "v2":{
     * "id": "ID"
-    * "label": "label" OPTIONAL
     * "properties": {
     * "prop1Name": "prop1Value",
     * ...
     * "propNName": "propNValue"
+    * "label": "label" OPTIONAL
     * }
     * "edge":{
-    * "label": "label" OPTIONAL
     * "properties":{
     * "prop1Name": "prop1Value",
     * ...
     * "propNName": "propNValue"
+    * "label": "label" OPTIONAL
     * }}}
     *
     * @param req The parsed JSON

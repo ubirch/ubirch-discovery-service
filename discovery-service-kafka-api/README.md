@@ -65,6 +65,15 @@ will start a ZooKeeper instance and a Kafka broker, then executes the body passe
 
 In this body, a producer will send requests to the discovery-service-kafka module, that will store it in the configured 
 JanusGraph instance and verify that the data has been correctly added.
+
+To test invalid request, the procedure is the following:
+* Delete the database
+* Read the first line of all file in resource/invalid/requests/[storing or parsing]/
+* For each file
+    * Send the wrong request
+    * Verify that the corresponding error available on resources/invalid/errorMessages/[storing or parsing]/ is 
+    thrown by the producer
+* Verify that no element were added to the database 
  
 # Deployment
 TODO    
