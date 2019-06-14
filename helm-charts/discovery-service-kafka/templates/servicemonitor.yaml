@@ -1,10 +1,10 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: kafka-api
+  name: {{ template "thischart.name" .}}
   namespace: prometheus
   labels:
-    app: kafka-api
+    app: {{ template "thischart.name" .}}
     release: prometheus-operator
 spec:
   endpoints:
@@ -15,4 +15,4 @@ spec:
     matchNames:
       - {{ .Release.Namespace }}
   selector:
-    name: "event-log-service"
+    name: {{ template "thischart.name" .}}

@@ -3,10 +3,14 @@ package com.ubirch.discovery.core.operation
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStruct
 import gremlin.scala._
-import org.slf4j.{ Logger, LoggerFactory }
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 
+/**
+  * Class that allows the queries of vertices from the gremlin server
+  * @param gc A gremlinConnector instance
+  */
 class GetVertices(implicit val gc: GremlinConnector) {
 
   private val ID = Key[String]("IdAssigned")
@@ -19,7 +23,6 @@ class GetVertices(implicit val gc: GremlinConnector) {
     * @param limit number of random vertices to be returned.
     * @return a list of VertexStruct
     */
-
   def getAllVertices(limit: Int = 1000000): List[VertexStruct] = {
     val listVertexes: List[Vertex] = gc.g.V().limit(limit).l() // return scala list of vertex
     log.info(listVertexes.mkString)

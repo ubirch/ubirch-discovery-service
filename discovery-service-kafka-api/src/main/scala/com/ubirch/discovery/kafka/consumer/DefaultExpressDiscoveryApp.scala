@@ -1,12 +1,12 @@
 package com.ubirch.discovery.kafka.consumer
 
-import com.ubirch.discovery.kafka.models.{ AddV, Store }
+import com.ubirch.discovery.kafka.models.{AddV, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 
 import scala.language.postfixOps
@@ -55,6 +55,11 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   def parseRelations(data: String): Seq[AddV] = {
     implicit val formats: DefaultFormats = DefaultFormats
+    data match {
+      case "" => throw ParsingException(s"Error parsing data [received empty message: $data]")
+      case "[]" => throw ParsingException(s"Error parsing data [received empty message: $data]")
+      case _ =>
+    }
     try {
       jackson.parseJson(data).extract[Seq[AddV]]
     } catch {

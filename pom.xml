@@ -196,7 +196,7 @@
 
         <!-- /Scalatra -->
 
-        <!-- Javax serverlet -->
+        <!-- Javax servlet -->
 
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -204,7 +204,7 @@
             <version>${javaxServlet.version}</version>
         </dependency>
 
-        <!-- /Javax serverlet -->
+        <!-- /Javax servlet -->
 
         <!-- Json4s -->
 
