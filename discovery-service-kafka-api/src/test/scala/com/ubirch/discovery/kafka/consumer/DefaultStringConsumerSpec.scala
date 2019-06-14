@@ -33,7 +33,7 @@ class DefaultStringConsumerSpec extends TestBase {
         mapReqExpected.foreach { re =>
           cleanDb()
           publishStringMessageToKafka(topic, re._1)
-          Thread.sleep(3000)
+          Thread.sleep(4000)
           howManyElementsInJG shouldBe howManyElementsShouldBeInJg(re._2)
         }
 

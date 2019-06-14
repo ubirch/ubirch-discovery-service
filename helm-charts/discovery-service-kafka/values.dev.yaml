@@ -15,11 +15,11 @@ discoveryservice:
     timeout: 2
     consumer:
       errorTopic: "com.ubirch.eventlog.discovery-error"
-      topics: "com.ubirch.eventlog.discovery, test"
+      topics: "com.ubirch.eventlog.discovery"
       group: "discovery-kafka"
       poolRecords: 500
     producer:
-      topics: "com.ubirch.eventlog.discovery, test"
+      topics: "com.ubirch.eventlog.discovery"
       errorTopic: "com.ubirch.eventlog.discovery-error"
   prometheus:
     port: 4321

@@ -1,6 +1,6 @@
 environment: ubirch-dev
 namespace: ubirch-dev
-ingestFQDN: ingest.ubirch.dev.ubirch.com #TOASK
+ingestFQDN: ingest.ubirch.dev.ubirch.com
 keyServiceURL: key-svc.core-dev:8095
 kafkaURL: kafka.core-dev:9092
 image:

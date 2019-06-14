@@ -9,8 +9,8 @@ import com.ubirch.discovery.core.structure.VertexStructDb
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.{ DateTime, DateTimeZone }
-import org.scalatest.{ FeatureSpec, Matchers }
+import org.joda.time.{DateTime, DateTimeZone}
+import org.scalatest.{FeatureSpec, Matchers}
 
 import scala.io.Source
 
@@ -33,93 +33,58 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
   }
 
   feature("add vertices") {
-    scenario("add two unlinked vertex") {
+    scenario("valid scenarios") {
 
       // clean database
       deleteDatabase()
 
       // prepare
-      val allReq = readAllFiles("/addVerticesSpec/valid/requests/")
-      val r1 = allReq.head
-      val (id1, l1, p1) = parseStringVertex(r1.head)
-      val (id2, l2, p2) = parseStringVertex(r1(1))
-      val (lE, pE) = parseStringEdge(r1(2))
-      logger.info(parseStringVertex(r1.head).toString())
-      // commit
-      AddVertices().addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE, lE)
+      val allReq: List[(List[String], (Int, Int))] = readAllFiles("/addVerticesSpec/valid/")
 
-      // analyse
-      //    count number of vertices and edges
-      val nbVertices = gc.g.V().count().toSet().head
-      val nbEdges = gc.g.E.count().toSet().head
-      nbVertices shouldBe 2
-      nbEdges shouldBe 1
+      val listAllElems: List[(List[CoupleVAndE], (Int, Int))] = allReq map { vve: (List[String], (Int, Int)) =>
 
-      //    vertices
-      val v1Reconstructed = new VertexStructDb(id1, gc.g)
-      val v2Reconstructed = new VertexStructDb(id2, gc.g)
+        def getListVVE(accu: (List[CoupleVAndE], (Int, Int)), toParse: (List[String], (Int, Int))): (List[CoupleVAndE], (Int, Int)) = {
+          toParse match {
+            case (Nil, _) => accu
+            case x =>
+              getListVVE((CoupleVAndE(stringToVert(x._1.head), stringToVert(x._1(1)), StringToEdg(x._1(2))) :: accu._1, x._2), (x._1.drop(3), x._2))
+          }
+        }
+        getListVVE((Nil, (0, 0)), vve)
+      }
 
-      try {
-        AddVertices().verifVertex(v1Reconstructed, p1)
-        AddVertices().verifVertex(v2Reconstructed, p2)
-        AddVertices().verifEdge(id1, id2, pE)
-      } catch {
-        case e: ImportToGremlinException =>
-          logger.error("", e)
-          fail()
+      listAllElems foreach { lVVE: (List[CoupleVAndE], (Int, Int)) =>
+        // clean
+        deleteDatabase()
+        // commit
+        lVVE._1 foreach { vve =>
+          AddVertices().addTwoVertices(vve.v1.id, vve.v1.props, vve.v1.label)(vve.v2.id, vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
+        }
+        // verif
+        lVVE._1 foreach { vve =>
+
+          //    vertices
+          val v1Reconstructed = new VertexStructDb(vve.v1.id, gc.g)
+          val v2Reconstructed = new VertexStructDb(vve.v2.id, gc.g)
+
+          try {
+            AddVertices().verifVertex(v1Reconstructed, vve.v1.props)
+            AddVertices().verifVertex(v2Reconstructed, vve.v2.props)
+            AddVertices().verifEdge(vve.v1.id, vve.v2.id, vve.e.props)
+          } catch {
+            case e: ImportToGremlinException =>
+              logger.error("", e)
+              fail()
+          }
+        }
+        val nbVertices = gc.g.V().count().toSet().head
+        val nbEdges = gc.g.E.count().toSet().head
+        (nbVertices, nbEdges) shouldBe lVVE._2
+
       }
 
     }
 
-    scenario("add vertices that follow the format A-B-C") {
-      // clean database
-      deleteDatabase()
-
-      // prepare
-      val id1 = 1.toString
-      val id2 = 2.toString
-      val id3 = 3.toString
-      val now1 = DateTime.now(DateTimeZone.UTC)
-      val p1: List[KeyValue[String]] = List(new KeyValue[String](Created, dateTimeFormat.print(now1)))
-      val now2 = DateTime.now(DateTimeZone.UTC)
-      val p2: List[KeyValue[String]] = List(new KeyValue[String](Created, dateTimeFormat.print(now2)))
-      val now3 = DateTime.now(DateTimeZone.UTC)
-      val p3: List[KeyValue[String]] = List(new KeyValue[String](Created, dateTimeFormat.print(now3)))
-
-      val pE: List[KeyValue[String]] = List(
-        new KeyValue[String](Name, "edge"),
-        new KeyValue[String](Number, "38")
-      )
-
-      // commit
-      AddVertices().addTwoVertices(id1, p1)(id2, p2)(pE)
-      AddVertices().addTwoVertices(id2, p2)(id3, p3)(pE)
-
-      // analyse
-      //    count number of vertices & edges
-      val nbVertex = gc.g.V().count().toSet().head
-      nbVertex shouldBe 3
-      val nbEdges = gc.g.E().count().toSet.head
-      nbEdges shouldBe 2
-
-      //    reconstruct vertices
-      val v1Reconstructed = new VertexStructDb(id1.toString, gc.g)
-      val v2Reconstructed = new VertexStructDb(id2.toString, gc.g)
-      val v3Reconstructed = new VertexStructDb(id3.toString, gc.g)
-
-      //    verify vertices and edges
-      try {
-        AddVertices().verifVertex(v1Reconstructed, p1)
-        AddVertices().verifVertex(v2Reconstructed, p2)
-        AddVertices().verifVertex(v3Reconstructed, p3)
-        AddVertices().verifEdge(id1, id2, pE)
-        AddVertices().verifEdge(id2, id3, pE)
-      } catch {
-        case e: ImportToGremlinException =>
-          logger.error("", e)
-          fail()
-      }
-    }
   }
 
   feature("verify verifier") {
@@ -196,10 +161,25 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
   //TODO: make a test for verifEdge and verifVertex
 
   // ----------- helpers -----------
+  case class CoupleVAndE(v1: Vert, v2: Vert, e: Edg)
+  case class Vert(id: String, label: String, props: List[KeyValue[String]])
+  case class Edg(label: String, props: List[KeyValue[String]])
 
-  def readAllFiles(directory: String): List[List[String]] = {
-    val listFiles = getFilesInDirectory(directory)
-    listFiles map { f => readFile(f.getCanonicalPath) }
+  def readAllFiles(directory: String): List[(List[String], (Int, Int))] = {
+    val filesExpectedResults = getFilesInDirectory(directory + "expectedResults/")
+    val filesReq = getFilesInDirectory(directory + "requests/")
+
+    val allExpectedResults: List[(Int, Int)] = filesExpectedResults map { f =>
+      val bothInt = readFile(f.getCanonicalPath).head
+      val nbVertex = bothInt.substring(0, bothInt.indexOf(",")).toInt
+      val nbEdges = bothInt.substring(bothInt.indexOf(",") + 1).toInt
+      (nbVertex, nbEdges)
+    }
+    val allReq = filesReq map { f => readFile(f.getCanonicalPath) }
+
+    logger.info((allReq zip allExpectedResults) mkString ", ")
+
+    allReq zip allExpectedResults
   }
 
   def getFilesInDirectory(dir: String): List[File] = {
@@ -219,7 +199,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     lines
   }
 
-  def parseStringVertex(vertexStruct: String): (String, String, List[KeyValue[String]]) = {
+  def stringToVert(vertexStruct: String): Vert = {
     val listValues = vertexStruct.split(";").toList
     assert(listValues.length > 1, s"Test is incorrect: $vertexStruct is missing some values")
     val id = listValues.head
@@ -227,28 +207,27 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     // determine if vertex has properties
     if (listValues.length > 2) {
       val listProperties = extractProps(Nil, listValues.drop(2))
-      (id, label, listProperties)
-    } else (id, label, Nil)
+      Vert(id, label, listProperties)
+    } else Vert(id, label, Nil)
   }
 
-  def parseStringEdge(edgeStruct: String): (String, List[KeyValue[String]]) = {
+  def StringToEdg(edgeStruct: String): Edg = {
     val listValues = edgeStruct.split(";").toList
     assert(listValues.nonEmpty, s"Test is incorrect: $edgeStruct is missing some values")
     val label = listValues.head
     if (listValues.length > 1) {
       val listProps = extractProps(Nil, listValues.drop(1))
-      (label, listProps)
-    } else (label, Nil)
+      Edg(label, listProps)
+    } else Edg(label, Nil)
   }
 
   def extractProps(accu: List[KeyValue[String]], list: List[String]): List[KeyValue[String]] = {
     list match {
       case Nil => accu
-      case x :: xs => {
+      case x :: xs =>
         val kvAsListOfTwoString = x.split(":")
         val kv = new KeyValue[String](new Key[String](kvAsListOfTwoString.head), kvAsListOfTwoString(1))
         extractProps(kv :: accu, xs)
-      }
     }
   }
 }
