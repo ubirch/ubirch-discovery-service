@@ -18,6 +18,16 @@
     <packaging>jar</packaging>
 
     <dependencies>
+
+        <!-- Ubirch -->
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>event-log-kafka</artifactId>
+            <version>${ubirchKafka.version}</version>
+        </dependency>
+
+        <!-- / Ubirch -->
+
         <!-- Core -->
         <dependency>
             <groupId>com.ubirch.discovery</groupId>
@@ -54,6 +64,8 @@
         <scalatest-embedded-kafka>2.0.0</scalatest-embedded-kafka>
         <maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
         <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
+        <ubirchKafka.version>1.2.3-SNAPSHOT</ubirchKafka.version>
+
 
         <!-- /plugins -->
 
@@ -85,6 +97,27 @@
                     </execution>
                 </executions>
             </plugin>
+
+
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>${maven-dependency-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <overWriteReleases>false</overWriteReleases>
+                            <includeScope>runtime</includeScope>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
             <!-- disable surefire -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -132,12 +165,13 @@
                     <buildDirectory>${project.build.outputDirectory}</buildDirectory>
                     <repository>ubirch/${project.artifactId}</repository>
                     <tag>${build.number}</tag>
+                    <tag>latest</tag>
                     <buildArgs>
                         <VERSION>${project.version}</VERSION>
                         <BUILD>${build.number}</BUILD>
                         <SERVICE_NAME>${project.name}</SERVICE_NAME>
                         <JAR_LIBS>target/lib</JAR_LIBS>
-                        <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>                        <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
+                        <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
                     </buildArgs>
                 </configuration>
             </plugin>
@@ -152,6 +186,7 @@
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
                             <mainClass>com.ubirch.discovery.kafka.Service</mainClass>
+                            <useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                     </archive>
                 </configuration>

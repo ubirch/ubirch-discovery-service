@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- parent pom -->
+    <!-- info -->
     <groupId>com.ubirch.discovery</groupId>
     <artifactId>discovery-service</artifactId>
     <version>0.1.0</version>
@@ -99,7 +99,6 @@
         <jodaTime.version>2.10</jodaTime.version>
         <jodaConverter.version>2.1.1</jodaConverter.version>
 
-        <ubirchKafka.version>1.2.3-SNAPSHOT</ubirchKafka.version>
 
         <!-- plugins -->
         <maven-dependency-plugin.version>2.8</maven-dependency-plugin.version>
@@ -267,12 +266,6 @@
         <!-- /Joda -->
 
         <!-- Ubirch -->
-
-        <dependency>
-            <groupId>com.ubirch</groupId>
-            <artifactId>event-log-kafka</artifactId>
-            <version>${ubirchKafka.version}</version>
-        </dependency>
 
         <!-- /Ubirch -->
 
