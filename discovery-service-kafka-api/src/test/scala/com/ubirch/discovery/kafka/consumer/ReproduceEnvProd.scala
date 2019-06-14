@@ -141,6 +141,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
       generateRequest("device_id", listDvId(1))("signature", listId(5)),
       generateRequest("leaf_tree", listId(3))("signature", listId(6)),
       generateRequest("device_id", listDvId(2))("signature", listId(6))
+
     )
     (initMsg, listId(3), listId(5))
   }
@@ -162,13 +163,13 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     val properties = generateProperties()
     val label = generateLabel(typeNode)
     val id = generateId(key)
-    val vertex = s"""\"$v1Orv2\":{$id,$properties,$label}"""
+    val vertex = s"""\"${v1Orv2}\":{$id,$properties,$label}"""
     //    logger.info("vertex: " + vertex)
     vertex
   }
 
   def generateId(key: String): String = {
-    val id: String = s"""\"id\":\"$key\""""
+    val id: String = s"""\"id\":\"${key}\""""
     //    logger.info("id: " + id)
     id
   }
