@@ -3,9 +3,9 @@ package com.ubirch.discovery.core.operation
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStructDb
-import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList}
-import com.ubirch.discovery.core.util.Util.{extractValue, getEdge, getEdgeProperties, recompose}
-import gremlin.scala.{Key, KeyValue}
+import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, KeyNotInList }
+import com.ubirch.discovery.core.util.Util.{ extractValue, getEdge, getEdgeProperties, recompose }
+import gremlin.scala.{ Key, KeyValue }
 
 import scala.language.postfixOps
 
