@@ -6,7 +6,7 @@ These instructions will get you a copy of the project up and running on your loc
 purposes. See deployment for notes on how to deploy the project on a live system.
 
 ### Prerequisites and installation
-Note: a local version of Kafka is not needed if your goal is to only test the project
+Note: a local version of Kafka is not needed if the goal is to run the tests
 * A local version of the [Kafka platform](https://kafka.apache.org/quickstart)
     * Start zookeeper and the server 
 
@@ -47,7 +47,7 @@ topic = "com.ubirch.eventlog.discovery, test"
 errorTopic = "test-error"
 ```
 
-Execute ```mvn test``` or use your IDE built-in test module to execute the tests
+Run ```mvn test``` or use your IDE built-in test module to execute the tests
 
 ### Break down into end to end tests
 

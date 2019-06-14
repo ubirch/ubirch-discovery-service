@@ -8,7 +8,9 @@ object Exceptions {
     */
   class ImportToGremlinException(message: String) extends Exception(message)
 
-  case class KeyNotInList(message: String) extends Exception(message)
+  case class KeyNotInList(message: String) extends ImportToGremlinException(message)
 
   case class NumberOfEdgesNotCorrect(msg: String) extends ImportToGremlinException(message = msg)
+
+  case class IdNotCorrect(msg: String) extends ImportToGremlinException("IdNotCorrect: " + msg)
 }

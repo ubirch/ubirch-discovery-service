@@ -3,9 +3,9 @@ package com.ubirch.discovery.core.operation
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStructDb
-import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, KeyNotInList }
-import com.ubirch.discovery.core.util.Util.{ extractValue, getEdge, getEdgeProperties, recompose }
-import gremlin.scala.{ Key, KeyValue }
+import com.ubirch.discovery.core.util.Exceptions.{IdNotCorrect, ImportToGremlinException, KeyNotInList}
+import com.ubirch.discovery.core.util.Util.{extractValue, getEdge, getEdgeProperties, recompose}
+import gremlin.scala.{Key, KeyValue}
 
 import scala.language.postfixOps
 
@@ -23,7 +23,7 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
   def addTwoVertices(id1: String, p1: List[KeyValue[String]], l1: String = label)
     (id2: String, p2: List[KeyValue[String]], l2: String = label)
     (pE: List[KeyValue[String]], lE: String = label): String = {
-    if (id1 == id2) throw new IllegalArgumentException("id1 should not be equal to id2")
+    if (id1 == id2) throw IdNotCorrect(s"id1 $id1 should not be equal to id2")
     val vFrom: VertexStructDb = new VertexStructDb(id1, gc.g)
     val vTo: VertexStructDb = new VertexStructDb(id2, gc.g)
     howMany(vFrom, vTo) match {

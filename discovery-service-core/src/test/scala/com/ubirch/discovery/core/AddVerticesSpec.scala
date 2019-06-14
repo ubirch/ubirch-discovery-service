@@ -18,74 +18,95 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
   implicit val gc: GremlinConnector = GremlinConnector.get
 
-  private val dateTimeFormat = ISODateTimeFormat.dateTime()
-
-  val defaultLabelValue: String = "aLabel"
-
-  val Number: Key[String] = Key[String]("number")
-  val Name: Key[String] = Key[String]("name")
-  val Created: Key[String] = Key[String]("created")
-  val IdAssigned: Key[String] = Key[String]("IdAssigned")
-  implicit val ordering: (KeyValue[String] => String) => Ordering[KeyValue[String]] = Ordering.by[KeyValue[String], String](_)
-
   def deleteDatabase(): Unit = {
     gc.g.V().drop().iterate()
   }
 
-  feature("add vertices") {
-    scenario("valid scenarios") {
+  feature("add vertices - correct tests") {
 
+    def executeTestValid(listCoupleVAndE: List[CoupleVAndE], testConfValid: TestConfValid) = {
+      // clean
+      deleteDatabase()
+      // commit
+      logger.info("Testing " + testConfValid.nameTest)
+      listCoupleVAndE foreach { vve =>
+        AddVertices().addTwoVertices(vve.v1.id, vve.v1.props, vve.v1.label)(vve.v2.id, vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
+      }
+      // verif
+      listCoupleVAndE foreach { vve =>
+
+        val v1Reconstructed = new VertexStructDb(vve.v1.id, gc.g)
+        val v2Reconstructed = new VertexStructDb(vve.v2.id, gc.g)
+
+        try {
+          AddVertices().verifVertex(v1Reconstructed, vve.v1.props)
+          AddVertices().verifVertex(v2Reconstructed, vve.v2.props)
+          AddVertices().verifEdge(vve.v1.id, vve.v2.id, vve.e.props)
+        } catch {
+          case e: Throwable =>
+            logger.error("", e)
+            fail()
+        }
+      }
+      val nbVertices = gc.g.V().count().toSet().head
+      val nbEdges = gc.g.E.count().toSet().head
+      (nbVertices, nbEdges) shouldBe(testConfValid.nbVertex, testConfValid.nbEdges)
+    }
+
+    val allReq: List[(List[String], TestConfValid)] = readAllFilesValid("/addVerticesSpec/valid/")
+
+    val listAllElems: List[(List[CoupleVAndE], TestConfValid)] = allReq map { vve: (List[String], TestConfValid) =>
+      getListVVE((Nil, TestConfValid(0, 0, "")), vve)
+    }
+
+    // run the tests for valid
+    listAllElems foreach { m =>
+      scenario(m._2.nameTest) {
+        executeTestValid(m._1, m._2)
+      }
+    }
+  }
+
+
+  feature("add vertices - incorrect tests") {
+
+    def executeTestInvalid(listCoupleVAndE: List[CoupleVAndE], testConfInvalid: TestConfInvalid): Unit = {
       // clean database
       deleteDatabase()
 
-      // prepare
-      val allReq: List[(List[String], (Int, Int))] = readAllFiles("/addVerticesSpec/valid/")
-
-      val listAllElems: List[(List[CoupleVAndE], (Int, Int))] = allReq map { vve: (List[String], (Int, Int)) =>
-
-        def getListVVE(accu: (List[CoupleVAndE], (Int, Int)), toParse: (List[String], (Int, Int))): (List[CoupleVAndE], (Int, Int)) = {
-          toParse match {
-            case (Nil, _) => accu
-            case x =>
-              getListVVE((CoupleVAndE(stringToVert(x._1.head), stringToVert(x._1(1)), StringToEdg(x._1(2))) :: accu._1, x._2), (x._1.drop(3), x._2))
-          }
-        }
-        getListVVE((Nil, (0, 0)), vve)
-      }
-
-      listAllElems foreach { lVVE: (List[CoupleVAndE], (Int, Int)) =>
-        // clean
-        deleteDatabase()
-        // commit
-        lVVE._1 foreach { vve =>
+      // commit
+      logger.info("Testing " + testConfInvalid.nameTest)
+      listCoupleVAndE foreach { vve =>
+        try {
           AddVertices().addTwoVertices(vve.v1.id, vve.v1.props, vve.v1.label)(vve.v2.id, vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
-        }
-        // verif
-        lVVE._1 foreach { vve =>
-
-          //    vertices
-          val v1Reconstructed = new VertexStructDb(vve.v1.id, gc.g)
-          val v2Reconstructed = new VertexStructDb(vve.v2.id, gc.g)
-
-          try {
-            AddVertices().verifVertex(v1Reconstructed, vve.v1.props)
-            AddVertices().verifVertex(v2Reconstructed, vve.v2.props)
-            AddVertices().verifEdge(vve.v1.id, vve.v2.id, vve.e.props)
-          } catch {
-            case e: ImportToGremlinException =>
-              logger.error("", e)
-              fail()
+        } catch {
+          case e: ImportToGremlinException => {
+            logger.info(e.getMessage)
+            e.getMessage shouldBe testConfInvalid.expectedResult
           }
+          case e =>
+            logger.error("", e)
+            fail()
         }
-        val nbVertices = gc.g.V().count().toSet().head
-        val nbEdges = gc.g.E.count().toSet().head
-        (nbVertices, nbEdges) shouldBe lVVE._2
-
       }
+    }
 
+    val allReq: List[(List[String], TestConfInvalid)] = readAllFilesInvalid("/addVerticesSpec/invalid/")
+
+    val listAllElems: List[(List[CoupleVAndE], TestConfInvalid)] = allReq map { vve: (List[String], TestConfInvalid) =>
+      getListVVE((Nil, TestConfInvalid("", "")), vve)
+    }
+
+    listAllElems foreach { m =>
+      scenario(m._2.nameTest) {
+        executeTestInvalid(m._1, m._2)
+      }
     }
 
   }
+
+
+
 
   feature("verify verifier") {
     scenario("add vertices, verify correct data -> should be TRUE") {
@@ -93,6 +114,18 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     }
 
     scenario("add vertices, verify incorrect vertex properties data -> should be FALSE") {
+
+      val dateTimeFormat = ISODateTimeFormat.dateTime()
+
+      val defaultLabelValue: String = "aLabel"
+
+      val Number: Key[String] = Key[String]("number")
+      val Name: Key[String] = Key[String]("name")
+      val Created: Key[String] = Key[String]("created")
+      val IdAssigned: Key[String] = Key[String]("IdAssigned")
+      implicit val ordering: (KeyValue[String] => String) => Ordering[KeyValue[String]] = Ordering.by[KeyValue[String], String](_)
+
+
       // clean database
       deleteDatabase()
 
@@ -161,26 +194,62 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
   //TODO: make a test for verifEdge and verifVertex
 
   // ----------- helpers -----------
-  case class CoupleVAndE(v1: Vert, v2: Vert, e: Edg)
-  case class Vert(id: String, label: String, props: List[KeyValue[String]])
-  case class Edg(label: String, props: List[KeyValue[String]])
 
-  def readAllFiles(directory: String): List[(List[String], (Int, Int))] = {
+  def getListVVE[T](accu: (List[CoupleVAndE], T), toParse: (List[String], T)): (List[CoupleVAndE], T) = {
+    toParse match {
+      case (Nil, _) => accu
+      case x =>
+        getListVVE((CoupleVAndE(stringToVert(x._1.head), stringToVert(x._1(1)), StringToEdg(x._1(2))) :: accu._1, x._2), (x._1.drop(3), x._2))
+    }
+  }
+
+  def readAllFilesValid(directory: String): List[(List[String], TestConfValid)] = {
     val filesExpectedResults = getFilesInDirectory(directory + "expectedResults/")
     val filesReq = getFilesInDirectory(directory + "requests/")
 
-    val allExpectedResults: List[(Int, Int)] = filesExpectedResults map { f =>
+    val allExpectedResults: List[TestConfValid] = filesExpectedResults map { f =>
       val bothInt = readFile(f.getCanonicalPath).head
       val nbVertex = bothInt.substring(0, bothInt.indexOf(",")).toInt
       val nbEdges = bothInt.substring(bothInt.indexOf(",") + 1).toInt
-      (nbVertex, nbEdges)
+      TestConfValid(nbVertex, nbEdges, f.getName)
+    }
+    val allReq = filesReq map { f => readFile(f.getCanonicalPath) }
+    allReq zip allExpectedResults
+  }
+
+  case class CoupleVAndE(v1: Vert, v2: Vert, e: Edg)
+
+  def readAllFilesInvalid(directory: String): List[(List[String], TestConfInvalid)] = {
+    val filesExpectedResults = getFilesInDirectory(directory + "expectedResults/")
+    val filesReq = getFilesInDirectory(directory + "requests/")
+
+    val allExpectedResults: List[TestConfInvalid] = filesExpectedResults map { f =>
+      val errorMsg = readFile(f.getCanonicalPath).head
+      TestConfInvalid(errorMsg, f.getName)
     }
     val allReq = filesReq map { f => readFile(f.getCanonicalPath) }
 
     logger.info((allReq zip allExpectedResults) mkString ", ")
-
     allReq zip allExpectedResults
   }
+
+  case class Edg(label: String, props: List[KeyValue[String]])
+
+  def stringToVert(vertexStruct: String): Vert = {
+    val listValues = vertexStruct.split(";").toList
+    assert(listValues.nonEmpty, s"Test is incorrect: $vertexStruct is missing some values")
+    val id = listValues.head
+    val label = if (listValues.length > 1) listValues(1) else ""
+    // determine if vertex has properties
+    if (listValues.length > 2) {
+      val listProperties = extractProps(Nil, listValues.drop(2))
+      Vert(id, label, listProperties)
+    } else Vert(id, label, Nil)
+  }
+
+  case class TestConfValid(nbVertex: Int, nbEdges: Int, nameTest: String)
+
+  case class TestConfInvalid(expectedResult: String, nameTest: String)
 
   def getFilesInDirectory(dir: String): List[File] = {
     val path = getClass.getResource(dir)
@@ -199,17 +268,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     lines
   }
 
-  def stringToVert(vertexStruct: String): Vert = {
-    val listValues = vertexStruct.split(";").toList
-    assert(listValues.length > 1, s"Test is incorrect: $vertexStruct is missing some values")
-    val id = listValues.head
-    val label = listValues(1)
-    // determine if vertex has properties
-    if (listValues.length > 2) {
-      val listProperties = extractProps(Nil, listValues.drop(2))
-      Vert(id, label, listProperties)
-    } else Vert(id, label, Nil)
-  }
+  case class Vert(id: String, label: String = "", props: List[KeyValue[String]] = Nil)
 
   def StringToEdg(edgeStruct: String): Edg = {
     val listValues = edgeStruct.split(";").toList

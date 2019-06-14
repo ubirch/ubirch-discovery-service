@@ -1,11 +1,13 @@
 package com.ubirch.discovery.core.structure
 
 import java.util
+import java.util.concurrent.CompletionException
 
-import gremlin.scala.{ Key, KeyValue, TraversalSource }
+import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
+import gremlin.scala.{Key, KeyValue, TraversalSource}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.apache.tinkerpop.gremlin.structure.Vertex
-import org.slf4j.{ Logger, LoggerFactory }
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 
@@ -35,7 +37,11 @@ class VertexStructDb(val id: String, val g: TraversalSource) {
     } else {
       vertex = g.addV(b.of("label", label)).property(Id -> id).l().head
       for (keyV <- properties) {
-        g.V(vertex.id).property(keyV).iterate()
+        try {
+          g.V(vertex.id).property(keyV).iterate()
+        } catch {
+          case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
+        }
       }
     }
   }
