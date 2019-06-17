@@ -53,13 +53,15 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       (nbVertices, nbEdges) shouldBe(testConfValid.nbVertex, testConfValid.nbEdges)
     }
 
+    // get all the test data
     val allReq: List[(List[String], TestConfValid)] = readAllFilesValid("/addVerticesSpec/valid/")
 
+    // format test data
     val listAllElems: List[(List[CoupleVAndE], TestConfValid)] = allReq map { vve: (List[String], TestConfValid) =>
       getListVVE((Nil, TestConfValid(0, 0, "")), vve)
     }
 
-    // run the tests for valid
+    // run the tests
     listAllElems foreach { m =>
       scenario(m._2.nameTest) {
         executeTestValid(m._1, m._2)
@@ -91,12 +93,15 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       }
     }
 
+    // get all the test data
     val allReq: List[(List[String], TestConfInvalid)] = readAllFilesInvalid("/addVerticesSpec/invalid/")
 
+    // format test data
     val listAllElems: List[(List[CoupleVAndE], TestConfInvalid)] = allReq map { vve: (List[String], TestConfInvalid) =>
       getListVVE((Nil, TestConfInvalid("", "")), vve)
     }
 
+    // run the tests
     listAllElems foreach { m =>
       scenario(m._2.nameTest) {
         executeTestInvalid(m._1, m._2)
@@ -117,12 +122,9 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
       val dateTimeFormat = ISODateTimeFormat.dateTime()
 
-      val defaultLabelValue: String = "aLabel"
-
       val Number: Key[String] = Key[String]("number")
       val Name: Key[String] = Key[String]("name")
       val Created: Key[String] = Key[String]("created")
-      val IdAssigned: Key[String] = Key[String]("IdAssigned")
       implicit val ordering: (KeyValue[String] => String) => Ordering[KeyValue[String]] = Ordering.by[KeyValue[String], String](_)
 
 
