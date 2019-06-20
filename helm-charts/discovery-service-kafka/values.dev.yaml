@@ -24,7 +24,7 @@ discoveryservice:
   prometheus:
     port: 4321
   core:
-    hosts: "[janusgraph.core-dev]"
+    hosts: "janusgraph.core-dev"
     port: 8182
 
 

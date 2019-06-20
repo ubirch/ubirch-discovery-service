@@ -1,6 +1,7 @@
 package com.ubirch.discovery.kafka.consumer
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.kafka.TestBase
@@ -8,7 +9,6 @@ import com.ubirch.util.PortGiver
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 
-import scala.collection.breakOut
 import scala.io.Source
 
 class DefaultStringConsumerSpec extends TestBase {
@@ -20,7 +20,7 @@ class DefaultStringConsumerSpec extends TestBase {
 
   feature("Verifying valid requests") {
 
-    def runTest(test: ValidTest): Unit = {
+    def runTest(test: TestStruct): Unit = {
 
       implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
       withRunningKafka {
@@ -28,18 +28,14 @@ class DefaultStringConsumerSpec extends TestBase {
         val consumer = new DefaultExpressDiscoveryApp {}
         consumer.consumption.start()
         cleanDb()
-        logger.info("coucou")
-        logger.info(test.request)
-        logger.info(getGremlinConnector.g.V.count().toList().head.toString)
         publishStringMessageToKafka(topic, test.request)
         Thread.sleep(4000)
         howManyElementsInJG shouldBe howManyElementsShouldBeInJg(test.expectedResult)
-
+        consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
       }
-
     }
 
-    val allTests = getAllValidTests("/valid/")
+    val allTests = getAllTests("/valid/")
 
     allTests foreach { test =>
         scenario(test.nameOfTest) { runTest(test) }
@@ -47,61 +43,76 @@ class DefaultStringConsumerSpec extends TestBase {
 
   }
 
-  feature("Verifying invalid requests") {
-    scenario("Parsing errors") {
+  feature("Invalid requests: Parsing errors") {
+
+    def runTest(test: TestStruct): Unit = {
+
       implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
-      cleanDb()
       withRunningKafka {
-        val allRequests: Seq[String] = readAllFiles("/invalid/requests/parsing/")
-        val allExpectedResults: Seq[String] = readAllFiles("/invalid/expectedResults/parsing/")
-        val mapReqExpected: Map[String, String] = (allRequests zip allExpectedResults)(breakOut): Map[String, String]
 
         val consumer = new DefaultExpressDiscoveryApp {}
         consumer.consumption.start()
-
-        mapReqExpected.foreach { re =>
-          publishStringMessageToKafka(topic, re._1)
-          Thread.sleep(100)
-          consumeFirstMessageFrom(errorTopic) shouldBe re._2
-        }
-
-        howManyElementsInJG shouldBe (0, 0)
+        cleanDb()
+        publishStringMessageToKafka(topic, test.request)
+        Thread.sleep(100)
+        consumeFirstMessageFrom(errorTopic) shouldBe test.expectedResult
+        consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
       }
     }
 
-    scenario("Storing errors") {
-      implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
+    val allTests = getAllTests("/invalid/parsing/")
 
-      withRunningKafka {
-
-        val allRequests: Seq[String] = readAllFiles("/invalid/requests/storing/")
-        val allExpectedResults: Seq[String] = readAllFiles("/invalid/expectedResults/storing/")
-        val mapReqExpected: Map[String, String] = (allRequests zip allExpectedResults)(breakOut): Map[String, String]
-
-        val consumer = new DefaultExpressDiscoveryApp {}
-        consumer.consumption.start()
-
-        mapReqExpected.foreach { re =>
-          cleanDb()
-          publishStringMessageToKafka(topic, re._1)
-          Thread.sleep(1000)
-          consumeFirstMessageFrom(errorTopic) shouldBe re._2
-          howManyElementsInJG shouldBe (0, 0)
-        }
-      }
+    allTests foreach { test =>
+      scenario(test.nameOfTest) { runTest(test) }
     }
+
   }
 
-  // helpers
+  feature("Invalid requests: Storing errors") {
+
+    def runTest(test: TestStruct): Unit = {
+
+      implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
+      withRunningKafka {
+
+        val consumer = new DefaultExpressDiscoveryApp {}
+        consumer.consumption.start()
+        cleanDb()
+        publishStringMessageToKafka(topic, test.request)
+        Thread.sleep(4000)
+        consumeFirstMessageFrom(errorTopic) shouldBe test.expectedResult
+        howManyElementsInJG shouldBe (0, 0)
+        consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
+      }
+    }
+
+    val allTests = getAllTests("/invalid/storing/")
+
+    allTests foreach { test =>
+      scenario(test.nameOfTest) { runTest(test) }
+    }
+
+  }
+
+//   ------ helpers -------
+
 
   def getDefaultEmbeddedKafkaConfig: EmbeddedKafkaConfig = {
     EmbeddedKafkaConfig(kafkaPort = 9092, zooKeeperPort = PortGiver.giveMeZookeeperPort)
   }
 
-  case class ValidTest(request: String, expectedResult: String, nameOfTest: String)
+  case class TestStruct(request: String, expectedResult: String, nameOfTest: String)
 
-  def getAllValidTests(directory: String): List[ValidTest] = {
-    val filesReq: List[File] = getFilesInDirectory(directory + "requests/")
+  /*
+  Get a List of TestStruct containing :
+  - the request to send
+  - the expected result
+  - the name of the test
+  Does so by reading the tests in directory/inquiry and directory/expectedResults, zip the results, and gives the test
+  the same name as its file name
+   */
+  def getAllTests(directory: String): List[TestStruct] = {
+    val filesReq: List[File] = getFilesInDirectory(directory + "inquiry/")
     val filesExpectedResults: List[File] = getFilesInDirectory(directory + "expectedResults/")
 
     val allExpectedResults: List[(String, String)] = filesExpectedResults map { f =>
@@ -113,7 +124,7 @@ class DefaultStringConsumerSpec extends TestBase {
     }
     val res: List[(String, (String, String))] = allRes zip allExpectedResults
 
-    res map { m => ValidTest(m._1, m._2._1, m._2._2) }
+    res map { m => TestStruct(m._1, m._2._1, m._2._2) }
   }
 
 

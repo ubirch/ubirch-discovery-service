@@ -86,7 +86,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
             logger.info(e.getMessage)
             e.getMessage shouldBe testConfInvalid.expectedResult
           }
-          case e =>
+          case e: Throwable =>
             logger.error("", e)
             fail()
         }
@@ -172,7 +172,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
         fail
       } catch {
         case _: ImportToGremlinException =>
-        case _ => fail
+        case _: Throwable => fail
       }
 
       try {
@@ -180,7 +180,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
         fail
       } catch {
         case _: ImportToGremlinException =>
-        case _ => fail
+        case _: Throwable => fail
       }
 
       try {
@@ -188,7 +188,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
         fail
       } catch {
         case _: ImportToGremlinException =>
-        case _ => fail
+        case _: Throwable => fail
       }
     }
   }
