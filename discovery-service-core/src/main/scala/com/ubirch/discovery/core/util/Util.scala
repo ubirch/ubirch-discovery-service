@@ -1,14 +1,14 @@
 package com.ubirch.discovery.core.util
 
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.structure.VertexStruct
-import com.ubirch.discovery.core.util.Exceptions.{ KeyNotInList, NumberOfEdgesNotCorrect }
-import gremlin.scala.{ Key, KeyValue }
+import com.ubirch.discovery.core.structure.{VertexStruct, VertexStructDb}
+import com.ubirch.discovery.core.util.Exceptions.{KeyNotInList, NumberOfEdgesNotCorrect}
+import gremlin.scala.{Key, KeyValue}
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.json4s.JsonDSL._
 import org.json4s.jackson.Serialization
-import org.json4s.{ DefaultFormats, JsonAST }
-import org.slf4j.{ Logger, LoggerFactory }
+import org.json4s.{DefaultFormats, JsonAST}
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
@@ -77,24 +77,19 @@ object Util {
         if (pos == -1) throw KeyNotInList(s"key ${x._1.asInstanceOf[String]} is not contained in the list of keys")
         keys(pos) -> KeyValue(keys(pos), extractValue(theMap, keys(pos).name))
     }
-    if (keys.indexOf(Key[String]("IdAssigned")) != -1) {
-      (resWithId - Key[String]("IdAssigned")).values.toList
-    } else {
       resWithId.values.toList
-    }
   }
 
   /**
     *
-    * @param gc The gremlin connector
-    * @param idFrom Id of the vertex from where the edge goes
-    * @param idTo Id of the vertex to where the edge goes
-    * @param key The key describing the Id of the vertex
-    * @param size Number of expected edges connecting the vertexes (default: 1)
-    * @return The edge
+    * @param gc    The gremlin connector.
+    * @param vFrom vertex from where the edge goes.
+    * @param vTo   vertex to where the edge goes.
+    * @param size  Number of expected edges connecting the vertexes (default: 1).
+    * @return The edge.
     */
-  def getEdge(implicit gc: GremlinConnector, idFrom: String, idTo: String, key: Key[String], size: Int = 1): List[Edge] = {
-    val edgeList = gc.g.V().has(key, idFrom).outE().as("e").inV().has(key, idTo).select("e").toList()
+  def getEdge(implicit gc: GremlinConnector, vFrom: VertexStructDb, vTo: VertexStructDb, size: Int = 1): List[Edge] = {
+    val edgeList = gc.g.V(vFrom.vertex).outE().filter(_.inV().is(vTo.vertex)).toList()
     edgeList match {
       case x: List[Edge] =>
         if (x.size != size) throw NumberOfEdgesNotCorrect(s"The required number of edges linked the two vertices is not met: ${x.size}")

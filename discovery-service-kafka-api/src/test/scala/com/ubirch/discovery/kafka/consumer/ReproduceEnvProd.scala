@@ -1,5 +1,7 @@
 package com.ubirch.discovery.kafka.consumer
 
+import java.util.concurrent.TimeUnit
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.util.PortGiver
@@ -50,7 +52,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
       consumer.consumption.start()
       var counterRT = 0
       for (_ <- 1 to 5) {
-        val (listInit: Seq[String], keyRootTree: String, keyLastId: String) = initNodes(List(idDevice1, idDevice2, idDevice3))
+        val (listInit: Seq[String], keyRootTree: String, keyLastId: String) = initNodes()
         listInit.foreach { m =>
           publishStringMessageToKafka(topic, m)
         }
@@ -88,41 +90,6 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
             publishStringMessageToKafka(topic, chainToNewUpp)
 
             lastId = idNewUPP
-            //          if (counter % 2 == 0) {
-            //            val newId = Random.alphanumeric.take(32).mkString
-            //            val newLabel = "generic"
-            //            val req = generateRequest(lastLabel, lastId)(newLabel, newId)
-            //            publishStringMessageToKafka(topic, req)
-            //            lastId = newId
-            //            lastLabel = newLabel
-            //            logger.info("generic")
-            //          } else {
-            //            if (counter % 4 == 1) {
-            //              val newId = Random.alphanumeric.take(32).mkString
-            //              val newLabel = "upp"
-            //              val req1 = generateRequest(lastLabel, lastId)(newLabel, newId)
-            //              publishStringMessageToKafka(topic, req1)
-            //              val req2 = generateRequest(newLabel, newId)("device_id", dvId) //keyDeviceId
-            //              publishStringMessageToKafka(topic, req2)
-            //              val req3 = generateRequest(newLabel, newId)("leaf_tree", keyFoundationTree)
-            //              publishStringMessageToKafka(topic, req3)
-            //              lastLabel = newLabel
-            //              lastId = newId
-            //              logger.info("upp")
-            //            } else {
-            //              val newId = Random.alphanumeric.take(32).mkString
-            //              val newLabel = "signature"
-            //              val req1 = generateRequest(lastLabel, lastId)(newLabel, newId)
-            //              publishStringMessageToKafka(topic, req1)
-            //              val req2 = generateRequest(newLabel, newId)("device_id", dvId) //keyDeviceId
-            //              publishStringMessageToKafka(topic, req2)
-            //              val req3 = generateRequest(newLabel, newId)("leaf_tree", keyFoundationTree)
-            //              publishStringMessageToKafka(topic, req3)
-            //              lastLabel = newLabel
-            //              lastId = newId
-            //              logger.info("signature")
-            //            }
-            //          }
             counterUPP = counterUPP + 1
             logger.info("counterRT= " + counterRT + ", counterFT = " + counterFT.toString + ", counterUPP = " + counterUPP.toString)
             Thread.sleep(250)
@@ -133,7 +100,9 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
         counterRT = counterRT + 1
       }
       Thread.sleep(30000)
+      consumer.consumption.shutdown(10, TimeUnit.SECONDS)
     }
+
   }
 
   def whichDeviceId(rnd: Float, k1: String, k2: String, k3: String): String = {
@@ -150,16 +119,17 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     *         2/: key leaf tree
     *         3/: key device id
     */
-  def initNodes(listDvId: List[String]): (List[String], String, String) = {
+  def initNodes(): (List[String], String, String) = {
     val listId = List(
       Random.alphanumeric.take(32).mkString,
       Random.alphanumeric.take(32).mkString,
+      Random.alphanumeric.take(32).mkString
     )
     val initMsg = List(
-      generateRequest("blockchain_ETH", listId(0))("root_tree", listId(1)), //1
-      generateRequest("root_tree", listId(1))("blockchain_IOTA", listId(2)), //2
+      generateRequest("blockchain_ETH", listId.head)("root_tree", listId(1)), //1
+      generateRequest("root_tree", listId(1))("blockchain_IOTA", listId(2)) //2
     )
-    (initMsg, listId(1), listId(0))
+    (initMsg, listId(1), listId.head)
   }
 
   def generateRequest(tn1: String, k1: String)(tn2: String, k2: String): String = {
@@ -167,7 +137,6 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     val v2 = generateVertex(tn2, k2, "v2")
     val edge = generateEdge()
     val req = s"""[{$v1,$v2,$edge}]"""
-    //    logger.info("*req: " + req)
     req
   }
 
@@ -182,13 +151,11 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     val label = generateLabel(typeNode)
     val id = generateId(key)
     val vertex = s"""\"$v1Orv2\":{$id,$properties,$label}"""
-    //    logger.info("vertex: " + vertex)
     vertex
   }
 
   def generateId(key: String): String = {
     val id: String = s"""\"id\":\"$key\""""
-    //    logger.info("id: " + id)
     id
   }
 
@@ -196,13 +163,11 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
   def generateEdge(): String = {
     val properties = generateProperties()
     val edge = s"""\"edge\":{$properties}"""
-    //    logger.info("edge: " + edge)
     edge
   }
 
   def generateLabel(lbl: String): String = {
     val label = s"""\"label\":\"$lbl\""""
-    //    logger.info("label: " + label)
     label
   }
 
@@ -215,7 +180,6 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
   def generateProperties(): String = {
     val timestamp: String = (System.currentTimeMillis / 100).toString
     val prop = s"""\"properties\":{\"timeStamp\":\"$timestamp\"}"""
-    //    logger.info("props: " + prop)
     prop
   }
 

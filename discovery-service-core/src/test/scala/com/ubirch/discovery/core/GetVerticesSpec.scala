@@ -2,7 +2,7 @@ package com.ubirch.discovery.core
 
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.GetVertices
-import org.scalatest.{ FeatureSpec, Matchers }
+import org.scalatest.{FeatureSpec, Matchers}
 
 class GetVerticesSpec extends FeatureSpec with Matchers {
 
@@ -12,12 +12,11 @@ class GetVerticesSpec extends FeatureSpec with Matchers {
     scenario("get all") {
 
       //prepare
-      new AddVerticesSpec
 
     }
 
     scenario("detDepth") {
-      new GetVertices().getVertexDepth("1", 3)
+      GetVertices().getVertexDepth("1", 3)
     }
   }
 }

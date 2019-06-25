@@ -1,2 +1,2 @@
-IdNotCorrect: id1 add-twice-same-vertex should not be equal to id2
+IdNotCorrect: p1 = List(IdOfV = 2, ) should not be equal to the properties of the second vertex
 Adding twice the same ID

@@ -1,3 +1,5 @@
-[{"v1":{"id": "1","properties":{"additionalProp1": "string","additionalProp2": "string","additionalProp3": "string"}, "label":"v1"},"v2": {"id": "2","properties": {"name": "aName","number": "5"}, "label": "v2"},"edge": {"properties": {"hrue": "frehou"}}}]
+[{"v1":{"properties":{"ourId":"1"}, "label":"v1"},"v2": {"properties": {"ourId":"2"}, "label": "v2"},"edge": {"properties": {"hrue": "frehou"}}}]
 
 Normal request to add two vertices that contains properties, a label, and an edge to link them
+
+

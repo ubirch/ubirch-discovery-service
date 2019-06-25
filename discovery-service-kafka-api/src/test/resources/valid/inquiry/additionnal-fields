@@ -1,0 +1,1 @@
+[{"v1":{"stuff":"thing", "id": "45", "properties":{"additionalProp1": "string","additionalProp2": "string","additionalProp3": "string"}, "label":"v1"},"v2": {"id": "17","properties": {"name": "aName","number": "5"}, "label": "v2"},"edge": {"properties": {"hrue": "frehou"}}}]

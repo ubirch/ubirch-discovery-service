@@ -28,20 +28,19 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       // clean
       deleteDatabase()
       // commit
-      logger.info("Testing " + testConfValid.nameTest)
       listCoupleVAndE foreach { vve =>
-        AddVertices().addTwoVertices(vve.v1.id, vve.v1.props, vve.v1.label)(vve.v2.id, vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
+        AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
       }
       // verif
       listCoupleVAndE foreach { vve =>
 
-        val v1Reconstructed = new VertexStructDb(vve.v1.id, gc.g)
-        val v2Reconstructed = new VertexStructDb(vve.v2.id, gc.g)
+        val v1Reconstructed = new VertexStructDb(vve.v1.props, gc.g, vve.v1.label)
+        val v2Reconstructed = new VertexStructDb(vve.v2.props, gc.g, vve.v2.label)
 
         try {
           AddVertices().verifVertex(v1Reconstructed, vve.v1.props)
           AddVertices().verifVertex(v2Reconstructed, vve.v2.props)
-          AddVertices().verifEdge(vve.v1.id, vve.v2.id, vve.e.props)
+          AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, vve.e.props)
         } catch {
           case e: Throwable =>
             logger.error("", e)
@@ -54,7 +53,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     }
 
     // get all the test data
-    val allReq: List[(List[String], TestConfValid)] = readAllFilesValid("/addVerticesSpec/valid/")
+    val allReq: List[(List[String], TestConfValid)] = readAllFilesValid("/addVerticesSpec/valid/basic/")
 
     // format test data
     val listAllElems: List[(List[CoupleVAndE], TestConfValid)] = allReq map { vve: (List[String], TestConfValid) =>
@@ -69,6 +68,47 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     }
   }
 
+  feature("add vertices - properties can be updated") {
+
+    def executeTestValid(listCoupleVAndE: List[CoupleVAndE], testConfValid: TestConfValid): Unit = {
+      // clean
+      deleteDatabase()
+      // commit
+      listCoupleVAndE foreach { vve =>
+        AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
+
+        val v1Reconstructed = new VertexStructDb(vve.v1.props, gc.g, vve.v1.label)
+        val v2Reconstructed = new VertexStructDb(vve.v2.props, gc.g, vve.v2.label)
+
+        try {
+          AddVertices().verifVertex(v1Reconstructed, vve.v1.props)
+          AddVertices().verifVertex(v2Reconstructed, vve.v2.props)
+          AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, vve.e.props)
+        } catch {
+          case e: Throwable =>
+            logger.error("", e)
+            fail()
+        }
+      }
+      // verif
+
+      val nbVertices = gc.g.V().count().toSet().head
+      val nbEdges = gc.g.E.count().toSet().head
+      (nbVertices, nbEdges) shouldBe(testConfValid.nbVertex, testConfValid.nbEdges)
+    }
+
+    // get all the test data
+    val allReq: List[(List[String], TestConfValid)] = readAllFilesValid("/addVerticesSpec/valid/updateProps/")
+    // format test data
+    val listAllElems: List[(List[CoupleVAndE], TestConfValid)] = allReq map { vve: (List[String], TestConfValid) =>
+      getListVVE((Nil, TestConfValid(0, 0, "")), vve)
+    }
+    listAllElems foreach { m =>
+      scenario(m._2.nameTest) {
+        executeTestValid(m._1, m._2)
+      }
+    }
+  }
 
   feature("add vertices - incorrect tests") {
 
@@ -80,12 +120,11 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       logger.info("Testing " + testConfInvalid.nameTest)
       listCoupleVAndE foreach { vve =>
         try {
-          AddVertices().addTwoVertices(vve.v1.id, vve.v1.props, vve.v1.label)(vve.v2.id, vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
+          AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
         } catch {
-          case e: ImportToGremlinException => {
+          case e: ImportToGremlinException =>
             logger.info(e.getMessage)
             e.getMessage shouldBe testConfInvalid.expectedResult
-          }
           case e: Throwable =>
             logger.error("", e)
             fail()
@@ -110,9 +149,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
   }
 
-
-
-
   feature("verify verifier") {
     scenario("add vertices, verify correct data -> should be TRUE") {
       // no need to implement it, scenario("add two unlinked vertex") already covers this topic
@@ -127,13 +163,10 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       val Created: Key[String] = Key[String]("created")
       implicit val ordering: (KeyValue[String] => String) => Ordering[KeyValue[String]] = Ordering.by[KeyValue[String], String](_)
 
-
       // clean database
       deleteDatabase()
 
       // prepare
-      val id1 = 1.toString
-      val id2 = 2.toString
 
       val now1 = DateTime.now(DateTimeZone.UTC)
       val p1: List[KeyValue[String]] = List(
@@ -152,7 +185,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       )
 
       // commit
-      AddVertices().addTwoVertices(id1, p1)(id2, p2)(pE)
+      AddVertices().addTwoVertices(p1, "aLabel")(p2, "aLabel")(pE, "aLabel")
 
       // create false data
       val pFalse: List[KeyValue[String]] = List(new KeyValue[String](Number, "1"))
@@ -165,8 +198,8 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       nbVertices shouldBe 2
       nbEdges shouldBe 1
       //    vertices
-      val v1Reconstructed = new VertexStructDb(id1, gc.g)
-
+      val v1Reconstructed = new VertexStructDb(p1, gc.g, "aLabel")
+      val v2Reconstructed = new VertexStructDb(p2, gc.g, "aLabel")
       try {
         AddVertices().verifVertex(v1Reconstructed, pFalse)
         fail
@@ -176,7 +209,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       }
 
       try {
-        AddVertices().verifEdge(id1, id2, pFalse)
+        AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -184,7 +217,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       }
 
       try {
-        AddVertices().verifEdge(id1, id1, pFalse)
+        AddVertices().verifEdge(v1Reconstructed, v1Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -201,7 +234,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     toParse match {
       case (Nil, _) => accu
       case x =>
-        getListVVE((CoupleVAndE(stringToVert(x._1.head), stringToVert(x._1(1)), StringToEdg(x._1(2))) :: accu._1, x._2), (x._1.drop(3), x._2))
+        getListVVE(accu = (accu._1 :+ CoupleVAndE(stringToVert(x._1.head), stringToVert(x._1(1)), StringToEdg(x._1(2))), x._2), toParse = (x._1.drop(3), x._2))
     }
   }
 
@@ -231,7 +264,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     }
     val allReq = filesReq map { f => readFile(f.getCanonicalPath) }
 
-    logger.info((allReq zip allExpectedResults) mkString ", ")
     allReq zip allExpectedResults
   }
 
@@ -240,13 +272,10 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
   def stringToVert(vertexStruct: String): Vert = {
     val listValues = vertexStruct.split(";").toList
     assert(listValues.nonEmpty, s"Test is incorrect: $vertexStruct is missing some values")
-    val id = listValues.head
-    val label = if (listValues.length > 1) listValues(1) else ""
-    // determine if vertex has properties
-    if (listValues.length > 2) {
-      val listProperties = extractProps(Nil, listValues.drop(2))
-      Vert(id, label, listProperties)
-    } else Vert(id, label, Nil)
+    val label = listValues.head
+    val listProperties = extractProps(Nil, listValues.tail)
+    Vert(label, listProperties)
+
   }
 
   case class TestConfValid(nbVertex: Int, nbEdges: Int, nameTest: String)
@@ -270,7 +299,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     lines
   }
 
-  case class Vert(id: String, label: String = "", props: List[KeyValue[String]] = Nil)
+  case class Vert(label: String = "", props: List[KeyValue[String]] = Nil)
 
   def StringToEdg(edgeStruct: String): Edg = {
     val listValues = edgeStruct.split(";").toList

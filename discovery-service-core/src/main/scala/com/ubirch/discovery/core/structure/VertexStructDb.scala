@@ -3,26 +3,36 @@ package com.ubirch.discovery.core.structure
 import java.util
 import java.util.concurrent.CompletionException
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
-import gremlin.scala.{Key, KeyValue, TraversalSource}
+import gremlin.scala.{KeyValue, TraversalSource}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
-import org.apache.tinkerpop.gremlin.structure.Vertex
-import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 
-class VertexStructDb(val id: String, val g: TraversalSource) {
+class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSource, label: String) extends LazyLogging {
 
-  def log: Logger = LoggerFactory.getLogger(this.getClass)
+  var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
+    def lookupByProps(propList: List[KeyValue[String]]): gremlin.scala.Vertex = {
+      propList match {
+        case Nil => null
+        case value :: xs =>
+          g.V().hasLabel(label).has(value).headOption() match {
+            case Some(v) => v
+            case None => lookupByProps(xs)
+          }
+      }
+    }
 
-  val Id: Key[String] = Key[String]("IdAssigned")
-
-  var vertex: Vertex = g.V.has(Id, id).headOption() match {
-    case Some(x) => x
-    case None => null
+    val res = lookupByProps(properties)
+    if (res != null) {
+      addPropertiesToVertex(res.id.toString)
+    }
+    res
   }
 
-  def exist: Boolean = if (vertex == null) false else true
+
+  def exist: Boolean = vertex != null
 
   /**
     * Adds a vertex in the database with his label and properties.
@@ -33,17 +43,27 @@ class VertexStructDb(val id: String, val g: TraversalSource) {
     */
   def addVertex(properties: List[KeyValue[String]], label: String, b: Bindings): Unit = {
     if (exist) {
-      throw new IllegalStateException("Vertex already exist in the database")
+      throw new ImportToGremlinException("Vertex already exist in the database")
     } else {
-      vertex = g.addV(b.of("label", label)).property(Id -> id).l().head
-      for (keyV <- properties) {
-        try {
+      try {
+        vertex = g.addV(b.of("label", label)).property(properties.head).l().head
+        for (keyV <- properties.tail) {
           g.V(vertex.id).property(keyV).iterate()
-        } catch {
-          case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
         }
+        } catch {
+        case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
       }
     }
+  }
+
+  private def addPropertiesToVertex(id: String): Unit = {
+    for (keyV <- properties) {
+      if (!doesPropExist(keyV)) {
+        g.V(id).property(keyV).iterate()
+      }
+    }
+
+    def doesPropExist(keyV: KeyValue[String]): Boolean = g.V(id).properties(keyV.key.name).toList().nonEmpty
   }
 
   /**
