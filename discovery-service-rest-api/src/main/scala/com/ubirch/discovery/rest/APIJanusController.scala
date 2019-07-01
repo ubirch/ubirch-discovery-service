@@ -2,16 +2,16 @@ package com.ubirch.discovery.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.operation.{ AddVertices, GetVertices }
+import com.ubirch.discovery.core.operation.{AddVertices, GetVertices}
 import com.ubirch.discovery.core.structure.VertexStruct
 import com.ubirch.discovery.core.util.Util.arrayVertexToJson
-import gremlin.scala.{ Key, KeyValue }
+import gremlin.scala.{Key, KeyValue}
 import org.json4s.JsonAST.JNothing
 import org.json4s.jackson.Serialization
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ ResponseMessage, Swagger, SwaggerSupport, SwaggerSupportSyntax }
-import org.scalatra.{ CorsSupport, ScalatraServlet }
+import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupport, SwaggerSupportSyntax}
+import org.scalatra.{CorsSupport, ScalatraServlet}
 
 import scala.language.postfixOps
 
@@ -44,14 +44,10 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
       schemes "http" // Force swagger ui to use http instead of https, only need to say it once
       description "Still not implemented. Does not work right now as it should now support dynamic properties addition"
       parameters (
-        pathParam[String]("id1").
-        description("id of the first vertex"),
         pathParam[String]("label1").
         description("label of the first vertex"),
         queryParam[Option[Map[String, String]]]("properties1").
         description("Properties of the second vertex"),
-        pathParam[String]("id2").
-        description("id of the second vertex"),
         pathParam[String]("label2").
         description("label of the second vertex"),
         queryParam[Option[Map[String, String]]]("properties2").
@@ -86,12 +82,10 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     val prop1 = propertiesToKeyValuesList("properties1")
     val prop2 = propertiesToKeyValuesList("properties2")
     val propE = propertiesToKeyValuesList("propertiesEdge")
-    val id1 = params("id1")
-    val id2 = params("id2")
     val label1 = params("label1")
     val label2 = params("label2")
     val labelEdge = params("labelEdge")
-    val res = new AddVertices().addTwoVertices(id1, prop1, label1)(id2, prop2, label2)(propE, labelEdge)
+    val res = new AddVertices().addTwoVertices(prop1, label1)(prop2, label2)(propE, labelEdge)
     res
   }
 

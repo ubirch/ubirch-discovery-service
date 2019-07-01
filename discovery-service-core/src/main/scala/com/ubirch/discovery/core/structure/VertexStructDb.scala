@@ -31,7 +31,6 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
     res
   }
 
-
   def exist: Boolean = vertex != null
 
   /**
@@ -50,7 +49,7 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
         for (keyV <- properties.tail) {
           g.V(vertex.id).property(keyV).iterate()
         }
-        } catch {
+      } catch {
         case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
       }
     }

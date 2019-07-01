@@ -41,7 +41,6 @@ class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
 
       val vSDb = new VertexStructDb(properties, gc.g, label)
 
-
       vSDb.addVertex(properties, "aLabel", gc.b)
 
       val response = vSDb.getPropertiesMap

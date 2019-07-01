@@ -77,7 +77,7 @@ object Util {
         if (pos == -1) throw KeyNotInList(s"key ${x._1.asInstanceOf[String]} is not contained in the list of keys")
         keys(pos) -> KeyValue(keys(pos), extractValue(theMap, keys(pos).name))
     }
-      resWithId.values.toList
+    resWithId.values.toList
   }
 
   /**
@@ -89,7 +89,7 @@ object Util {
     * @return The edge.
     */
   def getEdge(implicit gc: GremlinConnector, vFrom: VertexStructDb, vTo: VertexStructDb, size: Int = 1): List[Edge] = {
-    val edgeList = gc.g.V(vFrom.vertex).outE().filter(_.inV().is(vTo.vertex)).toList()
+    val edgeList = gc.g.V(vFrom.vertex).outE().as("e").inV().is(vTo.vertex).select("e").l() //filter(_.inV().is(vTo.vertex)).toList()
     edgeList match {
       case x: List[Edge] =>
         if (x.size != size) throw NumberOfEdgesNotCorrect(s"The required number of edges linked the two vertices is not met: ${x.size}")

@@ -112,8 +112,8 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     * @return boolean. True = linked, False = not linked.
     */
   private def areVertexLinked(vFrom: VertexStructDb, vTo: VertexStructDb): Boolean = {
-    val oneWay = gc.g.V(vFrom.vertex).outE().as("e").filter(_.inV().is(vTo.vertex)).toList() //inV.has(ID, vTo.id).select("e").toList
-    val otherWay = gc.g.V(vTo.vertex).outE().as("e").filter(_.inV().is(vFrom.vertex)).toList()
+    val oneWay = gc.g.V(vFrom.vertex).outE().inV().is(vTo.vertex).l() // filter(_.inV().is(vTo.vertex)).toList() //inV.has(ID, vTo.id).select("e").toList
+    val otherWay = gc.g.V(vTo.vertex).outE().inV().is(vFrom.vertex).l() //.filter(_.inV().is(vFrom.vertex)).toList()
     oneWay.nonEmpty || otherWay.nonEmpty
   }
 
