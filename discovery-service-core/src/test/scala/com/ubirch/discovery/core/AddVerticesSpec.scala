@@ -69,7 +69,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     }
   }
 
-
   feature("add vertices - incorrect tests") {
 
     def executeTestInvalid(listCoupleVAndE: List[CoupleVAndE], testConfInvalid: TestConfInvalid): Unit = {
@@ -110,9 +109,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
   }
 
-
-
-
   feature("verify verifier") {
     scenario("add vertices, verify correct data -> should be TRUE") {
       // no need to implement it, scenario("add two unlinked vertex") already covers this topic
@@ -126,7 +122,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       val Name: Key[String] = Key[String]("name")
       val Created: Key[String] = Key[String]("created")
       implicit val ordering: (KeyValue[String] => String) => Ordering[KeyValue[String]] = Ordering.by[KeyValue[String], String](_)
-
 
       // clean database
       deleteDatabase()
