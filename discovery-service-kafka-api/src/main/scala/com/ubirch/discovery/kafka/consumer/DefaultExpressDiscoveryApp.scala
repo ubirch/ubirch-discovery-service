@@ -1,12 +1,12 @@
 package com.ubirch.discovery.kafka.consumer
 
-import com.ubirch.discovery.kafka.models.{ AddV, Store }
+import com.ubirch.discovery.kafka.models.{AddV, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 
 import scala.language.postfixOps
@@ -38,6 +38,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
     consumerRecords.foreach { cr =>
+      val t0 = System.nanoTime()
 
       logger.debug("Received value: " + cr.value())
 
@@ -50,6 +51,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
           logger.error(ErrorsHandler.generateException(e))
       }
 
+      val t1 = System.nanoTime()
+      logger.info(s"message processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
     }
   }
 
