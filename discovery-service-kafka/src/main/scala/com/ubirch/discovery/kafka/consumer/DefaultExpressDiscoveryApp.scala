@@ -108,28 +108,36 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       val t0 = System.nanoTime()
       val vertexCached = Store.vertexToCache(data.head.v1)
 
-      val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
-      import scala.concurrent.ExecutionContext.Implicits.global
-      data.foreach { x =>
-        val process = Future(Store.addVCached(x, vertexCached))
-        processesOfFutures += process
+      // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
+      // thus creating a ConnectionTimeOut exception
+      val dataPartition = data.grouped(16).toList
+
+      dataPartition foreach { batchOfAddV =>
+        logger.info(s"STARTED sending a batch of ${batchOfAddV.size} asynchronously")
+        val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
+        import scala.concurrent.ExecutionContext.Implicits.global
+        batchOfAddV.foreach { x =>
+          val process = Future(Store.addVCached(x, vertexCached))
+          processesOfFutures += process
+        }
+
+        val futureProcesses = Future.sequence(processesOfFutures)
+
+        val latch = new CountDownLatch(1)
+        futureProcesses.onComplete {
+          case Success(_) =>
+            latch.countDown()
+          case Failure(e) =>
+            logger.error("Something happened", e)
+            latch.countDown()
+        }
+        latch.await()
+        logger.info(s"FINISHED sending a batch of ${batchOfAddV.size} asynchronously")
+
       }
-
-      val futureProcesses = Future.sequence(processesOfFutures)
-
-      val latch = new CountDownLatch(1)
-      futureProcesses.onComplete {
-        case Success(_) =>
-          latch.countDown()
-        case Failure(e) =>
-          logger.error("Something happened", e)
-          latch.countDown()
-      }
-
-      latch.await()
 
       val t1 = System.nanoTime()
-      logger.info(s"message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      logger.info(s"CAHCED - message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
       true
     } catch {
       case e: Exception =>
