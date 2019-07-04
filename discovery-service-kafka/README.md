@@ -51,7 +51,7 @@ Run ```mvn test``` or use your IDE built-in test module to execute the tests
 
 ### Break down into end to end tests
 
-All tests extends the [TestBase](https://github.com/ubirch/ubirch-discovery-service/blob/master/discovery-service-kafka-api/src/test/scala/com/ubirch/discovery/kafka/TestBase.scala)
+All tests extends the [TestBase](https://github.com/ubirch/ubirch-discovery-service/blob/master/discovery-service-kafka/src/test/scala/com/ubirch/discovery/kafka/TestBase.scala)
 trait that defines some necessary functions as well as which library should be included in the test module
 
 All tests begin with the configuration of an embedded kafka server/client/producer

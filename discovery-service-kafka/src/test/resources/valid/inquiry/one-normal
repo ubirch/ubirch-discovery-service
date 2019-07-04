@@ -1,5 +1,0 @@
-[{"v1":{"properties":{"ourId":"1"}, "label":"v1"},"v2": {"properties": {"ourId":"2"}, "label": "v2"},"edge": {"properties": {"hrue": "frehou"}}}]
-
-Normal request to add two vertices that contains properties, a label, and an edge to link them
-
-

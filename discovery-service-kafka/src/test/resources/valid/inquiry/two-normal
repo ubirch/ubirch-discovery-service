@@ -1,1 +1,0 @@
-[{"v1":{"properties":{"ourId": "1"}, "label":"v1"},"v2": {"properties": {"ourId": "2"}, "label": "v2"},"edge": {"properties": {"hrue": "frehou"}}}, {"v1":{"properties":{"ourId": "3"}},"v2": {"properties": {"ourId":"4"}},"edge": {"label": "aLabelMonPtitGars", "properties": {"hrue": "frehou"}}}]
