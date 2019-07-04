@@ -3,6 +3,7 @@ package com.ubirch.discovery.core.structure
 import java.util
 import java.util.concurrent.CompletionException
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala.{Key, KeyValue, TraversalSource}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
@@ -11,15 +12,20 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 
-class VertexStructDb(val id: String, val g: TraversalSource) {
+class VertexStructDb(val id: String, val g: TraversalSource) extends LazyLogging {
 
   def log: Logger = LoggerFactory.getLogger(this.getClass)
 
   val Id: Key[String] = Key[String]("IdAssigned")
 
-  var vertex: Vertex = g.V.has(Id, id).headOption() match {
-    case Some(x) => x
-    case None => null
+  var vertex: Vertex = {
+    val t0 = System.nanoTime()
+    val res = g.V.has(Id, id).headOption() match {
+      case Some(x) => x
+      case None => null
+    }
+    logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to check if vertex with ID $id is already in the DB")
+    res
   }
 
   def exist: Boolean = if (vertex == null) false else true
@@ -33,8 +39,9 @@ class VertexStructDb(val id: String, val g: TraversalSource) {
     */
   def addVertex(properties: List[KeyValue[String]], label: String, b: Bindings): Unit = {
     if (exist) {
-      throw new IllegalStateException("Vertex already exist in the database")
+      throw new IllegalStateException(s"Vertex ${vertex.id()} already exist in the database")
     } else {
+      val t0 = System.nanoTime()
       vertex = g.addV(b.of("label", label)).property(Id -> id).l().head
       for (keyV <- properties) {
         try {
@@ -43,6 +50,7 @@ class VertexStructDb(val id: String, val g: TraversalSource) {
           case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
         }
       }
+      logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to add vertex ${vertex.id()} to DB")
     }
   }
 

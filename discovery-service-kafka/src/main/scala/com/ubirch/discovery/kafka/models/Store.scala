@@ -1,12 +1,14 @@
 package com.ubirch.discovery.kafka.models
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
+import com.ubirch.discovery.core.structure.VertexStructDb
 import gremlin.scala.{Key, KeyValue}
 
 import scala.language.postfixOps
 
-object Store {
+object Store extends LazyLogging {
 
   implicit val gc = GremlinConnector.get
 
@@ -59,6 +61,26 @@ object Store {
     val pE = mapToListKeyValues(req.edge.properties)
     val lE = req.edge.label
     addVertices.addTwoVertices(id1, p1, l1)(id2, p2, l2)(pE, lE)
+  }
+
+  def vertexToCache(vertexToConvert: VertexKafkaStruct): VertexStructDb = {
+    val vertex = new VertexStructDb(vertexToConvert.id, gc.g)
+    // add it to the DB if not already present
+    if (!vertex.exist) {
+      val pCached = mapToListKeyValues(vertexToConvert.properties)
+      val lCached = vertexToConvert.label
+      vertex.addVertex(pCached, lCached, gc.b)
+    }
+    vertex
+  }
+
+  def addVCached(req: AddV, vCached: VertexStructDb): Unit = {
+    val idNotCached = req.v2.id
+    val pNotCached = mapToListKeyValues(req.v2.properties)
+    val lNotCached = req.v2.label
+    val pE = mapToListKeyValues(req.edge.properties)
+    val lE = req.edge.label
+    addVertices.addTwoVerticesCached(vCached)(idNotCached, pNotCached, lNotCached)(pE, lE)
   }
 
 }

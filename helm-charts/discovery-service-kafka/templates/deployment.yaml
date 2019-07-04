@@ -71,6 +71,10 @@ spec:
               value: {{ .Values.discoveryservice.core.hosts | quote }}
             - name: DISC_ENV_CORE_PORT
               value: {{ .Values.discoveryservice.core.port | quote }}
+            - name: DISC_ENV_CORE_COONPOOL_RECONINTERVAL
+              value: {{ .Values.discoveryservice.core.connectionPool.reconnectInterval | quote }}
+            - name: DISC_ENV_CORE_COONPOOL_MAXWAITCONNECTION
+              value: {{ .Values.discoveryservice.core.connectionPool.maxWaitForConnection | quote }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       terminationGracePeriodSeconds: 30

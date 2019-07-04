@@ -26,6 +26,9 @@ discoveryservice:
   core:
     hosts: "janusgraph.core-dev"
     port: 8182
+    connectionPool:
+      reconnectInterval: 500
+      maxWaitForConnection: 6000
 
 
 redis:
