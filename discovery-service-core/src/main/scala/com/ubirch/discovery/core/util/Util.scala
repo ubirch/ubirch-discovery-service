@@ -1,5 +1,6 @@
 package com.ubirch.discovery.core.util
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.{VertexStruct, VertexStructDb}
 import com.ubirch.discovery.core.util.Exceptions.{KeyNotInList, NumberOfEdgesNotCorrect}
@@ -8,14 +9,11 @@ import org.apache.tinkerpop.gremlin.structure.Edge
 import org.json4s.JsonDSL._
 import org.json4s.jackson.Serialization
 import org.json4s.{DefaultFormats, JsonAST}
-import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
-object Util {
-
-  def log: Logger = LoggerFactory.getLogger(this.getClass)
+object Util extends LazyLogging {
 
   def arrayVertexToJson(arrayVertexes: Array[VertexStruct]): String = {
 
@@ -44,7 +42,7 @@ object Util {
       i = i + 1
     }
 
-    arrayVertexReformated.foreach(v => log.info(v.toString))
+    arrayVertexReformated.foreach(v => logger.info(v.toString))
     arrayVertexReformated
   }
 

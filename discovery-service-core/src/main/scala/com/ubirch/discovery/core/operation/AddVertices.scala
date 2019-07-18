@@ -81,7 +81,7 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     }
   }
 
-  // TODO: change
+  // TODO: change (change what ???)
   def addTwoVerticesCached(vCached: VertexStructDb)
                           (pOther: List[KeyValue[String]], lOther: String = label)
                           (pE: List[KeyValue[String]], lE: String = label): String = {

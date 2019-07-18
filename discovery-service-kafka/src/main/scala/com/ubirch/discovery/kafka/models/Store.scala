@@ -62,6 +62,7 @@ object Store extends LazyLogging {
   def vertexToCache(vertexToConvert: VertexKafkaStruct): VertexStructDb = {
     val pCached = mapToListKeyValues(vertexToConvert.properties)
     val vertex = new VertexStructDb(pCached, gc.g, vertexToConvert.label)
+    if (!vertex.exist) vertex.addVertex(pCached, vertexToConvert.label, gc.b)
     // add it to the DB if not already present
     vertex
   }

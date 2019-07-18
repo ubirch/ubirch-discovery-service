@@ -39,7 +39,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
   }
 
   val addToJanus: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[addVertex]("addToJanusTwoVertexes")
+    (apiOperation[AddVertices]("addToJanusTwoVertexes")
       summary "Add two to JanusGraph"
       schemes "http" // Force swagger ui to use http instead of https, only need to say it once
       description "Still not implemented. Does not work right now as it should now support dynamic properties addition"
@@ -85,11 +85,11 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     val label1 = params("label1")
     val label2 = params("label2")
     val labelEdge = params("labelEdge")
-    val res = new AddVertices().addTwoVertices(prop1, label1)(prop2, label2)(propE, labelEdge)
+    val res = AddVertices().addTwoVertices(prop1, label1)(prop2, label2)(propE, labelEdge)
     res
   }
 
-  val getVertexesJanusGraph: SwaggerSupportSyntax.OperationBuilder =
+  val getVertices: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[VertexStruct]]("getVertexesJanusGraph")
       summary "Display informations about a Vertex"
       description "Display informations about a Vertex (ID and properties)." +
@@ -97,7 +97,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
       parameter queryParam[Option[Int]]("id").description("Id of the vertex we're looking for")
       responseMessage ResponseMessage(404, "404: Can't find edge with the given ID"))
 
-  get("/getVertex", operation(getVertexesJanusGraph)) {
+  get("/getVertices", operation(getVertices)) {
     params.get("id") match {
       case Some(id) =>
         val vertex = new GetVertices().getVertexByPublicId(id)
@@ -112,8 +112,8 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     }
   }
 
-  val getVertexesWithDepth: SwaggerSupportSyntax.OperationBuilder =
-    (apiOperation[List[vertexWithDepth]]("getVertexesWithDepth")
+  val getVerticesWithDepth: SwaggerSupportSyntax.OperationBuilder =
+    (apiOperation[List[VertexWithDepth]]("getVertexesWithDepth")
       summary "Get a vertex and the surrounding ones"
       description "see summary"
       parameter queryParam[String]("id").description("Id of the vertex we're looking for")
@@ -121,9 +121,9 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
 
       responseMessage ResponseMessage(404, "404: Can't find edge with the ID: idNumber"))
 
-  get("/getVertexesDepth", operation(getVertexesWithDepth)) {
+  get("/getVertexesDepth", operation(getVerticesWithDepth)) {
 
-    val neighbors = new GetVertices().getVertexDepth(params.get("id").get, params.get("depth").get.toInt)
+    val neighbors = GetVertices().getVertexDepth(params.get("id").get, params.get("depth").get.toInt)
     if (neighbors == null) {
       halt(404, s"404: Can't find vertex with the provided ID")
     } else {
@@ -134,10 +134,6 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
 
 }
 
-case class properties(map: Map[String, String])
+case class VertexWithDepth(distance: Array[Integer])
 
-case class vertexWithDepth(distance: Array[Integer])
-
-case class neighbor(neighborId: Integer)
-
-case class addVertex(id1: Int, properties1: Map[String, String], id2: Integer, properties2: Map[String, String], propertiesEdge: Map[String, String])
+case class AddVertices(id1: Int, properties1: Map[String, String], id2: Integer, properties2: Map[String, String], propertiesEdge: Map[String, String])

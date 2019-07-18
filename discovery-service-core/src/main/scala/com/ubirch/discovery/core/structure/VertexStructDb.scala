@@ -19,9 +19,9 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
         case value :: xs =>
           if (value.key.name == "type") lookupByProps(xs) else
             g.V().has(value).headOption() match {
-            case Some(v) => v
-            case None => lookupByProps(xs)
-          }
+              case Some(v) => v
+              case None => lookupByProps(xs)
+            }
       }
     }
 

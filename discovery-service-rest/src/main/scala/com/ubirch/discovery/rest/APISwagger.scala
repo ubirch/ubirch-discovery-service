@@ -6,8 +6,8 @@ import org.scalatra.swagger.{ApiInfo, NativeSwaggerBase, Swagger}
 class ResourcesApp(implicit val swagger: Swagger) extends ScalatraServlet with NativeSwaggerBase
 
 object RestApiInfo extends ApiInfo(
-  "The Ubirch API",
-  "Docs for the Ubirch REST API",
+  "Ubirch JanusGraph API",
+  "Swagger documentation for the Ubirch REST API",
   "http://ubirch.de",
   "benoit.george@ubirch.com",
   "Apache V2",
