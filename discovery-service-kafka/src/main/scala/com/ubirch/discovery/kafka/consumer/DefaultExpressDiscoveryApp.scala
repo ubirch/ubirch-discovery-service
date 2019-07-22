@@ -109,7 +109,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       val vertexCached = Store.vertexToCache(data.head.v1)
 
       // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
-      // thus creating a ConnectionTimeOut exception
+      // that could otherwise create a ConnectionTimeOut exception
       val dataPartition = data.grouped(16).toList
 
       dataPartition foreach { batchOfAddV =>

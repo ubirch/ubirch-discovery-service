@@ -12,5 +12,5 @@ object Exceptions {
 
   case class NumberOfEdgesNotCorrect(msg: String) extends ImportToGremlinException(message = msg)
 
-  case class IdNotCorrect(msg: String) extends ImportToGremlinException("IdNotCorrect: " + msg)
+  case class PropertiesNotCorrect(msg: String) extends ImportToGremlinException("IdNotCorrect: " + msg)
 }

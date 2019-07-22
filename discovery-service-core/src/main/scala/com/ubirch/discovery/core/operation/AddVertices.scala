@@ -3,7 +3,7 @@ package com.ubirch.discovery.core.operation
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStructDb
-import com.ubirch.discovery.core.util.Exceptions.{IdNotCorrect, ImportToGremlinException, KeyNotInList}
+import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList, PropertiesNotCorrect}
 import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
 import gremlin.scala.{Key, KeyValue}
 
@@ -23,7 +23,7 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
                     (p2: List[KeyValue[String]], l2: String)
                     (pE: List[KeyValue[String]], lE: String): String = {
 
-    if (p1.sortBy(x => x.key.name) equals p2.sortBy(x => x.key.name)) throw IdNotCorrect(s"p1 = ${p1.map(x => s"${x.key.name} = ${x.value}, ")} should not be equal to the properties of the second vertex")
+    if (p1.sortBy(x => x.key.name) equals p2.sortBy(x => x.key.name)) throw PropertiesNotCorrect(s"p1 = ${p1.map(x => s"${x.key.name} = ${x.value}, ")} should not be equal to the properties of the second vertex")
     val vFrom: VertexStructDb = new VertexStructDb(p1, gc.g, l1)
     val vTo: VertexStructDb = new VertexStructDb(p2, gc.g, l2)
     val t0 = System.nanoTime()
@@ -81,13 +81,12 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     }
   }
 
-  // TODO: change (change what ???)
   def addTwoVerticesCached(vCached: VertexStructDb)
                           (pOther: List[KeyValue[String]], lOther: String = label)
                           (pE: List[KeyValue[String]], lE: String = label): String = {
     logger.info(s"Operating on two vertices: one cached: ${vCached.vertex.id()} and one not: $lOther")
     val t0 = System.nanoTime()
-    if (vCached.properties.sortBy(x => x.key.name) == pOther.sortBy(x => x.key.name)) throw IdNotCorrect(s"v1 should not be equal to v2")
+    if (vCached.properties.sortBy(x => x.key.name) == pOther.sortBy(x => x.key.name)) throw PropertiesNotCorrect(s"v1 should not be equal to v2")
     val vOther: VertexStructDb = new VertexStructDb(pOther, gc.g, lOther)
     if (!vOther.exist) oneExist(vCached)(vOther, pOther, lOther)(pE, lE)
     else twoExist(vCached, vOther, pE, lE)
@@ -146,7 +145,6 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to link vertices")
   }
 
-  // cached version TODO: update with new structure
   private def oneExist(vCached: VertexStructDb)
                       (vTo: VertexStructDb, pTo: List[KeyValue[String]], lTo: String)
                       (pE: List[KeyValue[String]], lE: String): Unit = {

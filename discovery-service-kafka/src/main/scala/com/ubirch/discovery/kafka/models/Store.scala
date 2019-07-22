@@ -52,6 +52,7 @@ object Store extends LazyLogging {
   def addV(req: AddV): Unit = {
     val p1 = mapToListKeyValues(req.v1.properties)
     val l1 = req.v1.label
+    logger.info("l1:" + l1)
     val p2 = mapToListKeyValues(req.v2.properties)
     val l2 = req.v2.label
     val pE = mapToListKeyValues(req.edge.properties)
