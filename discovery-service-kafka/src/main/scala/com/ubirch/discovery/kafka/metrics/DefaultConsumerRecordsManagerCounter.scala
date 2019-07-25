@@ -10,18 +10,21 @@ trait Counter {
 //@Singleton
 class DefaultConsumerRecordsManagerCounter extends Counter {
 
+  val namespace: String = "ubirch"
+
   final val counter: PrometheusCounter = PrometheusCounter.build()
     .namespace(namespace)
     .name("storing_error_total")
     .help("Total storing errors.")
     .labelNames("result")
     .register()
-  val namespace: String = "ubirch"
 
 }
 
 //@Singleton
 class DefaultMetricsLoggerCounter extends Counter {
+
+  val namespace: String = "ubirch"
 
   final val counter: PrometheusCounter = PrometheusCounter.build()
     .namespace(namespace)
@@ -29,6 +32,5 @@ class DefaultMetricsLoggerCounter extends Counter {
     .help("Total relations stored.")
     .labelNames("result")
     .register()
-  val namespace: String = "ubirch"
 
 }
