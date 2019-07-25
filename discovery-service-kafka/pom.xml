@@ -40,10 +40,9 @@
         <!-- Test -->
 
         <dependency>
-            <groupId>net.manub</groupId>
-            <artifactId>scalatest-embedded-kafka_${scala.compat.version}</artifactId>
-            <version>${scalatest-embedded-kafka}</version>
-            <scope>test</scope>
+            <groupId>io.github.embeddedkafka</groupId>
+            <artifactId>embedded-kafka_${scala.compat.version}</artifactId>
+            <version>${embedded-kafka}</version>
         </dependency>
 
         <!-- /Test -->
@@ -65,6 +64,7 @@
         <maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
         <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
         <ubirchKafka.version>1.2.3-SNAPSHOT</ubirchKafka.version>
+        <embedded-kafka>2.3.0</embedded-kafka>
 
 
         <!-- /plugins -->

@@ -5,6 +5,7 @@ import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.util.PortGiver
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 
+import scala.collection.immutable
 import scala.util.Random
 
 object ReproduceEnvProd extends TestBase with LazyLogging {
@@ -25,14 +26,12 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     "blockchain_ETH",
     "root_tree",
     "leaf_tree",
-    "signature",
     "upp",
-    "generic",
     "device_id"
   )
 
   implicit val config: EmbeddedKafkaConfig = EmbeddedKafkaConfig(
-    kafkaPort = 9092,
+    kafkaPort = 9093,
     zooKeeperPort = PortGiver.giveMeZookeeperPort
   )
 
@@ -40,67 +39,68 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
 
     withRunningKafka {
 
+      logger.info(config.kafkaPort.toString)
       val topic = "test"
+      logger.info("starting consumer")
       val consumer = new DefaultExpressDiscoveryApp {}
+      consumer.consumption.start()
+      logger.info("consumer started")
 
       val idDevice1 = Random.alphanumeric.take(32).mkString
       val idDevice2 = Random.alphanumeric.take(32).mkString
       val idDevice3 = Random.alphanumeric.take(32).mkString
 
-      consumer.consumption.start()
       var counterRT = 0
-      for (_ <- 1 to 5) {
+      for (_ <- 1 to 30) {
         val (listInit: Seq[String], keyRootTree: String) = initNodes()
         listInit.foreach { m =>
+          logger.info(m)
           publishStringMessageToKafka(topic, m)
         }
 
         val sigOrigUpp = generateNewKey
-        val reqOrigUppDID = generateRequest("upp", sigOrigUpp)("device_id", whichDeviceId(Random.nextFloat(), idDevice1, idDevice2, idDevice3))
+        val reqOrigUppDID = generateRequest("upp", Map("signature" -> sigOrigUpp, "type" -> "upp"))("device_id", Map("device-id" -> whichDeviceId(Random.nextFloat(), idDevice1, idDevice2, idDevice3), "type" -> "device-id"))
         publishStringMessageToKafka(topic, reqOrigUppDID)
 
         var counterFT = 0
         for (i <- 1 to 3) {
           val keyFoundationTree = generateNewKey
-          val foundationToRoot = generateRequest("root_tree", keyRootTree)("foundation_tree", keyFoundationTree)
+          val foundationToRoot = generateRequest("root_tree", Map("hash" -> keyRootTree, "type" -> "root_tree"))("foundation_tree", Map("hash" -> keyFoundationTree, "type" -> "foundation_tree"))
           publishStringMessageToKafka(topic, foundationToRoot)
           var signature = if (i == 1) sigOrigUpp else generateNewKey
 
           if (i == 1) {
-            val uppToFt = generateRequest("upp", signature)("foundation_tree", keyFoundationTree)
+            val uppToFt = generateRequest("upp", Map("signature" -> signature, "type" -> "upp"))("foundation_tree", Map("hash" -> keyFoundationTree, "type" -> "foundation_tree"))
             publishStringMessageToKafka(topic, uppToFt)
           }
 
           var counterUPP = 0
 
-          for (_ <- 1 to 10) {
+          for (_ <- 1 to 30) {
 
             val dvId = whichDeviceId(Random.nextFloat(), idDevice1, idDevice2, idDevice3)
 
             val chain = signature
             signature = generateNewKey
 
-            val uppToFt = generateRequest("upp", signature)("foundation_tree", keyFoundationTree)
+            val uppToFt = generateRequest("upp", Map("signature" -> signature, "type" -> "upp"))("foundation_tree", Map("hash" -> keyFoundationTree, "type" -> "foundation_tree"))
             publishStringMessageToKafka(topic, uppToFt)
 
-            //            val uppToSign = generateRequest("upp", chain)("signature", idSign)
-            //            publishStringMessageToKafka(topic, uppToSign)
-
-            val uppToDevId = generateRequest("upp", signature)("device_id", dvId)
+            val uppToDevId = generateRequest("upp", Map("signature" -> signature, "type" -> "upp"))("device_id", Map("device-id" -> dvId, "type" -> "device-id"))
             publishStringMessageToKafka(topic, uppToDevId)
 
-            val uppToOldUpp = generateRequest("upp", signature)("upp", chain)
+            val uppToOldUpp = generateRequest("upp", Map("signature" -> signature, "type" -> "upp"))("upp", Map("signature" -> chain, "type" -> "upp"))
             publishStringMessageToKafka(topic, uppToOldUpp)
 
             counterUPP = counterUPP + 1
-            logger.info("counterRT = " + counterRT + ", counterFT = " + counterFT.toString + ", counterUPP = " + counterUPP.toString)
-            Thread.sleep(250)
+            //logger.info("counterRT = " + counterRT + ", counterFT = " + counterFT.toString + ", counterUPP = " + counterUPP.toString)
+            Thread.sleep(10)
           }
           counterFT = counterFT + 1
         }
         counterRT = counterRT + 1
       }
-      Thread.sleep(30000)
+      Thread.sleep(50)
     }
   }
 
@@ -124,16 +124,20 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
       Random.alphanumeric.take(32).mkString,
       Random.alphanumeric.take(32).mkString
     )
+
+    val propertiesBcxEth = Map("hash" -> listId.head, "type" -> "blockchain_ETH")
+    val propertiesBcxIOTA = Map("hash" -> listId(2), "type" -> "blockchain_IOTA")
+    val propertiesRootTree = Map("hash" -> listId(1))
     val initMsg = List(
-      generateRequest("blockchain_ETH", listId.head)("root_tree", listId(1)), //1
-      generateRequest("root_tree", listId(1))("blockchain_IOTA", listId(2)) //2
+      generateRequest("blockchain", propertiesBcxEth)("root_tree", propertiesRootTree), //1
+      generateRequest("blockchain", propertiesBcxIOTA)("root_tree", propertiesRootTree) //2
     )
     (initMsg, listId(1))
   }
 
-  def generateRequest(tn1: String, k1: String)(tn2: String, k2: String): String = {
-    val v1 = generateVertex(tn1, k1, "v1")
-    val v2 = generateVertex(tn2, k2, "v2")
+  def generateRequest(tn1: String, p1: Map[String, String])(tn2: String, p2: Map[String, String]): String = {
+    val v1 = generateVertex(tn1, p1, "v1")
+    val v2 = generateVertex(tn2, p2, "v2")
     val edge = generateEdge()
     val req = s"""[{$v1,$v2,$edge}]"""
     //    logger.info("*req: " + req)
@@ -146,8 +150,8 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     * Generate a vertex that has the following structure:
     * "v1Orv2":{"id":"typeNode", "properties":{"timeStamp":"CREATION_TIME}, "label":"TYPE_NODE"}
     */
-  def generateVertex(typeNode: String, key: String, v1Orv2: String): String = {
-    val properties = generatePropertiesVertex(key)
+  def generateVertex(typeNode: String, props: Map[String, String], v1Orv2: String): String = {
+    val properties = generatePropertiesVertex(props)
     val label = generateLabel(typeNode)
     val vertex = s"""\"$v1Orv2\":{$properties,$label}"""
     //    logger.info("vertex: " + vertex)
@@ -191,6 +195,15 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     val prop = s"""\"properties\":{\"signature\":\"$signature\"}"""
     //    logger.info("props: " + prop)
     prop
+  }
+
+  def generatePropertiesVertex(lProps: Map[String, String]): String = {
+    val prop: immutable.Iterable[String] = lProps map { kv => s"""\"${kv._1}\":\"${kv._2}\",""" }
+    val header = s"""\"properties\":{"""
+    val bottom = s"""}"""
+    val res = header + prop.mkString("").dropRight(1) + bottom
+    //s"""\"properties\":{\"signature\":\"$signature\"}"""
+    res
   }
 
 }

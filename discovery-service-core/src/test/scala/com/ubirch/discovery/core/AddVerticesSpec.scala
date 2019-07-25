@@ -113,7 +113,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
   feature("add vertices - incorrect tests") {
 
     def executeTestInvalid(listCoupleVAndE: List[CoupleVAndE], testConfInvalid: TestConfInvalid): Unit = {
-      // clean database
       deleteDatabase()
 
       // commit

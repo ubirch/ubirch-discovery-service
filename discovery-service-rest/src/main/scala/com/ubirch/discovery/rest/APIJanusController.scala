@@ -2,7 +2,7 @@ package com.ubirch.discovery.rest
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.operation.{AddVertices, GetVertices}
+import com.ubirch.discovery.core.operation.GetVertices
 import com.ubirch.discovery.core.structure.VertexStruct
 import com.ubirch.discovery.core.util.Util.arrayVertexToJson
 import gremlin.scala.{Key, KeyValue}
@@ -85,8 +85,8 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     val label1 = params("label1")
     val label2 = params("label2")
     val labelEdge = params("labelEdge")
-    val res = AddVertices().addTwoVertices(prop1, label1)(prop2, label2)(propE, labelEdge)
-    res
+    //val res: String = AddVertices().addTwoVertices(prop1, label1)(prop2, label2)(propE, labelEdge)
+    "TODO: fix this"
   }
 
   val getVertices: SwaggerSupportSyntax.OperationBuilder =
@@ -100,14 +100,14 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
   get("/getVertices", operation(getVertices)) {
     params.get("id") match {
       case Some(id) =>
-        val vertex = new GetVertices().getVertexByPublicId(id)
+        val vertex = GetVertices().getVertexByPublicId(id)
         if (vertex == null) {
           halt(404, s"404: Can't find vertex with the ID: $id")
         } else {
           vertex.toJson
         }
       case None =>
-        val listVertexes = new GetVertices().getAllVertices(100)
+        val listVertexes = GetVertices().getAllVertices(100)
         arrayVertexToJson(listVertexes.toArray)
     }
   }

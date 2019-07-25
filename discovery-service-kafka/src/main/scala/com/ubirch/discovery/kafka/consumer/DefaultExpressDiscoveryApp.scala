@@ -2,6 +2,7 @@ package com.ubirch.discovery.kafka.consumer
 
 import java.util.concurrent.CountDownLatch
 
+import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsManagerCounter, DefaultMetricsLoggerCounter}
 import com.ubirch.discovery.kafka.models.{AddV, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
@@ -39,13 +40,18 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   override val valueDeserializer: Deserializer[String] = new StringDeserializer
 
+  val errorCounter: Counter = new DefaultConsumerRecordsManagerCounter
+  val storeCounter: Counter = new DefaultMetricsLoggerCounter
+
   override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
     consumerRecords.foreach { cr =>
 
       logger.debug("Received value: " + cr.value())
+      storeCounter.counter.labels("ReceivedMessage").inc()
 
       Try(parseRelations(cr.value())).recover {
         case exception: ParsingException =>
+          errorCounter.counter.labels("ParsingException").inc()
           send(producerErrorTopic, ErrorsHandler.generateException(exception))
           logger.error(ErrorsHandler.generateException(exception))
           Nil
@@ -53,19 +59,19 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
         if (checkIfAllVertexAreTheSame(x)) {
           Try(storeCache(x)) recover {
             case e: StoreException =>
+              errorCounter.counter.labels("StoreException").inc()
               send(producerErrorTopic, ErrorsHandler.generateException(e))
               logger.error(ErrorsHandler.generateException(e))
           }
         } else {
           Try(store(x)) recover {
             case e: StoreException =>
+              errorCounter.counter.labels("StoreException").inc()
               send(producerErrorTopic, ErrorsHandler.generateException(e))
               logger.error(ErrorsHandler.generateException(e))
           }
         }
-
       }
-
     }
   }
 
@@ -95,6 +101,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       data.foreach(Store.addV)
       val t1 = System.nanoTime()
       logger.info(s"message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      storeCounter.counter.labels("RelationshipStoredSuccessfully").inc(data.length)
       true
     } catch {
       case e: Exception =>
@@ -137,6 +144,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       }
 
       val t1 = System.nanoTime()
+      storeCounter.counter.labels("RelationshipStoredSuccessfully").inc(data.length)
       logger.info(s"CAHCED - message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
       true
     } catch {

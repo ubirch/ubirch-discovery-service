@@ -77,5 +77,9 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
     res map { x => x._1 -> x._2.asScala.toList }
   }
 
+  def deleteVertex(): Unit = {
+    if (exist) g.V(vertex.id).drop().iterate()
+  }
+
 }
 
