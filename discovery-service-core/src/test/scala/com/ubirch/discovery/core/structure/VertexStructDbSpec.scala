@@ -38,6 +38,7 @@ class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
         new KeyValue[String](Name, "aName"),
         new KeyValue[String](Created, dateTimeFormat.print(now))
       )
+      implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(properties)
 
       val vSDb = new VertexStructDb(properties, gc.g, label)
 
@@ -56,5 +57,15 @@ class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
 
   }
 
+  def putPropsOnPropSet(propList: List[KeyValue[String]]): Set[Elements.Property] = {
+    def iterateOnListProp(it: List[KeyValue[String]], accu: Set[Elements.Property]): Set[Elements.Property] = {
+      it match {
+        case Nil => accu
+        case x :: xs => iterateOnListProp(xs, accu ++ Set(new Elements.Property(x.key.name, true)))
+      }
+    }
+
+    iterateOnListProp(propList, Set())
+  }
 }
 

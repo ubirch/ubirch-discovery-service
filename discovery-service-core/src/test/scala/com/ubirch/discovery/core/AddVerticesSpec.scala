@@ -5,7 +5,7 @@ import java.io.File
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
-import com.ubirch.discovery.core.structure.VertexStructDb
+import com.ubirch.discovery.core.structure.{Elements, VertexStructDb}
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
@@ -29,10 +29,12 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       deleteDatabase()
       // commit
       listCoupleVAndE foreach { vve =>
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(vve.v1.props) ++ putPropsOnPropSet(vve.v2.props)
         AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
       }
       // verif
       listCoupleVAndE foreach { vve =>
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(vve.v1.props) ++ putPropsOnPropSet(vve.v2.props)
 
         val v1Reconstructed = new VertexStructDb(vve.v1.props, gc.g, vve.v1.label)
         val v2Reconstructed = new VertexStructDb(vve.v2.props, gc.g, vve.v2.label)
@@ -75,6 +77,8 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       deleteDatabase()
       // commit
       listCoupleVAndE foreach { vve =>
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(vve.v1.props) ++ putPropsOnPropSet(vve.v2.props)
+
         AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
 
         val v1Reconstructed = new VertexStructDb(vve.v1.props, gc.g, vve.v1.label)
@@ -119,6 +123,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       logger.info("Testing " + testConfInvalid.nameTest)
       listCoupleVAndE foreach { vve =>
         try {
+          implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(vve.v1.props) ++ putPropsOnPropSet(vve.v2.props)
           AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
         } catch {
           case e: ImportToGremlinException =>
@@ -184,6 +189,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       )
 
       // commit
+      implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(p1)
       AddVertices().addTwoVertices(p1, "aLabel")(p2, "aLabel")(pE, "aLabel")
 
       // create false data
@@ -318,5 +324,16 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
         val kv = new KeyValue[String](new Key[String](kvAsListOfTwoString.head), kvAsListOfTwoString(1))
         extractProps(kv :: accu, xs)
     }
+  }
+
+  def putPropsOnPropSet(propList: List[KeyValue[String]]): Set[Elements.Property] = {
+    def iterateOnListProp(it: List[KeyValue[String]], accu: Set[Elements.Property]): Set[Elements.Property] = {
+      it match {
+        case Nil => accu
+        case x :: xs => iterateOnListProp(xs, accu ++ Set(new Elements.Property(x.key.name, true)))
+      }
+    }
+
+    iterateOnListProp(propList, Set())
   }
 }

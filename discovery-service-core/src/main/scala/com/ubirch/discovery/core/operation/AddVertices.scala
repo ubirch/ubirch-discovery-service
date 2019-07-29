@@ -2,6 +2,7 @@ package com.ubirch.discovery.core.operation
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
+import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.structure.VertexStructDb
 import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList, PropertiesNotCorrect}
 import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
@@ -21,7 +22,8 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
   /* main part of the program */
   def addTwoVertices(p1: List[KeyValue[String]], l1: String)
                     (p2: List[KeyValue[String]], l2: String)
-                    (pE: List[KeyValue[String]], lE: String): String = {
+                    (pE: List[KeyValue[String]], lE: String)
+                    (implicit propSet: Set[Property]): String = {
 
     if (p1.sortBy(x => x.key.name) equals p2.sortBy(x => x.key.name)) throw PropertiesNotCorrect(s"p1 = ${p1.map(x => s"${x.key.name} = ${x.value}, ")} should not be equal to the properties of the second vertex")
     val vFrom: VertexStructDb = new VertexStructDb(p1, gc.g, l1)
@@ -94,7 +96,8 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
 
   def addTwoVerticesCached(vCached: VertexStructDb)
                           (pOther: List[KeyValue[String]], lOther: String = label)
-                          (pE: List[KeyValue[String]], lE: String = label): String = {
+                          (pE: List[KeyValue[String]], lE: String = label)
+                          (implicit propSet: Set[Property]): String = {
     logger.info(s"Operating on two vertices: one cached: ${vCached.vertex.id()} and one not: $lOther")
     val t0 = System.nanoTime()
     if (vCached.properties.sortBy(x => x.key.name) == pOther.sortBy(x => x.key.name)) throw PropertiesNotCorrect(s"v1 should not be equal to v2")
@@ -105,7 +108,6 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     logger.info(s"CACHED - message processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
     "Alles gut"
   }
-
 
   private def oneExistCache(vCached: VertexStructDb)
                            (vTo: VertexStructDb, pTo: List[KeyValue[String]], lTo: String)

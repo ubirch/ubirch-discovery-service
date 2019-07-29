@@ -4,20 +4,21 @@ import java.util
 import java.util.concurrent.CompletionException
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala.{KeyValue, TraversalSource}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 
 import scala.collection.JavaConverters._
 
-class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSource, label: String) extends LazyLogging {
+class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSource, label: String)(implicit propSet: Set[Property]) extends LazyLogging {
 
   var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
     def lookupByProps(propList: List[KeyValue[String]]): gremlin.scala.Vertex = {
       propList match {
         case Nil => null
         case value :: xs =>
-          if (value.key.name == "type") lookupByProps(xs) else
+          if (!isPropertyIterable(value.key.name)) lookupByProps(xs) else
             g.V().has(value).headOption() match {
               case Some(v) => v
               case None => lookupByProps(xs)
@@ -30,6 +31,21 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
       addPropertiesToVertex(res.id.toString)
     }
     res
+  }
+
+  def isPropertyIterable(prop: String): Boolean = {
+    def checkOnProps(set: Set[Property]): Boolean = {
+      set.toList match {
+        case Nil => false
+        case x => if (x.head.name == prop) {
+          if (x.head.getUniqueness) true else checkOnProps(x.tail.toSet)
+        } else {
+          checkOnProps(x.tail.toSet)
+        }
+      }
+    }
+
+    checkOnProps(propSet)
   }
 
   def exist: Boolean = vertex != null

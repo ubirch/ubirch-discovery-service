@@ -12,7 +12,7 @@ object Elements {
     override def toString: String = name
   }
 
-  abstract class Property(name: String, isUnique: Boolean = false) extends Types(name) {
+  class Property(name: String, isUnique: Boolean = false) extends Types(name) {
     override val elementType: ElementType = TheProperty
 
     def getUniqueness: Boolean = isUnique

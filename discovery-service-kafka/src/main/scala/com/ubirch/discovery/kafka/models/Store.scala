@@ -3,6 +3,7 @@ package com.ubirch.discovery.kafka.models
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
+import com.ubirch.discovery.core.structure.Elements.{Label, Property}
 import com.ubirch.discovery.core.structure.VertexStructDb
 import gremlin.scala.{Key, KeyValue}
 
@@ -11,6 +12,8 @@ import scala.language.postfixOps
 object Store extends LazyLogging {
 
   implicit val gc: GremlinConnector = GremlinConnector.get
+
+  implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
   val addVertices = AddVertices()
 
@@ -57,6 +60,10 @@ object Store extends LazyLogging {
     val l2 = req.v2.label
     val pE = mapToListKeyValues(req.edge.properties)
     val lE = req.edge.label
+    checkIfLabelIsAllowed(l1)
+    checkIfLabelIsAllowed(l2)
+    checkIfPropertiesAreAllowed(p1)
+    checkIfPropertiesAreAllowed(p2)
     addVertices.addTwoVertices(p1, l1)(p2, l2)(pE, lE)
   }
 
@@ -68,11 +75,42 @@ object Store extends LazyLogging {
     vertex
   }
 
+  def checkIfLabelIsAllowed(label: String): Boolean = {
+    def iterate(it: List[Label]): Boolean = {
+      it match {
+        case Nil => false
+        case x :: xs => if (x.name.equals(label)) true else iterate(xs)
+      }
+    }
+
+    iterate(KafkaElements.listOfAllLabels.toList)
+  }
+
+  def checkIfPropertiesAreAllowed(props: List[KeyValue[String]]): Boolean = {
+    def iterate(it: List[Property], prop: String): Boolean = {
+      it match {
+        case Nil => false
+        case x :: xs => if (x.name.equals(prop)) true else iterate(xs, prop)
+      }
+    }
+
+    def checkAllProps(it: List[KeyValue[String]]): Boolean = {
+      it match {
+        case Nil => true
+        case x :: xs => if (iterate(KafkaElements.listOfAllProperties.toList, x.key.name)) checkAllProps(xs) else false
+      }
+    }
+
+    checkAllProps(props)
+  }
+
   def addVCached(req: AddV, vCached: VertexStructDb): Unit = {
     val pNotCached = mapToListKeyValues(req.v2.properties)
     val lNotCached = req.v2.label
     val pE = mapToListKeyValues(req.edge.properties)
     val lE = req.edge.label
+    checkIfLabelIsAllowed(lNotCached)
+    checkIfPropertiesAreAllowed(pNotCached)
     addVertices.addTwoVerticesCached(vCached)(pNotCached, lNotCached)(pE, lE)
   }
 
