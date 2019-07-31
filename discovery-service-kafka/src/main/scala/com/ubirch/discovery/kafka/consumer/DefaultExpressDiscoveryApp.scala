@@ -12,12 +12,11 @@ import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
+trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   override val producerBootstrapServers: String = conf.getString("kafkaApi.kafkaProducer.bootstrapServers")
 
@@ -44,13 +43,13 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   val errorCounter: Counter = new DefaultConsumerRecordsManagerCounter
   val storeCounter: Counter = new DefaultMetricsLoggerCounter
 
-  override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Future[Unit] = {
+  override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
     consumerRecords.foreach { cr =>
 
       logger.debug("Received value: " + cr.value())
       storeCounter.counter.labels("ReceivedMessage").inc()
 
-      val t = parseRelations(cr.value()).recover {
+      Try(parseRelations(cr.value())).recover {
         case exception: ParsingException =>
           errorCounter.counter.labels("ParsingException").inc()
           send(producerErrorTopic, ErrorsHandler.generateException(exception))
@@ -72,7 +71,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
               logger.error(ErrorsHandler.generateException(e))
           }
         }
-
+      }
     }
   }
 
@@ -81,7 +80,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       data forall (data.head.v1.properties.keySet == _.v1.properties.keySet)
   }
 
-    def parseRelations(data: String): Future[Seq[AddV]] = Future {
+  def parseRelations(data: String): Seq[AddV] = {
 
     implicit val formats: DefaultFormats = DefaultFormats
     data match {
