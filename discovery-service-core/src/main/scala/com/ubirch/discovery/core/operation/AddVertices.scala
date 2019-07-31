@@ -1,5 +1,7 @@
 package com.ubirch.discovery.core.operation
 
+import java.util.concurrent.CountDownLatch
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStructDb
@@ -7,7 +9,12 @@ import com.ubirch.discovery.core.util.Exceptions.{IdNotCorrect, ImportToGremlinE
 import com.ubirch.discovery.core.util.Util.{extractValue, getEdge, getEdgeProperties, recompose}
 import gremlin.scala.{Key, KeyValue}
 
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 /**
   * Allows the storage of two nodes (vertices) in the janusgraph server. Link them together
@@ -27,30 +34,15 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     logger.info(s"operating on two vertices: one $l1 and one $l2")
     val t0 = System.nanoTime()
     if (id1 == id2) throw IdNotCorrect(s"id1 $id1 should not be equal to id2")
-    val vFrom: VertexStructDb = new VertexStructDb(id1, gc.g)
-    val vTo: VertexStructDb = new VertexStructDb(id2, gc.g)
+    val (vFrom, vTo) = getVFromVTo(id1, id2)
     howMany(vFrom, vTo) match {
       case 0 => noneExist(vFrom, p1, l1)(vTo, p2, l2)(pE, lE)
       case 1 => oneExist(vFrom, p1, l1)(vTo, p2, l2)(pE, lE)
       case 2 => twoExist(vFrom, vTo, pE, lE)
     }
     val t1 = System.nanoTime()
-    logger.info(s"message processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+    logger.info(s"INTERNAL - message processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
     "OK BB" //TODO: change this return line
-  }
-
-  def addTwoVerticesCached(vCached: VertexStructDb)
-                          (idOther: String, pOther: List[KeyValue[String]], lOther: String = label)
-                          (pE: List[KeyValue[String]], lE: String = label): String = {
-    logger.info(s"Operating on two vertices: one cached: ${vCached.vertex.id()} and one not: $lOther")
-    val t0 = System.nanoTime()
-    if (vCached.vertex.id().toString == idOther) throw IdNotCorrect(s"id1 $idOther should not be equal to id2")
-    val vOther: VertexStructDb = new VertexStructDb(idOther, gc.g)
-    if (!vOther.exist) oneExist(vCached)(vOther, pOther, lOther)(pE, lE)
-    else twoExist(vCached, vOther, pE, lE)
-    val t1 = System.nanoTime()
-    logger.info(s"CACHED - message processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
-    "Alles gut"
   }
 
   /*
@@ -62,12 +54,53 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     (vTo: VertexStructDb, p2: List[KeyValue[String]], l2: String)
     (pE: List[KeyValue[String]], lE: String): Unit = {
     logger.info("None of the two vertices were in the database")
-    vFrom.addVertex(p1, l1, gc.b)
-    //    verifVertex(vFrom, p1, l1)
-    vTo.addVertex(p2, l2, gc.b)
-    //    verifVertex(vTo, p2, l2)
+    addVertexAsync(List((vFrom, p1, l1), (vTo, p1, l1)))
+    /*vFrom.addVertex(p1, l1, gc.b)
+    vTo.addVertex(p2, l2, gc.b)*/
     createEdge(vFrom, vTo, pE, lE)
-    //    verifEdge(vFrom.id, vTo.id, pE)
+  }
+
+  def addVertexAsync(vertices: List[(VertexStructDb, List[KeyValue[String]], String)]): Unit = {
+    val processesOfFutures: ListBuffer[Future[Unit]] = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
+    vertices.foreach { v =>
+      val process = Future(v._1.addVertex(v._2, v._3, gc.b))
+      processesOfFutures += process
+    }
+
+    val futureProcesses: Future[ListBuffer[Unit]] = Future.sequence(processesOfFutures)
+
+    val latch = new CountDownLatch(1)
+
+    futureProcesses.onComplete {
+      case Success(l) =>
+        latch.countDown()
+      case Failure(e) =>
+        throw e
+        latch.countDown()
+    }
+    latch.await()
+  }
+
+  /**
+    * Create an edge between two vertices.
+    *
+    * @param vFrom First vertex.
+    * @param vTo   Second vertex.
+    * @param pE    properties of the edge that will link them.
+    * @param lE    label of the edge that will link them.
+    */
+  private def createEdge(vFrom: VertexStructDb, vTo: VertexStructDb, pE: List[KeyValue[String]], lE: String): Unit = {
+    val t0 = System.nanoTime()
+    if (pE.isEmpty) {
+      gc.g.V(vFrom.vertex).as("a").V(vTo.vertex).addE(lE).from(vFrom.vertex).toSet().head
+    } else {
+      val edge = gc.g.V(vFrom.vertex).as("a").V(vTo.vertex).addE(lE).property(pE.head).from(vFrom.vertex).toSet().head
+      for (keyV <- pE.tail) {
+        gc.g.E(edge).property(keyV).iterate()
+      }
+    }
+
+    logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to link vertices, len(properties) = ${pE.size} .")
   }
 
   /*
@@ -94,13 +127,9 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     }
   }
 
-  // cached version
-  private def oneExist(vCached: VertexStructDb)
-                      (vTo: VertexStructDb, pTo: List[KeyValue[String]], lTo: String)
-                      (pE: List[KeyValue[String]], lE: String): Unit = {
-    logger.info(s"A vertex was already in the database: ${vCached.id}")
-    vTo.addVertex(pTo, lTo, gc.b)
-    createEdge(vCached, vTo, pE, lE)
+  def getVFromVTo(idVFrom: String, idVTo: String): (VertexStructDb, VertexStructDb) = {
+    val res = createVertexStructDbAsync(List(idVFrom, idVTo))
+    (res.head, res(1))
   }
 
   /*
@@ -121,26 +150,51 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     } else if (vTo.exist) 1 else 0
   }
 
-  /**
-    * Create an edge between two vertices.
-    *
-    * @param vFrom First vertex.
-    * @param vTo   Second vertex.
-    * @param pE    properties of the edge that will link them.
-    * @param lE    label of the edge that will link them.
-    */
-  private def createEdge(vFrom: VertexStructDb, vTo: VertexStructDb, pE: List[KeyValue[String]], lE: String): Unit = {
-    val t0 = System.nanoTime()
-    if (pE.isEmpty) {
-      gc.g.V(vFrom.vertex).as("a").V(vTo.vertex).addE(lE).from(vFrom.vertex).toSet().head
-    } else {
-      val edge = gc.g.V(vFrom.vertex).as("a").V(vTo.vertex).addE(lE).property(pE.head).from(vFrom.vertex).toSet().head
-      for (keyV <- pE.tail) {
-        gc.g.E(edge).property(keyV).iterate()
-      }
+  def createVertexStructDbAsync(ids: List[String]): List[VertexStructDb] = {
+    val processesOfFutures: ListBuffer[Future[VertexStructDb]] = scala.collection.mutable.ListBuffer.empty[Future[VertexStructDb]]
+    ids.foreach { id =>
+      val process = Future(new VertexStructDb(id, gc.g))
+      processesOfFutures += process
     }
 
-    logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to link vertices")
+    val futureProcesses: Future[ListBuffer[VertexStructDb]] = Future.sequence(processesOfFutures)
+
+    val latch = new CountDownLatch(1)
+
+    futureProcesses.onComplete {
+      case Success(l) =>
+        latch.countDown()
+        l
+      case Failure(e) =>
+        throw e
+        latch.countDown()
+        scala.collection.mutable.ListBuffer.empty[Future[VertexStructDb]]
+    }
+    latch.await()
+    Await.result(futureProcesses, 1 second).toList
+  }
+
+  def addTwoVerticesCached(vCached: VertexStructDb)
+                          (idOther: String, pOther: List[KeyValue[String]], lOther: String = label)
+                          (pE: List[KeyValue[String]], lE: String = label): String = {
+    logger.info(s"Operating on two vertices: one cached: ${vCached.vertex.id()} and one not: $lOther")
+    val t0 = System.nanoTime()
+    if (vCached.vertex.id().toString == idOther) throw IdNotCorrect(s"id1 $idOther should not be equal to id2")
+    val vOther: VertexStructDb = new VertexStructDb(idOther, gc.g)
+    if (!vOther.exist) oneExist(vCached)(vOther, pOther, lOther)(pE, lE)
+    else twoExist(vCached, vOther, pE, lE)
+    val t1 = System.nanoTime()
+    logger.info(s"CACHED - message processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+    "Alles gut"
+  }
+
+  // cached version
+  private def oneExist(vCached: VertexStructDb)
+                      (vTo: VertexStructDb, pTo: List[KeyValue[String]], lTo: String)
+                      (pE: List[KeyValue[String]], lE: String): Unit = {
+    logger.info(s"A vertex was already in the database: ${vCached.id}")
+    vTo.addVertex(pTo, lTo, gc.b)
+    createEdge(vCached, vTo, pE, lE)
   }
 
   /**
@@ -152,10 +206,8 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     */
   private def areVertexLinked(vFrom: VertexStructDb, vTo: VertexStructDb): Boolean = {
     val t0 = System.nanoTime()
-    val res = gc.g.V(vFrom.vertex).bothE().bothV().is(vTo.vertex).l()
-    //    val oneWay = gc.g.V(vFrom.vertex).outE().as("e").inV.has(ID, vTo.id).select("e").toList
-    //    val otherWay = gc.g.V(vTo.vertex).outE().as("e").inV.has(ID, vFrom.id).select("e").toList
-    logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to check if vertices were linked. Result: ${res.nonEmpty}")
+    val res = gc.g.V(vTo.vertex).bothE().bothV().is(vFrom.vertex).l()
+    logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to check if vertices ${vFrom.vertex.label()} and ${vTo.vertex.label()} were linked. Result: ${res.nonEmpty}")
     res.nonEmpty
   }
 

@@ -39,6 +39,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   override val valueDeserializer: Deserializer[String] = new StringDeserializer
 
+  val asynchronousBatchSize: Int = conf.getInt("kafkaApi.gremlinConf.asynchronousBatchSize")
+
   override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
     consumerRecords.foreach { cr =>
 
@@ -90,9 +92,36 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
   }
 
   def store(data: Seq[AddV]): Boolean = {
+
     try {
       val t0 = System.nanoTime()
-      data.foreach(Store.addV)
+
+      // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
+      // thus creating a ConnectionTimeOut exception
+      val dataPartition = data.grouped(asynchronousBatchSize).toList
+
+      dataPartition foreach { batchOfAddV =>
+        val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
+        import scala.concurrent.ExecutionContext.Implicits.global
+        batchOfAddV.foreach { x =>
+          val process = Future(Store.addV(x))
+          processesOfFutures += process
+        }
+
+        val futureProcesses = Future.sequence(processesOfFutures)
+
+        val latch = new CountDownLatch(1)
+        futureProcesses.onComplete {
+          case Success(_) =>
+            latch.countDown()
+          case Failure(e) =>
+            logger.error("Something happened", e)
+            latch.countDown()
+        }
+        latch.await()
+
+      }
+
       val t1 = System.nanoTime()
       logger.info(s"message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
       true
@@ -110,7 +139,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
       // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
       // thus creating a ConnectionTimeOut exception
-      val dataPartition = data.grouped(16).toList
+      val dataPartition = data.grouped(asynchronousBatchSize).toList
 
       dataPartition foreach { batchOfAddV =>
         logger.info(s"STARTED sending a batch of ${batchOfAddV.size} asynchronously")
@@ -137,7 +166,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       }
 
       val t1 = System.nanoTime()
-      logger.info(s"CAHCED - message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      logger.info(s"CACHED - message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
       true
     } catch {
       case e: Exception =>

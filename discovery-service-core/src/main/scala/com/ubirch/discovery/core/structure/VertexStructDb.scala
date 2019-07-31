@@ -24,7 +24,7 @@ class VertexStructDb(val id: String, val g: TraversalSource) extends LazyLogging
       case Some(x) => x
       case None => null
     }
-    logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to check if vertex with ID $id is already in the DB")
+    logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to check if vertex with ID $id was already in the DB")
     res
   }
 
