@@ -12,11 +12,12 @@ import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
+trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   override val producerBootstrapServers: String = conf.getString("kafkaApi.kafkaProducer.bootstrapServers")
 
@@ -43,13 +44,13 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
   val errorCounter: Counter = new DefaultConsumerRecordsManagerCounter
   val storeCounter: Counter = new DefaultMetricsLoggerCounter
 
-  override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
+  override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Future[Unit] = {
     consumerRecords.foreach { cr =>
 
       logger.debug("Received value: " + cr.value())
       storeCounter.counter.labels("ReceivedMessage").inc()
 
-      Try(parseRelations(cr.value())).recover {
+      val t = parseRelations(cr.value()).recover {
         case exception: ParsingException =>
           errorCounter.counter.labels("ParsingException").inc()
           send(producerErrorTopic, ErrorsHandler.generateException(exception))
@@ -71,7 +72,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
               logger.error(ErrorsHandler.generateException(e))
           }
         }
-      }
+
     }
   }
 
@@ -80,7 +81,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       data forall (data.head.v1.properties.keySet == _.v1.properties.keySet)
   }
 
-  def parseRelations(data: String): Seq[AddV] = {
+    def parseRelations(data: String): Future[Seq[AddV]] = Future {
+
     implicit val formats: DefaultFormats = DefaultFormats
     data match {
       case "" => throw ParsingException(s"Error parsing data [received empty message: $data]")

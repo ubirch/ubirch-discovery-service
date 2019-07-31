@@ -19,14 +19,6 @@
 
     <dependencies>
 
-        <!-- Ubirch -->
-        <dependency>
-            <groupId>com.ubirch</groupId>
-            <artifactId>event-log-kafka</artifactId>
-            <version>${ubirchKafka.version}</version>
-        </dependency>
-
-        <!-- / Ubirch -->
 
         <!-- Core -->
         <dependency>
@@ -63,7 +55,6 @@
         <scalatest-embedded-kafka>2.0.0</scalatest-embedded-kafka>
         <maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
         <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
-        <ubirchKafka.version>1.2.3-SNAPSHOT</ubirchKafka.version>
         <embedded-kafka>2.3.0</embedded-kafka>
 
 
