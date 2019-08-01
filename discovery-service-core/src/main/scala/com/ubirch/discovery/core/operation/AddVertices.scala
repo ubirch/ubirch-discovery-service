@@ -54,9 +54,9 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
     (vTo: VertexStructDb, p2: List[KeyValue[String]], l2: String)
     (pE: List[KeyValue[String]], lE: String): Unit = {
     logger.info("None of the two vertices were in the database")
-    addVertexAsync(List((vFrom, p1, l1), (vTo, p1, l1)))
-    /*vFrom.addVertex(p1, l1, gc.b)
-    vTo.addVertex(p2, l2, gc.b)*/
+    addVertexAsync(List((vFrom, p1, l1), (vTo, p2, l2)))
+    /*    vFrom.addVertex(p1, l1, gc.b)
+        vTo.addVertex(p2, l2, gc.b)*/
     createEdge(vFrom, vTo, pE, lE)
   }
 
