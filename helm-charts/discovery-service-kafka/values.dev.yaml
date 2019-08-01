@@ -22,7 +22,7 @@ discoveryservice:
       topics: "com.ubirch.eventlog.discovery"
       errorTopic: "com.ubirch.eventlog.discovery.error"
     gremlinConf:
-      asynchronousBatchSize: 16
+      asynchronousBatchSize: 8
   prometheus:
     port: 4321
   core:
