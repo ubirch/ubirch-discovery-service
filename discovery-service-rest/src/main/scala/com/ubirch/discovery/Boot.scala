@@ -7,7 +7,7 @@ import org.eclipse.jetty.webapp.WebAppContext
 
 object Boot {
   def main(args: Array[String]) {
-    val server = new Server(8080)
+    val server = new Server(8081)
     val context = new WebAppContext()
     context.setServer(server)
     context.setContextPath("/")

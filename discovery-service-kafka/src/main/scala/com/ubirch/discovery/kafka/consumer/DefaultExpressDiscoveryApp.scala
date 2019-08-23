@@ -2,6 +2,7 @@ package com.ubirch.discovery.kafka.consumer
 
 import java.util.concurrent.CountDownLatch
 
+import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsManagerCounter, DefaultMetricsLoggerCounter}
 import com.ubirch.discovery.kafka.models.{AddV, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
@@ -41,13 +42,18 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   val asynchronousBatchSize: Int = conf.getInt("kafkaApi.gremlinConf.asynchronousBatchSize")
 
+  val errorCounter: Counter = new DefaultConsumerRecordsManagerCounter
+  val storeCounter: Counter = new DefaultMetricsLoggerCounter
+
   override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
     consumerRecords.foreach { cr =>
 
       logger.debug("Received value: " + cr.value())
+      storeCounter.counter.labels("ReceivedMessage").inc()
 
       Try(parseRelations(cr.value())).recover {
         case exception: ParsingException =>
+          errorCounter.counter.labels("ParsingException").inc()
           send(producerErrorTopic, ErrorsHandler.generateException(exception))
           logger.error(ErrorsHandler.generateException(exception))
           Nil
@@ -55,12 +61,14 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
         if (checkIfAllVertexAreTheSame(x)) {
           Try(storeCache(x)) recover {
             case e: StoreException =>
+              errorCounter.counter.labels("StoreException").inc()
               send(producerErrorTopic, ErrorsHandler.generateException(e))
               logger.error(ErrorsHandler.generateException(e))
           }
         } else {
           Try(store(x)) recover {
             case e: StoreException =>
+              errorCounter.counter.labels("StoreException").inc()
               send(producerErrorTopic, ErrorsHandler.generateException(e))
               logger.error(ErrorsHandler.generateException(e))
           }
@@ -105,6 +113,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
         import scala.concurrent.ExecutionContext.Implicits.global
         batchOfAddV.foreach { x =>
           val process = Future(Store.addV(x))
+          storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
           processesOfFutures += process
         }
 
@@ -123,7 +132,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       }
 
       val t1 = System.nanoTime()
-      logger.info(s"message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      logger.debug(s"message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      storeCounter.counter.labels("MessageStoredSuccessfully").inc()
       true
     } catch {
       case e: Exception =>
@@ -142,11 +152,12 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       val dataPartition = data.grouped(asynchronousBatchSize).toList
 
       dataPartition foreach { batchOfAddV =>
-        logger.info(s"STARTED sending a batch of ${batchOfAddV.size} asynchronously")
+        logger.debug(s"STARTED sending a batch of ${batchOfAddV.size} asynchronously")
         val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
         import scala.concurrent.ExecutionContext.Implicits.global
         batchOfAddV.foreach { x =>
           val process = Future(Store.addVCached(x, vertexCached))
+          storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
           processesOfFutures += process
         }
 
@@ -161,12 +172,13 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
             latch.countDown()
         }
         latch.await()
-        logger.info(s"FINISHED sending a batch of ${batchOfAddV.size} asynchronously")
+        logger.debug(s"FINISHED sending a batch of ${batchOfAddV.size} asynchronously")
 
       }
 
       val t1 = System.nanoTime()
-      logger.info(s"CACHED - message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      logger.debug(s"CACHED - message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      storeCounter.counter.labels("MessageStoredSuccessfully").inc()
       true
     } catch {
       case e: Exception =>

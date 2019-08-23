@@ -91,7 +91,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     val label1 = params("label1")
     val label2 = params("label2")
     val labelEdge = params("labelEdge")
-    val res = new AddVertices().addTwoVertices(id1, prop1, label1)(id2, prop2, label2)(propE, labelEdge)
+    val res = AddVertices().addTwoVertices(id1, prop1, label1)(id2, prop2, label2)(propE, labelEdge)
     res
   }
 

@@ -23,13 +23,12 @@ class PrometheusMetrics(lifecycle: Lifecycle) extends LazyLogging with ConfigBas
   val port: Int = conf.getInt("core.metrics.prometheus.port")
 
   logger.info("Creating Prometheus Server on Port[{}]", port)
-
   val server: HTTPServer = try {
     new HTTPServer(port)
   } catch {
     case _: BindException =>
       val newPort = port + new scala.util.Random().nextInt(50)
-      logger.info("Port[{}] is busy, trying Port[{}]", port, newPort)
+      logger.debug("Port[{}] is busy, trying Port[{}]", port, newPort)
       new HTTPServer(newPort)
   }
 
