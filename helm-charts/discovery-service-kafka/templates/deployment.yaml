@@ -21,7 +21,7 @@ spec:
         release: {{ .Release.Name }}
     spec:
       containers:
-          - name: discovery-srv
+        - name: discovery-srv
           image: "ubirch/discovery-service-kafka:{{ .Values.image.tag | default "latest" }}"
           imagePullPolicy: Always
           ports:
