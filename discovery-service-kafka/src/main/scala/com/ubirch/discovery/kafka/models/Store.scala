@@ -53,11 +53,11 @@ object Store extends LazyLogging {
     * @return
     */
   def addV(req: AddV): Unit = {
-    val p1 = mapToListKeyValues(req.v1.properties)
-    val l1 = req.v1.label
+    val p1 = mapToListKeyValues(req.v_from.properties)
+    val l1 = req.v_from.label
     logger.info("l1:" + l1)
-    val p2 = mapToListKeyValues(req.v2.properties)
-    val l2 = req.v2.label
+    val p2 = mapToListKeyValues(req.v_to.properties)
+    val l2 = req.v_to.label
     val pE = mapToListKeyValues(req.edge.properties)
     val lE = req.edge.label
     checkIfLabelIsAllowed(l1)
@@ -105,8 +105,8 @@ object Store extends LazyLogging {
   }
 
   def addVCached(req: AddV, vCached: VertexStructDb): Unit = {
-    val pNotCached = mapToListKeyValues(req.v2.properties)
-    val lNotCached = req.v2.label
+    val pNotCached = mapToListKeyValues(req.v_to.properties)
+    val lNotCached = req.v_to.label
     val pE = mapToListKeyValues(req.edge.properties)
     val lE = req.edge.label
     checkIfLabelIsAllowed(lNotCached)

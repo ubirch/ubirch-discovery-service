@@ -77,7 +77,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   def checkIfAllVertexAreTheSame(data: Seq[AddV]): Boolean = {
     if (data.size <= 3) false else
-      data forall (data.head.v1.properties.keySet == _.v1.properties.keySet)
+      data forall (data.head.v_from.properties.keySet == _.v_from.properties.keySet)
   }
 
   def parseRelations(data: String): Seq[AddV] = {
@@ -114,7 +114,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
   def storeCache(data: Seq[AddV]): Boolean = {
     try {
       val t0 = System.nanoTime()
-      val vertexCached = Store.vertexToCache(data.head.v1)
+      val vertexCached = Store.vertexToCache(data.head.v_from)
 
       // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
       // that could otherwise create a ConnectionTimeOut exception

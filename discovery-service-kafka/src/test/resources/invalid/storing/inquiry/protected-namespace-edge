@@ -1,1 +1,1 @@
-[{"v1":{"properties":{"edge": "truc"}, "label":"vvrt"},"v2": {"properties": {"name": "aName"}, "label": "v2"},"edge": {"properties": {}}}]
+[{"v_from":{"properties":{"edge": "truc"}, "label":"vvrt"},"v_to": {"properties": {"name": "aName"}, "label": "v_to"},"edge": {"properties": {}}}]
