@@ -35,7 +35,7 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
       case 2 => twoExist(vFrom, vTo, pE, lE)
     }
     val t1 = System.nanoTime()
-    logger.info(s"message processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+    logger.debug(s"INTERNAL - message processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
     "OK BB" //TODO: change this return line
   }
 
@@ -129,7 +129,7 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
    */
   private def twoExist(vFrom: VertexStructDb, vTo: VertexStructDb, pE: List[KeyValue[String]], lE: String): Unit = {
     if (!areVertexLinked(vFrom, vTo)) {
-      logger.info("Both vertices were already in the database")
+      logger.debug("Both vertices were already in the database")
       createEdge(vFrom, vTo, pE, lE)
     }
   }
@@ -167,7 +167,8 @@ case class AddVertices()(implicit gc: GremlinConnector) extends LazyLogging {
       }
     }
 
-    logger.info(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to link vertices")
+
+    logger.debug(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to link vertices, len(properties) = ${pE.size} .")
   }
 
   /**

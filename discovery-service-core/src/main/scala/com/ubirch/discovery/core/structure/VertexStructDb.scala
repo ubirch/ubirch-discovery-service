@@ -25,11 +25,12 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
             }
       }
     }
-
+    val t0 = System.nanoTime()
     val res = lookupByProps(properties)
     if (res != null) {
       addPropertiesToVertex(res.id.toString)
     }
+    logger.debug(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to check if vertex was already in the DB")
     res
   }
 
@@ -73,10 +74,12 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
   }
 
   private def addPropertiesToVertex(id: String): Unit = {
+    val t0 = System.nanoTime()
     for (keyV <- properties) {
       if (!doesPropExist(keyV)) {
         g.V(id).property(keyV).iterate()
       }
+      logger.debug(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to add vertex ${vertex.id()} to DB")
     }
 
     def doesPropExist(keyV: KeyValue[String]): Boolean = g.V(id).properties(keyV.key.name).toList().nonEmpty

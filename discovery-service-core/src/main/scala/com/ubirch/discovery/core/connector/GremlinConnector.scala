@@ -21,9 +21,9 @@ object GremlinConnector {
   def get: GremlinConnector = instance
 
   /*
-  Loads the properties contained in ressources/application.conf in the cluster
+  Loads the properties contained in resources/application.conf in the cluster
    */
-  def buildProperties(config: Config) = {
+  def buildProperties(config: Config): PropertiesConfiguration = {
     val conf = new PropertiesConfiguration()
     conf.addProperty("hosts", config.getString("core.connector.hosts"))
     conf.addProperty("port", config.getString("core.connector.port"))

@@ -21,7 +21,7 @@ spec:
         release: {{ .Release.Name }}
     spec:
       containers:
-        - name: responder-svc
+        - name: discovery-srv
           image: "ubirch/discovery-service-kafka:{{ .Values.image.tag | default "latest" }}"
           imagePullPolicy: Always
           ports:
@@ -65,6 +65,8 @@ spec:
               value: {{ .Values.discoveryservice.kafka.producer.topics | quote }}
             - name: DISC_ENV_KAFKA_PROD_TIMEOUT
               value: {{ .Values.discoveryservice.kafka.timeout | quote }}
+            - name: DISC_ENV_KAFKA_GREM_ASYNC
+              value: {{ .Values.discoveryservice.kafka.gremlinConf.asynchronousBatchSize | quote }}
             - name: DISC_ENV_KAFKA_PROMETHEUS
               value: {{ .Values.discoveryservice.prometheus.port | quote }}
             - name: DISC_ENV_CORE_HOSTS
