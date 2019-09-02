@@ -2,13 +2,13 @@ package com.ubirch.discovery.core.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.structure.{VertexStruct, VertexStructDb}
-import com.ubirch.discovery.core.util.Exceptions.{KeyNotInList, NumberOfEdgesNotCorrect}
-import gremlin.scala.{Key, KeyValue}
+import com.ubirch.discovery.core.structure.{ VertexStruct, VertexStructDb }
+import com.ubirch.discovery.core.util.Exceptions.{ KeyNotInList, NumberOfEdgesNotCorrect }
+import gremlin.scala.{ Key, KeyValue }
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.json4s.JsonDSL._
 import org.json4s.jackson.Serialization
-import org.json4s.{DefaultFormats, JsonAST}
+import org.json4s.{ DefaultFormats, JsonAST }
 
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions

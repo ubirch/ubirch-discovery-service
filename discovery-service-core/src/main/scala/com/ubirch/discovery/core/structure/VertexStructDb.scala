@@ -6,7 +6,7 @@ import java.util.concurrent.CompletionException
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
-import gremlin.scala.{KeyValue, TraversalSource}
+import gremlin.scala.{ KeyValue, TraversalSource }
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 
 import scala.collection.JavaConverters._
@@ -63,6 +63,7 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
       throw new ImportToGremlinException("Vertex already exist in the database")
     } else {
       try {
+        logger.debug(s"adding vertex: label: $label; properties: ${properties.mkString(", ")}")
         vertex = g.addV(b.of("label", label)).property(properties.head).l().head
         for (keyV <- properties.tail) {
           g.V(vertex.id).property(keyV).iterate()
@@ -77,9 +78,10 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
     val t0 = System.nanoTime()
     for (keyV <- properties) {
       if (!doesPropExist(keyV)) {
+        logger.debug(s"Adding property: ${keyV.key.name}")
         g.V(id).property(keyV).iterate()
       }
-      logger.debug(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to add vertex ${vertex.id()} to DB")
+      logger.debug(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to add vertex $id to DB")
     }
 
     def doesPropExist(keyV: KeyValue[String]): Boolean = g.V(id).properties(keyV.key.name).toList().nonEmpty

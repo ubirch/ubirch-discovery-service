@@ -5,12 +5,12 @@ import java.io.File
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
-import com.ubirch.discovery.core.structure.{Elements, VertexStructDb}
+import com.ubirch.discovery.core.structure.{ Elements, VertexStructDb }
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.{DateTime, DateTimeZone}
-import org.scalatest.{FeatureSpec, Matchers}
+import org.joda.time.{ DateTime, DateTimeZone }
+import org.scalatest.{ FeatureSpec, Matchers }
 
 import scala.io.Source
 
@@ -51,7 +51,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       }
       val nbVertices = gc.g.V().count().toSet().head
       val nbEdges = gc.g.E.count().toSet().head
-      (nbVertices, nbEdges) shouldBe(testConfValid.nbVertex, testConfValid.nbEdges)
+      (nbVertices, nbEdges) shouldBe (testConfValid.nbVertex, testConfValid.nbEdges)
     }
 
     // get all the test data
@@ -98,7 +98,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
       val nbVertices = gc.g.V().count().toSet().head
       val nbEdges = gc.g.E.count().toSet().head
-      (nbVertices, nbEdges) shouldBe(testConfValid.nbVertex, testConfValid.nbEdges)
+      (nbVertices, nbEdges) shouldBe (testConfValid.nbVertex, testConfValid.nbEdges)
     }
 
     // get all the test data

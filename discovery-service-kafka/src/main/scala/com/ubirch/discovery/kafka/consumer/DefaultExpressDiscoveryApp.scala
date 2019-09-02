@@ -2,19 +2,19 @@ package com.ubirch.discovery.kafka.consumer
 
 import java.util.concurrent.CountDownLatch
 
-import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsManagerCounter, DefaultMetricsLoggerCounter}
-import com.ubirch.discovery.kafka.models.{AddV, Store}
+import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsManagerCounter, DefaultMetricsLoggerCounter }
+import com.ubirch.discovery.kafka.models.{ AddV, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
+import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
 
 import scala.concurrent.Future
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
@@ -102,29 +102,37 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
       // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
       // thus creating a ConnectionTimeOut exception
-      val dataPartition = data.grouped(16).toList
+      if (data.size > 3) {
+        val dataPartition = data.grouped(16).toList
 
-      dataPartition foreach { batchOfAddV =>
-        val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
-        import scala.concurrent.ExecutionContext.Implicits.global
-        batchOfAddV.foreach { x =>
-          val process = Future(Store.addV(x))
+        dataPartition foreach { batchOfAddV =>
+          val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
+          import scala.concurrent.ExecutionContext.Implicits.global
+          batchOfAddV.foreach { x =>
+            logger.debug(s"relationship: ${x.toString}")
+            val process = Future(Store.addV(x))
+            storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
+            processesOfFutures += process
+          }
+
+          val futureProcesses = Future.sequence(processesOfFutures)
+
+          val latch = new CountDownLatch(1)
+          futureProcesses.onComplete {
+            case Success(_) =>
+              latch.countDown()
+            case Failure(e) =>
+              logger.error("Something happened", e)
+              latch.countDown()
+          }
+          latch.await()
+        }
+      } else {
+        data.foreach { x =>
+          logger.debug(s"relationship: ${x.toString}")
+          Store.addV(x)
           storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
-          processesOfFutures += process
         }
-
-        val futureProcesses = Future.sequence(processesOfFutures)
-
-        val latch = new CountDownLatch(1)
-        futureProcesses.onComplete {
-          case Success(_) =>
-            latch.countDown()
-          case Failure(e) =>
-            logger.error("Something happened", e)
-            latch.countDown()
-        }
-        latch.await()
-
       }
 
       val t1 = System.nanoTime()
@@ -152,6 +160,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
         val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
         import scala.concurrent.ExecutionContext.Implicits.global
         batchOfAddV.foreach { x =>
+          logger.debug(s"relationship: ${x.toString}")
           val process = Future(Store.addVCached(x, vertexCached))
           storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
           processesOfFutures += process

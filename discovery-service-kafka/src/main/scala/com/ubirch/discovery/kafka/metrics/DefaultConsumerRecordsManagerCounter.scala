@@ -1,6 +1,6 @@
 package com.ubirch.discovery.kafka.metrics
 
-import io.prometheus.client.{Counter => PrometheusCounter}
+import io.prometheus.client.{ Counter => PrometheusCounter }
 
 trait Counter {
   val namespace: String

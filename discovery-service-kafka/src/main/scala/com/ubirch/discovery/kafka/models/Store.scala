@@ -3,9 +3,9 @@ package com.ubirch.discovery.kafka.models
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
-import com.ubirch.discovery.core.structure.Elements.{Label, Property}
+import com.ubirch.discovery.core.structure.Elements.{ Label, Property }
 import com.ubirch.discovery.core.structure.VertexStructDb
-import gremlin.scala.{Key, KeyValue}
+import gremlin.scala.{ Key, KeyValue }
 
 import scala.language.postfixOps
 
