@@ -25,6 +25,7 @@ discoveryservice:
       asynchronousBatchSize: 8
   prometheus:
     port: 4321
+    namespace: "ubirch_discovery_service"
   core:
     hosts: "janusgraph.core-dev"
     port: 8182

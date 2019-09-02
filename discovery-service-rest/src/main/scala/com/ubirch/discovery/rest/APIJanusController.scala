@@ -91,16 +91,18 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
 
   val getVertices: SwaggerSupportSyntax.OperationBuilder =
     (apiOperation[List[VertexStruct]]("getVertexesJanusGraph")
-      summary "Display informations about a Vertex"
-      description "Display informations about a Vertex (ID and properties)." +
-      "Not providing an ID will display the entire database"
-      parameter queryParam[Option[Int]]("id").description("Id of the vertex we're looking for")
+      summary "Display information about a Vertex"
+      description "Display information about a Vertex." +
+      "Not providing a property will display the entire database"
+      parameters (queryParam[Option[String]]("name").description("Name of a unique property of the vertex we're looking for"),
+      queryParam[Option[String]]("value").description("Value of the previously passed property name")
+      )
       responseMessage ResponseMessage(404, "404: Can't find edge with the given ID"))
 
-  get("/getVertices", operation(getVertices)) {
-    params.get("id") match {
+  get("/:name/:value", operation(getVertices)) {
+    params.get("name") match {
       case Some(id) =>
-        val vertex = GetVertices().getVertexByPublicId(id)
+        val vertex = GetVertices().getVertexByProperty(KeyValue[String](Key[String](params("name")), params("value")))
         if (vertex == null) {
           halt(404, s"404: Can't find vertex with the ID: $id")
         } else {
@@ -116,14 +118,15 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     (apiOperation[List[VertexWithDepth]]("getVertexesWithDepth")
       summary "Get a vertex and the surrounding ones"
       description "see summary"
-      parameter queryParam[String]("id").description("Id of the vertex we're looking for")
+      parameter queryParam[String]("name").description("Name of a unique property of the vertex we're looking for")
+      parameter queryParam[String]("value").description("Value of the previously passed property name")
       parameter queryParam[Int]("depth").description("Depth of what we're looking for")
 
       responseMessage ResponseMessage(404, "404: Can't find edge with the ID: idNumber"))
 
   get("/getVertexesDepth", operation(getVerticesWithDepth)) {
-
-    val neighbors = GetVertices().getVertexDepth(params.get("id").get, params.get("depth").get.toInt)
+    val kv = KeyValue[String](Key[String](params("name")), params("value"))
+    val neighbors = GetVertices().getVertexDepth(kv, params.get("depth").get.toInt)
     if (neighbors == null) {
       halt(404, s"404: Can't find vertex with the provided ID")
     } else {

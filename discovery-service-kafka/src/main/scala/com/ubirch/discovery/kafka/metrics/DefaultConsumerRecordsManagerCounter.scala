@@ -1,16 +1,15 @@
 package com.ubirch.discovery.kafka.metrics
 
+import com.ubirch.kafka.express.ConfigBase
 import io.prometheus.client.{ Counter => PrometheusCounter }
 
-trait Counter {
-  val namespace: String
+trait Counter extends ConfigBase {
+  val namespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
   val counter: PrometheusCounter
 }
 
 //@Singleton
 class DefaultConsumerRecordsManagerCounter extends Counter {
-
-  val namespace: String = "ubirch"
 
   final val counter: PrometheusCounter = PrometheusCounter.build()
     .namespace(namespace)
@@ -23,8 +22,6 @@ class DefaultConsumerRecordsManagerCounter extends Counter {
 
 //@Singleton
 class DefaultMetricsLoggerCounter extends Counter {
-
-  val namespace: String = "ubirch"
 
   final val counter: PrometheusCounter = PrometheusCounter.build()
     .namespace(namespace)

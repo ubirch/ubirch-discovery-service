@@ -13,8 +13,6 @@ import scala.collection.JavaConverters._
   */
 case class GetVertices()(implicit val gc: GremlinConnector) extends LazyLogging {
 
-  private val ID = Key[String]("IdAssigned")
-
   /**
     * Returns a fixed amount of (randomly selected) vertices.
     *
@@ -25,17 +23,7 @@ case class GetVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
     val listVertexes: List[Vertex] = gc.g.V().limit(limit).l() // return scala list of vertex
     logger.info(listVertexes.mkString)
 
-    def toVertexStructList(lVertex: List[Vertex], accu: List[VertexStruct]): List[VertexStruct] = {
-      lVertex match {
-        case Nil => accu
-        case x :: xs =>
-          val vStruct = toVertexStruct(x)
-          toVertexStructList(xs, vStruct :: accu)
-      }
-    }
-
-    val accuInit: List[VertexStruct] = Nil
-    toVertexStructList(listVertexes, accuInit)
+    listVertexes map { toVertexStruct }
   }
 
   /**
@@ -43,11 +31,11 @@ case class GetVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
     * Does not take into account the direction of the edge.
     * For example, for (A -> B -> C) and (A -> B <- C), A and C are always separated by a distance of 2.
     *
-    * @param idAssigned the (public) id of the vertex.
+    * @param property A unique property allowing us to find the vertex.
     * @param depth      the depth of the link between the starting and ending point.
     * @return
     */
-  def getVertexDepth(idAssigned: String, depth: Int): Map[Int, Iterable[Int]] = {
+  def getVertexDepth(property: KeyValue[String], depth: Int): Map[Int, Iterable[Int]] = {
 
     def getAllNeighborsDistance(idDb: Int, depth: Int): Map[Int, Int] = {
 
@@ -89,7 +77,7 @@ case class GetVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
 
     }
 
-    val v: Vertex = gc.g.V().has(ID, idAssigned).toList().head
+    val v: Vertex = gc.g.V().has(property).toList().head
     val idDeparture = v.id.toString
     val map: Map[Int, Int] = getAllNeighborsDistance(idDeparture.toInt, depth)
     map.groupBy(_._2).mapValues(_.keys)
@@ -98,12 +86,11 @@ case class GetVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
   /**
     * Return a vertex based on its (public) id.
     *
-    * @param idAssigned the public id of the vertex.
+    * @param property A unique property allowing us to find the vertex.
     * @return a VertexStruct containing informations about the vertex.
     */
-  def getVertexByPublicId(idAssigned: String): VertexStruct = {
-    val kv = new KeyValue[String](ID, idAssigned)
-    val v: Vertex = gc.g.V.has(kv).toList().head
+  def getVertexByProperty(property: KeyValue[String]): VertexStruct = {
+    val v: Vertex = gc.g.V.has(property).toList().head
     if (v == null) null
     toVertexStruct(v)
   }
