@@ -58,7 +58,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
         description("Properties of the edge that link the two vertexes")
       ))
 
-  post("/addVertexToJG/:id1/:id2", operation(addToJanus)) {
+  post("/:id1/:id2", operation(addToJanus)) {
     println(params.get("properties1"))
 
     def propertiesToKeyValuesList(propName: String): List[KeyValue[String]] = {
@@ -124,7 +124,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
 
       responseMessage ResponseMessage(404, "404: Can't find edge with the ID: idNumber"))
 
-  get("/getVertexesDepth", operation(getVerticesWithDepth)) {
+  get("/depth", operation(getVerticesWithDepth)) {
     val kv = KeyValue[String](Key[String](params("name")), params("value"))
     val neighbors = GetVertices().getVertexDepth(kv, params.get("depth").get.toInt)
     if (neighbors == null) {
