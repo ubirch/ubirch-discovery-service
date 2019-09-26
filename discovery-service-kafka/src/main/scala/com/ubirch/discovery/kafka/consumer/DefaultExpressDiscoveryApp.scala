@@ -2,19 +2,21 @@ package com.ubirch.discovery.kafka.consumer
 
 import java.util.concurrent.CountDownLatch
 
-import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsManagerCounter, DefaultMetricsLoggerCounter }
-import com.ubirch.discovery.kafka.models.{ AddV, Store }
+import com.ubirch.discovery.core.structure.Relation
+import com.ubirch.discovery.core.util.Timer
+import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsManagerCounter, DefaultMetricsLoggerCounter}
+import com.ubirch.discovery.kafka.models.{AddV, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 
 import scala.concurrent.Future
 import scala.language.postfixOps
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
@@ -75,33 +77,37 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
     }
   }
 
-  def checkIfAllVertexAreTheSame(data: Seq[AddV]): Boolean = {
-    if (data.size <= 3) false else
-      data forall (data.head.v_from.properties.keySet == _.v_from.properties.keySet)
+  def checkIfAllVertexAreTheSame(relations: Seq[Relation]): Boolean = {
+    if (relations.size <= 3) false else
+      relations.forall(r => relations.head.vFrom.equals(r.vFrom))
   }
 
-  def parseRelations(data: String): Seq[AddV] = {
+  def parseRelations(data: String): Seq[Relation] = {
 
     implicit val formats: DefaultFormats = DefaultFormats
+    stopIfEmptyMessage(data)
+    try {
+      val relationAsInternalStruct = jackson.parseJson(data).extract[Seq[AddV]]
+      relationAsInternalStruct map { r => r.toCoreRelation }
+    } catch {
+      case e: Exception => throw ParsingException(s"Error parsing data [${e.getMessage}]")
+    }
+  }
+
+  def stopIfEmptyMessage(data: String): Unit = {
     data match {
       case "" => throw ParsingException(s"Error parsing data [received empty message: $data]")
       case "[]" => throw ParsingException(s"Error parsing data [received empty message: $data]")
       case _ =>
     }
-    try {
-      jackson.parseJson(data).extract[Seq[AddV]]
-    } catch {
-      case e: Exception =>
-        throw ParsingException(s"Error parsing data [${e.getMessage}]")
-    }
   }
 
-  def store(data: Seq[AddV]): Boolean = {
+  def store(data: Seq[Relation]): Boolean = {
     try {
       val t0 = System.nanoTime()
 
       // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
-      // thus creating a ConnectionTimeOut exception
+      // that could create a ConnectionTimeOutException.
       if (data.size > 3) {
         val dataPartition = data.grouped(16).toList
 
@@ -136,7 +142,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       }
 
       val t1 = System.nanoTime()
-      logger.debug(s"message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      logger.debug(s"message MSG: ${data.mkString(", ")} of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
       storeCounter.counter.labels("MessageStoredSuccessfully").inc()
       true
     } catch {
@@ -146,13 +152,13 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
     }
   }
 
-  def storeCache(data: Seq[AddV]): Boolean = {
+  def storeCache(data: Seq[Relation]): Boolean = {
     try {
-      val t0 = System.nanoTime()
-      val vertexCached = Store.vertexToCache(data.head.v_from)
+      val timer = new Timer()
+      val vertexCached = Store.vertexToCache(data.head.vFrom)
 
       // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
-      // that could otherwise create a ConnectionTimeOut exception
+      // that could create a ConnectionTimeOutException.
       val dataPartition = data.grouped(16).toList
 
       dataPartition foreach { batchOfAddV =>
@@ -181,9 +187,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
       }
 
-      val t1 = System.nanoTime()
       storeCounter.counter.labels("RelationshipStoredSuccessfully").inc(data.length)
-      logger.info(s"CAHCED - message of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      timer.finish(s"process CACHED message MSG: ${data.mkString(", ")} of size ${data.size} ")
       true
     } catch {
       case e: Exception =>

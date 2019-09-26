@@ -5,13 +5,13 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.GetVertices
 import com.ubirch.discovery.core.structure.VertexStruct
 import com.ubirch.discovery.core.util.Util.arrayVertexToJson
-import gremlin.scala.{ Key, KeyValue }
+import gremlin.scala.{Key, KeyValue}
+import org.json4s.{DefaultFormats, Formats}
 import org.json4s.JsonAST.JNothing
 import org.json4s.jackson.Serialization
-import org.json4s.{ DefaultFormats, Formats }
+import org.scalatra.{CorsSupport, ScalatraServlet}
 import org.scalatra.json.NativeJsonSupport
-import org.scalatra.swagger.{ ResponseMessage, Swagger, SwaggerSupport, SwaggerSupportSyntax }
-import org.scalatra.{ CorsSupport, ScalatraServlet }
+import org.scalatra.swagger.{ResponseMessage, Swagger, SwaggerSupport, SwaggerSupportSyntax}
 
 import scala.language.postfixOps
 
@@ -94,10 +94,11 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
       summary "Display information about a Vertex"
       description "Display information about a Vertex." +
       "Not providing a property will display the entire database"
-      parameters (queryParam[Option[String]]("name").description("Name of a unique property of the vertex we're looking for"),
-      queryParam[Option[String]]("value").description("Value of the previously passed property name")
+      parameters (
+        queryParam[Option[String]]("name").description("Name of a unique property of the vertex we're looking for"),
+        queryParam[Option[String]]("value").description("Value of the previously passed property name")
       )
-      responseMessage ResponseMessage(404, "404: Can't find edge with the given ID"))
+        responseMessage ResponseMessage(404, "404: Can't find edge with the given ID"))
 
   get("/:name/:value", operation(getVertices)) {
     params.get("name") match {

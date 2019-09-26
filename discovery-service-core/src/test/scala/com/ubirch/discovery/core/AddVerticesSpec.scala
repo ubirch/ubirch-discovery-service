@@ -5,12 +5,12 @@ import java.io.File
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
-import com.ubirch.discovery.core.structure.{ Elements, VertexStructDb }
+import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
+import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.{ DateTime, DateTimeZone }
-import org.scalatest.{ FeatureSpec, Matchers }
+import org.scalatest.{FeatureSpec, Matchers}
 
 import scala.io.Source
 
@@ -28,21 +28,29 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       // clean
       deleteDatabase()
       // commit
-      listCoupleVAndE foreach { vve =>
-        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(vve.v1.props) ++ putPropsOnPropSet(vve.v2.props)
-        AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
+      listCoupleVAndE foreach { relationTest =>
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.v1.props) ++ putPropsOnPropSet(relationTest.v2.props)
+        val internalVertexFrom = VertexToAdd(relationTest.v1.props, relationTest.v1.label)
+        val internalVertexTo = VertexToAdd(relationTest.v2.props, relationTest.v2.label)
+        val internalEdge = EdgeToAdd(relationTest.e.props, relationTest.e.label)
+        val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
+        AddVertices().createRelation(relation)
       }
       // verif
-      listCoupleVAndE foreach { vve =>
-        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(vve.v1.props) ++ putPropsOnPropSet(vve.v2.props)
+      listCoupleVAndE foreach { relation =>
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.v1.props) ++ putPropsOnPropSet(relation.v2.props)
 
-        val v1Reconstructed = new VertexStructDb(vve.v1.props, gc.g, vve.v1.label)
-        val v2Reconstructed = new VertexStructDb(vve.v2.props, gc.g, vve.v2.label)
+        val internalVertexFrom = VertexToAdd(relation.v1.props, relation.v1.label)
+        val internalVertexTo = VertexToAdd(relation.v2.props, relation.v2.label)
+        val v1Reconstructed = new VertexStructDb(internalVertexFrom, gc.g)
+        val v2Reconstructed = new VertexStructDb(internalVertexTo, gc.g)
 
         try {
-          AddVertices().verifVertex(v1Reconstructed, vve.v1.props)
-          AddVertices().verifVertex(v2Reconstructed, vve.v2.props)
-          AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, vve.e.props)
+          AddVertices().verifVertex(v1Reconstructed, relation.v1.props)
+          AddVertices().verifVertex(v2Reconstructed, relation.v2.props)
+          logger.info(v1Reconstructed.internalVertex.properties.mkString(", "))
+          logger.info(v2Reconstructed.internalVertex.properties.mkString(", "))
+          AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, relation.e.props)
         } catch {
           case e: Throwable =>
             logger.error("", e)
@@ -76,18 +84,22 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       // clean
       deleteDatabase()
       // commit
-      listCoupleVAndE foreach { vve =>
-        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(vve.v1.props) ++ putPropsOnPropSet(vve.v2.props)
+      listCoupleVAndE foreach { relationTest =>
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.v1.props) ++ putPropsOnPropSet(relationTest.v2.props)
 
-        AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
+        val internalVertexFrom = VertexToAdd(relationTest.v1.props, relationTest.v1.label)
+        val internalVertexTo = VertexToAdd(relationTest.v2.props, relationTest.v2.label)
+        val internalEdge = EdgeToAdd(relationTest.e.props, relationTest.e.label)
+        val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
+        AddVertices().createRelation(relation)
 
-        val v1Reconstructed = new VertexStructDb(vve.v1.props, gc.g, vve.v1.label)
-        val v2Reconstructed = new VertexStructDb(vve.v2.props, gc.g, vve.v2.label)
+        val v1Reconstructed = internalVertexFrom.toVertexStructDb(gc.g)
+        val v2Reconstructed = internalVertexTo.toVertexStructDb(gc.g)
 
         try {
-          AddVertices().verifVertex(v1Reconstructed, vve.v1.props)
-          AddVertices().verifVertex(v2Reconstructed, vve.v2.props)
-          AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, vve.e.props)
+          AddVertices().verifVertex(v1Reconstructed, relationTest.v1.props)
+          AddVertices().verifVertex(v2Reconstructed, relationTest.v2.props)
+          AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, relationTest.e.props)
         } catch {
           case e: Throwable =>
             logger.error("", e)
@@ -121,10 +133,15 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
       // commit
       logger.info("Testing " + testConfInvalid.nameTest)
-      listCoupleVAndE foreach { vve =>
+      listCoupleVAndE foreach { relationTest =>
         try {
-          implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(vve.v1.props) ++ putPropsOnPropSet(vve.v2.props)
-          AddVertices().addTwoVertices(vve.v1.props, vve.v1.label)(vve.v2.props, vve.v2.label)(vve.e.props, vve.e.label)
+          implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.v1.props) ++ putPropsOnPropSet(relationTest.v2.props)
+          val internalVertexFrom = VertexToAdd(relationTest.v1.props, relationTest.v1.label)
+          val internalVertexTo = VertexToAdd(relationTest.v2.props, relationTest.v2.label)
+          val internalEdge = EdgeToAdd(relationTest.e.props, relationTest.e.label)
+          val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
+
+          AddVertices().createRelation(relation)
         } catch {
           case e: ImportToGremlinException =>
             logger.info(e.getMessage)
@@ -188,9 +205,13 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
         new KeyValue[String](Name, "edge")
       )
 
+      val internalVertexFrom = VertexToAdd(p1, "aLabel")
+      val internalVertexTo = VertexToAdd(p2, "aLabel")
+      val internalEdge = EdgeToAdd(pE, "aLabel")
+      val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
       // commit
       implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(p1)
-      AddVertices().addTwoVertices(p1, "aLabel")(p2, "aLabel")(pE, "aLabel")
+      AddVertices().createRelation(relation)
 
       // create false data
       val pFalse: List[KeyValue[String]] = List(new KeyValue[String](Number, "1"))
@@ -203,8 +224,8 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       nbVertices shouldBe 2
       nbEdges shouldBe 1
       //    vertices
-      val v1Reconstructed = new VertexStructDb(p1, gc.g, "aLabel")
-      val v2Reconstructed = new VertexStructDb(p2, gc.g, "aLabel")
+      val v1Reconstructed = internalVertexFrom.toVertexStructDb(gc.g)
+      val v2Reconstructed = internalVertexTo.toVertexStructDb(gc.g)
       try {
         AddVertices().verifVertex(v1Reconstructed, pFalse)
         fail

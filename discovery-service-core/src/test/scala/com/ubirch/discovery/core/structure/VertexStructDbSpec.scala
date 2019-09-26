@@ -4,10 +4,10 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.util.Util._
 import gremlin.scala._
+import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.{ DateTime, DateTimeZone }
-import org.scalatest.{ FeatureSpec, Matchers }
-import org.slf4j.{ Logger, LoggerFactory }
+import org.scalatest.{FeatureSpec, Matchers}
+import org.slf4j.{Logger, LoggerFactory}
 
 class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
 
@@ -40,9 +40,10 @@ class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
       )
       implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(properties)
 
-      val vSDb = new VertexStructDb(properties, gc.g, label)
+      val vertexInternal = VertexToAdd(properties, label)
+      val vSDb = new VertexStructDb(vertexInternal, gc.g)
 
-      vSDb.addVertex(properties, "aLabel", gc.b)
+      vSDb.addVertexWithProperties(gc.b)
 
       val response = vSDb.getPropertiesMap
       logger.debug(response.mkString)

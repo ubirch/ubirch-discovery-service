@@ -6,83 +6,88 @@ import java.util.concurrent.CompletionException
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
-import gremlin.scala.{ KeyValue, TraversalSource }
+import com.ubirch.discovery.core.util.Timer
+import gremlin.scala.{KeyValue, TraversalSource, Vertex}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 
 import scala.collection.JavaConverters._
 
-class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSource, label: String)(implicit propSet: Set[Property]) extends LazyLogging {
+class VertexStructDb(val internalVertex: VertexToAdd, val g: TraversalSource)(implicit propSet: Set[Property]) extends LazyLogging {
 
   var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
-    def lookupByProps(propList: List[KeyValue[String]]): gremlin.scala.Vertex = {
-      propList match {
+    def searchForVertexByProperties(properties: List[KeyValue[String]]): gremlin.scala.Vertex = {
+      properties match {
         case Nil => null
-        case value :: xs =>
-          if (!isPropertyIterable(value.key.name)) lookupByProps(xs) else
-            g.V().has(value).headOption() match {
+        case property :: restOfProperties =>
+          if (!isPropertyIterable(property.key.name)) searchForVertexByProperties(restOfProperties) else
+            g.V().has(property).headOption() match {
               case Some(v) => v
-              case None => lookupByProps(xs)
+              case None => searchForVertexByProperties(restOfProperties)
             }
       }
     }
-    val t0 = System.nanoTime()
-    val res = lookupByProps(properties)
-    if (res != null) {
-      addPropertiesToVertex(res.id.toString)
+    val timer = new Timer()
+    val possibleVertex = searchForVertexByProperties(internalVertex.properties)
+    if (possibleVertex != null) {
+      addNewPropertiesToVertex(possibleVertex.id.toString)
     }
-    logger.debug(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to check if vertex was already in the DB")
-    res
+    timer.finish(s"check if vertex with properties ${internalVertex.properties.mkString(", ")} was already in the DB")
+    possibleVertex
   }
 
   def isPropertyIterable(prop: String): Boolean = {
+
     def checkOnProps(set: Set[Property]): Boolean = {
       set.toList match {
         case Nil => false
         case x => if (x.head.name == prop) {
-          if (x.head.getUniqueness) true else checkOnProps(x.tail.toSet)
+          if (x.head.isPropertyUnique) true else checkOnProps(x.tail.toSet)
         } else {
           checkOnProps(x.tail.toSet)
         }
       }
     }
-
     checkOnProps(propSet)
+
   }
 
-  def exist: Boolean = vertex != null
+  def existInJanusGraph: Boolean = vertex != null
 
   /**
     * Adds a vertex in the database with his label and properties.
     *
-    * @param properties The properties of the to-be-added vertex as a list of gremlin.scala.KeyValues.
-    * @param label      The label of the to-be-added vertex.
     * @param b          Bindings for indexing.
     */
-  def addVertex(properties: List[KeyValue[String]], label: String, b: Bindings): Unit = {
-    if (exist) {
-      throw new ImportToGremlinException("Vertex already exist in the database")
-    } else {
-      try {
-        logger.debug(s"adding vertex: label: $label; properties: ${properties.mkString(", ")}")
-        vertex = g.addV(b.of("label", label)).property(properties.head).l().head
-        for (keyV <- properties.tail) {
-          g.V(vertex.id).property(keyV).iterate()
-        }
-      } catch {
-        case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
+  def addVertexWithProperties(b: Bindings): Unit = {
+    if (existInJanusGraph) throw new ImportToGremlinException("Vertex already exist in the database")
+    try {
+      logger.debug(s"adding vertex: label: ${internalVertex.label}; properties: ${internalVertex.properties.mkString(", ")}")
+      vertex = initialiseVertex(b)
+      for (property <- internalVertex.properties.tail) {
+        addPropertyToVertex(vertexId, property)
       }
+    } catch {
+      case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
     }
   }
 
-  private def addPropertiesToVertex(id: String): Unit = {
-    val t0 = System.nanoTime()
-    for (keyV <- properties) {
-      if (!doesPropExist(keyV)) {
-        logger.debug(s"Adding property: ${keyV.key.name}")
-        g.V(id).property(keyV).iterate()
+  private def initialiseVertex(b: Bindings): Vertex = {
+    g.addV(b.of("label", internalVertex.label)).property(internalVertex.properties.head).l().head
+  }
+
+  private def addPropertyToVertex(id: String, property: KeyValue[String]) = {
+    g.V(id).property(property).iterate()
+  }
+
+  private def addNewPropertiesToVertex(id: String): Unit = {
+    val timer = new Timer()
+    for (property <- internalVertex.properties) {
+      if (!doesPropExist(property)) {
+        addPropertyToVertex(id, property)
+        logger.debug(s"Adding property: ${property.key.name}")
       }
-      logger.debug(s"Took ${(System.nanoTime() / 1000000 - t0 / 1000000).toString} ms to add vertex $id to DB")
     }
+    timer.finish(s"add properties to vertex with id: $id")
 
     def doesPropExist(keyV: KeyValue[String]): Boolean = g.V(id).properties(keyV.key.name).toList().nonEmpty
   }
@@ -94,13 +99,15 @@ class VertexStructDb(val properties: List[KeyValue[String]], val g: TraversalSou
     * @return A map containing the properties name and respective values of the vertex contained in this structure.
     */
   def getPropertiesMap: Map[Any, List[Any]] = {
-    val res = g.V(vertex).valueMap.toList().head.asScala.toMap.asInstanceOf[Map[Any, util.ArrayList[Any]]]
-    res map { x => x._1 -> x._2.asScala.toList }
+    val propertyMapAsJava = g.V(vertex).valueMap.toList().head.asScala.toMap.asInstanceOf[Map[Any, util.ArrayList[Any]]]
+    propertyMapAsJava map { x => x._1 -> x._2.asScala.toList }
   }
 
   def deleteVertex(): Unit = {
-    if (exist) g.V(vertex.id).drop().iterate()
+    if (existInJanusGraph) g.V(vertex.id).drop().iterate()
   }
+
+  def vertexId: String = vertex.id().toString
 
 }
 

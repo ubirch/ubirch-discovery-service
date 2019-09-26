@@ -1,5 +1,5 @@
 environment: local
-namespace: ubirch-dev
+namespace: core-dev
 image:
   tag: latest # set to your local image tag if needed
 
@@ -14,13 +14,13 @@ discoveryservice:
     bootstrapServers: "kafka.core-dev:9092"
     timeout: 2
     consumer:
-      errorTopic: "com.ubirch.eventlog.discovery.error"
-      topics: "com.ubirch.eventlog.discovery"
+      errorTopic: "ubirch-svalbard-evt-relation-json-error"
+      topics: "ubirch-svalbard-evt-relation-json"
       group: "discovery-kafka"
       poolRecords: 500
     producer:
-      topics: "com.ubirch.eventlog.discovery"
-      errorTopic: "com.ubirch.eventlog.discovery.error"
+      topics: "ubirch-svalbard-evt-relation-json"
+      errorTopic: "ubirch-svalbard-evt-relation-json-error"
     gremlinConf:
       asynchronousBatchSize: 8
   prometheus:

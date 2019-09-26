@@ -3,9 +3,10 @@ package com.ubirch.discovery.kafka.models
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddVertices
-import com.ubirch.discovery.core.structure.Elements.{ Label, Property }
-import com.ubirch.discovery.core.structure.VertexStructDb
-import gremlin.scala.{ Key, KeyValue }
+import com.ubirch.discovery.core.structure.{Relation, VertexStructDb, VertexToAdd}
+import com.ubirch.discovery.core.structure.Elements.{Label, Property}
+import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
+import gremlin.scala.{Key, KeyValue}
 
 import scala.language.postfixOps
 
@@ -49,29 +50,29 @@ object Store extends LazyLogging {
     * "label": "label"
     * }}}
     *
-    * @param req The parsed JSON
+    * @param relation The parsed JSON
     * @return
     */
-  def addV(req: AddV): Unit = {
-    val p1 = mapToListKeyValues(req.v_from.properties)
-    val l1 = req.v_from.label
-    logger.info("l1:" + l1)
-    val p2 = mapToListKeyValues(req.v_to.properties)
-    val l2 = req.v_to.label
-    val pE = mapToListKeyValues(req.edge.properties)
-    val lE = req.edge.label
-    checkIfLabelIsAllowed(l1)
-    checkIfLabelIsAllowed(l2)
-    checkIfPropertiesAreAllowed(p1)
-    checkIfPropertiesAreAllowed(p2)
-    addVertices.addTwoVertices(p1, l1)(p2, l2)(pE, lE)
+  def addV(relation: Relation): Unit = {
+    logger.debug("l1:" + relation.vFrom.label)
+    stopIfRelationNotAllowed(relation)
+    addVertices.createRelation(relation)
   }
 
-  def vertexToCache(vertexToConvert: VertexKafkaStruct): VertexStructDb = {
-    val pCached = mapToListKeyValues(vertexToConvert.properties)
-    val vertex = new VertexStructDb(pCached, gc.g, vertexToConvert.label)
-    if (!vertex.exist) vertex.addVertex(pCached, vertexToConvert.label, gc.b)
-    // add it to the DB if not already present
+  def stopIfRelationNotAllowed(relation: Relation): Unit = {
+    val isRelationAllowed = checkIfLabelIsAllowed(relation.vFrom.label) &&
+    checkIfLabelIsAllowed(relation.vTo.label) &&
+    checkIfPropertiesAreAllowed(relation.vFrom.properties) &&
+    checkIfPropertiesAreAllowed(relation.vTo.properties)
+    if (!isRelationAllowed) {
+      logger.error(s"relation ${relation.toString} is not allowed")
+      throw ParsingException(s"relation ${relation.toString} is not allowed")
+    }
+  }
+
+  def vertexToCache(vertexToConvert: VertexToAdd): VertexStructDb = {
+    val vertex = vertexToConvert.toVertexStructDb(gc.g)
+    if (!vertex.existInJanusGraph) vertex.addVertexWithProperties(gc.b)
     vertex
   }
 
@@ -104,14 +105,15 @@ object Store extends LazyLogging {
     checkAllProps(props)
   }
 
-  def addVCached(req: AddV, vCached: VertexStructDb): Unit = {
-    val pNotCached = mapToListKeyValues(req.v_to.properties)
-    val lNotCached = req.v_to.label
-    val pE = mapToListKeyValues(req.edge.properties)
-    val lE = req.edge.label
-    checkIfLabelIsAllowed(lNotCached)
-    checkIfPropertiesAreAllowed(pNotCached)
-    addVertices.addTwoVerticesCached(vCached)(pNotCached, lNotCached)(pE, lE)
+  def addVCached(relation: Relation, vCached: VertexStructDb): Unit = {
+    val vertexNotCached = relation.vTo
+    val edge = relation.edge
+    val isAllowed = checkIfLabelIsAllowed(vertexNotCached.label) && checkIfPropertiesAreAllowed(vertexNotCached.properties)
+    if (!isAllowed)  {
+      logger.error(s"relation ${relation.toString} is not allowed")
+      throw ParsingException(s"relation ${relation.toString} is not allowed")
+    }
+    addVertices.addTwoVerticesCached(vCached)(vertexNotCached)(edge)
   }
 
 }
