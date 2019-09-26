@@ -29,7 +29,7 @@ class VertexStructDb(val internalVertex: VertexToAdd, val g: TraversalSource)(im
     val timer = new Timer()
     val possibleVertex = searchForVertexByProperties(internalVertex.properties)
     if (possibleVertex != null) {
-      addNewPropertiesToVertex(possibleVertex.id.toString)
+      addNewPropertiesToVertex(possibleVertex)
     }
     timer.finish(s"check if vertex with properties ${internalVertex.properties.mkString(", ")} was already in the DB")
     possibleVertex
@@ -64,7 +64,9 @@ class VertexStructDb(val internalVertex: VertexToAdd, val g: TraversalSource)(im
       logger.debug(s"adding vertex: label: ${internalVertex.label}; properties: ${internalVertex.properties.mkString(", ")}")
       vertex = initialiseVertex(b)
       for (property <- internalVertex.properties.tail) {
-        addPropertyToVertex(vertexId, property)
+        logger.info(s"adding property ${property.key.name} , ${property.value}")
+        logger.info("vertexId: " + vertexId)
+        addPropertyToVertex(property)
       }
     } catch {
       case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
@@ -75,21 +77,21 @@ class VertexStructDb(val internalVertex: VertexToAdd, val g: TraversalSource)(im
     g.addV(b.of("label", internalVertex.label)).property(internalVertex.properties.head).l().head
   }
 
-  private def addPropertyToVertex(id: String, property: KeyValue[String]) = {
-    g.V(id).property(property).iterate()
+  private def addPropertyToVertex(property: KeyValue[String], vertex: Vertex = vertex) = {
+    g.V(vertex).property(property).iterate()
   }
 
-  private def addNewPropertiesToVertex(id: String): Unit = {
+  private def addNewPropertiesToVertex(vertex: Vertex): Unit = {
     val timer = new Timer()
     for (property <- internalVertex.properties) {
       if (!doesPropExist(property)) {
-        addPropertyToVertex(id, property)
+        addPropertyToVertex(property, vertex: Vertex)
         logger.debug(s"Adding property: ${property.key.name}")
       }
     }
-    timer.finish(s"add properties to vertex with id: $id")
+    timer.finish(s"add properties to vertex with id: ${vertex.id().toString}")
 
-    def doesPropExist(keyV: KeyValue[String]): Boolean = g.V(id).properties(keyV.key.name).toList().nonEmpty
+    def doesPropExist(keyV: KeyValue[String]): Boolean = g.V(vertex).properties(keyV.key.name).toList().nonEmpty
   }
 
   /**

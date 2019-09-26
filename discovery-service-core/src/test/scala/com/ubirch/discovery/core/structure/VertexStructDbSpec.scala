@@ -41,7 +41,7 @@ class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
       implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(properties)
 
       val vertexInternal = VertexToAdd(properties, label)
-      val vSDb = new VertexStructDb(vertexInternal, gc.g)
+      val vSDb = vertexInternal.toVertexStructDb(gc.g)
 
       vSDb.addVertexWithProperties(gc.b)
 
@@ -52,6 +52,9 @@ class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
       val propertiesKey = Array(Number, Name, Created, IdAssigned)
 
       val propertiesReceived = recompose(response, propertiesKey)
+
+      logger.info("respomnse: " + response.mkString(", "))
+      logger.info("properties received: " + propertiesReceived.mkString(", "))
 
       propertiesReceived.sortBy(x => x.key.name) shouldBe properties.sortBy(x => x.key.name)
     }
