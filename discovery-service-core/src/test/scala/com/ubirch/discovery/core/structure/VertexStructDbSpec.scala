@@ -1,7 +1,7 @@
 package com.ubirch.discovery.core.structure
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.GremlinConnector
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.util.Util._
 import gremlin.scala._
 import org.joda.time.{DateTime, DateTimeZone}
@@ -11,7 +11,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
 
-  implicit val gc: GremlinConnector = GremlinConnector.get
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
   private val dateTimeFormat = ISODateTimeFormat.dateTime()
   val label = "aLabel"

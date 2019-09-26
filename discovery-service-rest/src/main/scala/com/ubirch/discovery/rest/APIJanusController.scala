@@ -1,7 +1,7 @@
 package com.ubirch.discovery.rest
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.GremlinConnector
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.operation.GetVertices
 import com.ubirch.discovery.core.structure.VertexStruct
 import com.ubirch.discovery.core.util.Util.arrayVertexToJson
@@ -25,7 +25,7 @@ class APIJanusController(implicit val swagger: Swagger) extends ScalatraServlet
     )
   }
 
-  implicit val gc: GremlinConnector = GremlinConnector.get
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
   // Stops the APIJanusController from being abstract
   protected val applicationDescription = "The API working with JanusGraph, allows add / display of vertexes/edges"

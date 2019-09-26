@@ -1,7 +1,7 @@
 package com.ubirch.discovery.kafka.models
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.GremlinConnector
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.operation.AddVertices
 import com.ubirch.discovery.core.structure.{Relation, VertexStructDb, VertexToAdd}
 import com.ubirch.discovery.core.structure.Elements.{Label, Property}
@@ -12,7 +12,7 @@ import scala.language.postfixOps
 
 object Store extends LazyLogging {
 
-  implicit val gc: GremlinConnector = GremlinConnector.get
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
   implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
@@ -61,9 +61,9 @@ object Store extends LazyLogging {
 
   def stopIfRelationNotAllowed(relation: Relation): Unit = {
     val isRelationAllowed = checkIfLabelIsAllowed(relation.vFrom.label) &&
-    checkIfLabelIsAllowed(relation.vTo.label) &&
-    checkIfPropertiesAreAllowed(relation.vFrom.properties) &&
-    checkIfPropertiesAreAllowed(relation.vTo.properties)
+      checkIfLabelIsAllowed(relation.vTo.label) &&
+      checkIfPropertiesAreAllowed(relation.vFrom.properties) &&
+      checkIfPropertiesAreAllowed(relation.vTo.properties)
     if (!isRelationAllowed) {
       logger.error(s"relation ${relation.toString} is not allowed")
       throw ParsingException(s"relation ${relation.toString} is not allowed")
@@ -109,7 +109,7 @@ object Store extends LazyLogging {
     val vertexNotCached = relation.vTo
     val edge = relation.edge
     val isAllowed = checkIfLabelIsAllowed(vertexNotCached.label) && checkIfPropertiesAreAllowed(vertexNotCached.properties)
-    if (!isAllowed)  {
+    if (!isAllowed) {
       logger.error(s"relation ${relation.toString} is not allowed")
       throw ParsingException(s"relation ${relation.toString} is not allowed")
     }

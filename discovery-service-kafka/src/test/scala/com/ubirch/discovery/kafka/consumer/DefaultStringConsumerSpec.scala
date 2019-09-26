@@ -3,7 +3,7 @@ package com.ubirch.discovery.kafka.consumer
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-import com.ubirch.discovery.core.connector.GremlinConnector
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.util.PortGiver
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
@@ -154,7 +154,7 @@ class DefaultStringConsumerSpec extends TestBase {
   }
 
   def getGremlinConnector: GremlinConnector = {
-    GremlinConnector.get
+    GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
   }
 
   def cleanDb(): Unit = {

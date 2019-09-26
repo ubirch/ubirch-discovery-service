@@ -3,7 +3,7 @@ package com.ubirch.discovery.core
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.GremlinConnector
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.operation.AddVertices
 import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
@@ -16,7 +16,7 @@ import scala.io.Source
 
 class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
-  implicit val gc: GremlinConnector = GremlinConnector.get
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
   def deleteDatabase(): Unit = {
     gc.g.V().drop().iterate()
