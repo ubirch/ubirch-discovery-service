@@ -24,33 +24,20 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
   feature("add vertices - correct tests") {
 
-    def executeTestValid(listCoupleVAndE: List[CoupleVAndE], testConfValid: TestConfValid) = {
+    def executeTestValid(relations: List[Relation], testConfiguration: TestConfValid) = {
       // clean
       deleteDatabase()
       // commit
-      listCoupleVAndE foreach { relationTest =>
-        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.v1.props) ++ putPropsOnPropSet(relationTest.v2.props)
-        val internalVertexFrom = VertexToAdd(relationTest.v1.props, relationTest.v1.label)
-        val internalVertexTo = VertexToAdd(relationTest.v2.props, relationTest.v2.label)
-        val internalEdge = EdgeToAdd(relationTest.e.props, relationTest.e.label)
-        val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
+      relations foreach { relation =>
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
         AddVertices().createRelation(relation)
       }
       // verif
-      listCoupleVAndE foreach { relation =>
-        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.v1.props) ++ putPropsOnPropSet(relation.v2.props)
-
-        val internalVertexFrom = VertexToAdd(relation.v1.props, relation.v1.label)
-        val internalVertexTo = VertexToAdd(relation.v2.props, relation.v2.label)
-        val v1Reconstructed = new VertexStructDb(internalVertexFrom, gc.g)
-        val v2Reconstructed = new VertexStructDb(internalVertexTo, gc.g)
+      relations foreach { relation =>
+        implicit val propSet: Set[Elements.Property] =  putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
 
         try {
-          AddVertices().verifVertex(v1Reconstructed, relation.v1.props)
-          AddVertices().verifVertex(v2Reconstructed, relation.v2.props)
-          logger.info(v1Reconstructed.internalVertex.properties.mkString(", "))
-          logger.info(v2Reconstructed.internalVertex.properties.mkString(", "))
-          AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, relation.e.props)
+          verificationRelation(relation)
         } catch {
           case e: Throwable =>
             logger.error("", e)
@@ -59,15 +46,15 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       }
       val nbVertices = gc.g.V().count().toSet().head
       val nbEdges = gc.g.E.count().toSet().head
-      (nbVertices, nbEdges) shouldBe (testConfValid.nbVertex, testConfValid.nbEdges)
+      (nbVertices, nbEdges) shouldBe (testConfiguration.nbVertex, testConfiguration.nbEdges)
     }
 
     // get all the test data
     val allReq: List[(List[String], TestConfValid)] = readAllFilesValid("/addVerticesSpec/valid/basic/")
 
     // format test data
-    val listAllElems: List[(List[CoupleVAndE], TestConfValid)] = allReq map { vve: (List[String], TestConfValid) =>
-      getListVVE((Nil, TestConfValid(0, 0, "")), vve)
+    val listAllElems: List[(List[Relation], TestConfValid)] = allReq map { vve: (List[String], TestConfValid) =>
+      getRelations((Nil, TestConfValid(0, 0, "")), vve)
     }
 
     // run the tests
@@ -80,33 +67,26 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
   feature("add vertices - properties can be updated") {
 
-    def executeTestValid(listCoupleVAndE: List[CoupleVAndE], testConfValid: TestConfValid): Unit = {
+    def executeTestValid(relations: List[Relation], testConfValid: TestConfValid): Unit = {
       // clean
       deleteDatabase()
       // commit
-      listCoupleVAndE foreach { relationTest =>
-        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.v1.props) ++ putPropsOnPropSet(relationTest.v2.props)
+      relations foreach { relation =>
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
 
-        val internalVertexFrom = VertexToAdd(relationTest.v1.props, relationTest.v1.label)
-        val internalVertexTo = VertexToAdd(relationTest.v2.props, relationTest.v2.label)
-        val internalEdge = EdgeToAdd(relationTest.e.props, relationTest.e.label)
-        val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
         AddVertices().createRelation(relation)
 
-        val v1Reconstructed = internalVertexFrom.toVertexStructDb(gc.g)
-        val v2Reconstructed = internalVertexTo.toVertexStructDb(gc.g)
 
+        // verif
         try {
-          AddVertices().verifVertex(v1Reconstructed, relationTest.v1.props)
-          AddVertices().verifVertex(v2Reconstructed, relationTest.v2.props)
-          AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, relationTest.e.props)
+          verificationRelation(relation)
+
         } catch {
           case e: Throwable =>
-            logger.error("", e)
+          logger.error("", e)
             fail()
         }
       }
-      // verif
 
       val nbVertices = gc.g.V().count().toSet().head
       val nbEdges = gc.g.E.count().toSet().head
@@ -116,8 +96,8 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     // get all the test data
     val allReq: List[(List[String], TestConfValid)] = readAllFilesValid("/addVerticesSpec/valid/updateProps/")
     // format test data
-    val listAllElems: List[(List[CoupleVAndE], TestConfValid)] = allReq map { vve: (List[String], TestConfValid) =>
-      getListVVE((Nil, TestConfValid(0, 0, "")), vve)
+    val listAllElems: List[(List[Relation], TestConfValid)] = allReq map { vve: (List[String], TestConfValid) =>
+      getRelations((Nil, TestConfValid(0, 0, "")), vve)
     }
     listAllElems foreach { m =>
       scenario(m._2.nameTest) {
@@ -128,20 +108,16 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
   feature("add vertices - incorrect tests") {
 
-    def executeTestInvalid(listCoupleVAndE: List[CoupleVAndE], testConfInvalid: TestConfInvalid): Unit = {
+    def executeTestInvalid(listCoupleVAndE: List[Relation], testConfInvalid: TestConfInvalid): Unit = {
       deleteDatabase()
 
       // commit
       logger.info("Testing " + testConfInvalid.nameTest)
       listCoupleVAndE foreach { relationTest =>
         try {
-          implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.v1.props) ++ putPropsOnPropSet(relationTest.v2.props)
-          val internalVertexFrom = VertexToAdd(relationTest.v1.props, relationTest.v1.label)
-          val internalVertexTo = VertexToAdd(relationTest.v2.props, relationTest.v2.label)
-          val internalEdge = EdgeToAdd(relationTest.e.props, relationTest.e.label)
-          val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
+          implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.vFrom.properties) ++ putPropsOnPropSet(relationTest.vTo.properties)
 
-          AddVertices().createRelation(relation)
+          AddVertices().createRelation(relationTest)
         } catch {
           case e: ImportToGremlinException =>
             logger.info(e.getMessage)
@@ -157,8 +133,8 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     val allReq: List[(List[String], TestConfInvalid)] = readAllFilesInvalid("/addVerticesSpec/invalid/")
 
     // format test data
-    val listAllElems: List[(List[CoupleVAndE], TestConfInvalid)] = allReq map { vve: (List[String], TestConfInvalid) =>
-      getListVVE((Nil, TestConfInvalid("", "")), vve)
+    val listAllElems: List[(List[Relation], TestConfInvalid)] = allReq map { vve: (List[String], TestConfInvalid) =>
+      getRelations((Nil, TestConfInvalid("", "")), vve)
     }
 
     // run the tests
@@ -205,9 +181,9 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
         new KeyValue[String](Name, "edge")
       )
 
-      val internalVertexFrom = VertexToAdd(p1, "aLabel")
-      val internalVertexTo = VertexToAdd(p2, "aLabel")
-      val internalEdge = EdgeToAdd(pE, "aLabel")
+      val internalVertexFrom = VertexCore(p1, "aLabel")
+      val internalVertexTo = VertexCore(p2, "aLabel")
+      val internalEdge = EdgeCore(pE, "aLabel")
       val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
       // commit
       implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(p1)
@@ -252,15 +228,21 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     }
   }
 
-  //TODO: make a test for verifEdge and verifVertex
-
   // ----------- helpers -----------
 
-  def getListVVE[T](accu: (List[CoupleVAndE], T), toParse: (List[String], T)): (List[CoupleVAndE], T) = {
+  def verificationRelation(relation: Relation)(implicit propSet: Set[Elements.Property]): Unit = {
+    val vFromDb = relation.vFrom.toVertexStructDb(gc.g)
+    val vToDb = relation.vTo.toVertexStructDb(gc.g)
+    AddVertices().verifVertex(vFromDb, relation.vFrom.properties)
+    AddVertices().verifVertex(vToDb, relation.vTo.properties)
+    AddVertices().verifEdge(vFromDb, vToDb, relation.edge.properties)
+  }
+
+  def getRelations[T](accu: (List[Relation], T), toParse: (List[String], T)): (List[Relation], T) = {
     toParse match {
       case (Nil, _) => accu
       case x =>
-        getListVVE(accu = (accu._1 :+ CoupleVAndE(stringToVert(x._1.head), stringToVert(x._1(1)), StringToEdg(x._1(2))), x._2), toParse = (x._1.drop(3), x._2))
+        getRelations(accu = (accu._1 :+ Relation(stringToVertex(x._1.head), stringToVertex(x._1(1)), StringToEdge(x._1(2))), x._2), toParse = (x._1.drop(3), x._2))
     }
   }
 
@@ -278,7 +260,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     allReq zip allExpectedResults
   }
 
-  case class CoupleVAndE(v1: Vert, v2: Vert, e: Edg)
 
   def readAllFilesInvalid(directory: String): List[(List[String], TestConfInvalid)] = {
     val filesExpectedResults = getFilesInDirectory(directory + "expectedResults/")
@@ -293,14 +274,13 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     allReq zip allExpectedResults
   }
 
-  case class Edg(label: String, props: List[KeyValue[String]])
 
-  def stringToVert(vertexStruct: String): Vert = {
+  def stringToVertex(vertexStruct: String): VertexCore = {
     val listValues = vertexStruct.split(";").toList
     assert(listValues.nonEmpty, s"Test is incorrect: $vertexStruct is missing some values")
     val label = listValues.head
     val listProperties = extractProps(Nil, listValues.tail)
-    Vert(label, listProperties)
+    VertexCore(listProperties, label)
 
   }
 
@@ -325,16 +305,15 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     lines
   }
 
-  case class Vert(label: String = "", props: List[KeyValue[String]] = Nil)
 
-  def StringToEdg(edgeStruct: String): Edg = {
+  def StringToEdge(edgeStruct: String): EdgeCore = {
     val listValues = edgeStruct.split(";").toList
     assert(listValues.nonEmpty, s"Test is incorrect: $edgeStruct is missing some values")
     val label = listValues.head
     if (listValues.length > 1) {
       val listProps = extractProps(Nil, listValues.drop(1))
-      Edg(label, listProps)
-    } else Edg(label, Nil)
+      EdgeCore(listProps, label)
+    } else EdgeCore(Nil, label)
   }
 
   def extractProps(accu: List[KeyValue[String]], list: List[String]): List[KeyValue[String]] = {

@@ -1,5 +1,5 @@
 environment: local
-namespace: core-dev
+namespace: core-demo
 image:
   tag: latest # set to your local image tag if needed
 
@@ -7,11 +7,11 @@ image:
 discoveryservice:
   noHost: true
   ingestFQDN: localhost
-  kafkaURL: "kafka.core-dev.svc.cluster.local:9092"
+  kafkaURL: "kafka.core-demo.svc.cluster.local:9092"
   redisSecretName: "redis-secrets"
   serverUuid: "9d3c78ff-22f3-4441-a5d1-85c636d486ff"
   kafka:
-    bootstrapServers: "kafka.core-dev:9092"
+    bootstrapServers: "kafka.core-demo:9092"
     timeout: 2
     consumer:
       errorTopic: "ubirch-svalbard-evt-relation-json-error"
@@ -27,31 +27,31 @@ discoveryservice:
     port: 4321
     namespace: "ubirch_discovery_service"
   core:
-    hosts: "janusgraph.core-dev"
+    hosts: "janusgraph.core-demo"
     port: 8182
     connectionPool:
       reconnectInterval: 500
       maxWaitForConnection: 6000
 
 prometheus:
-  namespace: prometheus-dev
+  namespace: prometheus
 
 redis:
-  masterURL: "redis-stable-master.core-dev.svc.cluster.local:6379"
-  slaveURL: "redis-stable-slave.core-dev.svc.cluster.local:6379"
+  masterURL: "redis-stable-master.core-demo.svc.cluster.local:6379"
+  slaveURL: "redis-stable-slave.core-demo.svc.cluster.local:6379"
 
 
 ingress:
   enabled: true
   annotations:
     certmanager.k8s.io/acme-challenge-type: "dns01"
-    certmanager.k8s.io/cluster-issuer: "letsencrypt-dev"
-    certmanager.k8s.io/acme-dns01-provider: "dev-dns"
+    certmanager.k8s.io/cluster-issuer: "letsencrypt-demo"
+    certmanager.k8s.io/acme-dns01-provider: "demo-dns-demo-ubirch-com"
     kubernetes.io/ingress.allow-http: "false"
   path: /
   hosts:
-    - niomon.dev.ubirch.com
+    - niomon.demo.ubirch.com
   tls:
-    - secretName: niomon-dev-ubirch-com-certificate
+    - secretName: niomon-demo-ubirch-com-certificate
       hosts:
-        - niomon.dev.ubirch.com
+        - niomon.demo.ubirch.com

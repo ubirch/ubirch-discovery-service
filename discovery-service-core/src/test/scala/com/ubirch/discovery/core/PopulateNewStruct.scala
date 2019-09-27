@@ -3,7 +3,7 @@ package com.ubirch.discovery.core
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.operation.AddVertices
-import com.ubirch.discovery.core.structure.{EdgeToAdd, VertexStructDb, VertexToAdd}
+import com.ubirch.discovery.core.structure.{EdgeCore, VertexCore, VertexServer}
 import com.ubirch.discovery.core.structure.Elements.Property
 import gremlin.scala.{Key, KeyValue}
 
@@ -33,13 +33,13 @@ object PopulateNewStruct extends LazyLogging {
   def main(args: Array[String]): Unit = {
     deleteDatabase()
     val device = initDevice()
-    var UPPs = new ListBuffer[VertexStructDb]
+    var UPPs = new ListBuffer[VertexServer]
     UPPs ++= initUPP(device, 4)
 
-    var FTs = new ListBuffer[VertexStructDb]
+    var FTs = new ListBuffer[VertexServer]
     FTs += initFT(null, UPPs.toList)
 
-    var MTs = new ListBuffer[VertexStructDb]
+    var MTs = new ListBuffer[VertexServer]
 
     for (i <- 0 to 1000) {
       UPPs ++= initUPP(device, 3)
@@ -55,55 +55,55 @@ object PopulateNewStruct extends LazyLogging {
     logger.info("finished!")
   }
 
-  def initDevice(): VertexStructDb = {
-    val internalDevice = VertexToAdd(List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString)), "DEVICE")
-    val device = new VertexStructDb(internalDevice, gc.g)
+  def initDevice(): VertexServer = {
+    val internalDevice = VertexCore(List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString)), "DEVICE")
+    val device = new VertexServer(internalDevice, gc.g)
     device.addVertexWithProperties(gc.b)
     device
   }
 
-  def initUPP(device: VertexStructDb, number: Int): List[VertexStructDb] = {
-    var v = new ListBuffer[VertexStructDb]
+  def initUPP(device: VertexServer, number: Int): List[VertexServer] = {
+    var v = new ListBuffer[VertexServer]
     for (_ <- 0 until number) {
       val UPPprops = List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString))
-      val internalUPP = VertexToAdd(UPPprops, "UPP")
-      AddVertices().addTwoVerticesCached(device)(internalUPP)(EdgeToAdd(edgeProps, "DEVICE->UPP"))
+      val internalUPP = VertexCore(UPPprops, "UPP")
+      AddVertices().addTwoVerticesCached(device)(internalUPP)(EdgeCore(edgeProps, "DEVICE->UPP"))
       v += internalUPP.toVertexStructDb(gc.g)
     }
     v.toList
   }
 
-  def initFT(FT: VertexStructDb = null, UPPs: List[VertexStructDb]): VertexStructDb = {
+  def initFT(FT: VertexServer = null, UPPs: List[VertexServer]): VertexServer = {
     val newFTprops = List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString))
     if (FT == null) {
       for (i <- 0 to 3) {
-        AddVertices().addTwoVerticesCached(UPPs(i))(VertexToAdd(newFTprops, "FOUNDATION_TREE"))(EdgeToAdd(edgeProps, "UPP->FT"))
+        AddVertices().addTwoVerticesCached(UPPs(i))(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "UPP->FT"))
       }
     } else {
-      AddVertices().addTwoVerticesCached(FT)(VertexToAdd(newFTprops, "FOUNDATION_TREE"))(EdgeToAdd(edgeProps, "FT->FT"))
+      AddVertices().addTwoVerticesCached(FT)(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "FT->FT"))
       for (i <- 0 to 2) {
-        AddVertices().addTwoVerticesCached(UPPs(i))(VertexToAdd(newFTprops, "FOUNDATION_TREE"))(EdgeToAdd(edgeProps, "UPP->FT"))
+        AddVertices().addTwoVerticesCached(UPPs(i))(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "UPP->FT"))
       }
     }
-    new VertexStructDb(VertexToAdd(newFTprops, "FOUNDATION_TREE"), gc.g)
+    new VertexServer(VertexCore(newFTprops, "FOUNDATION_TREE"), gc.g)
   }
 
-  def initMT(MT: VertexStructDb = null, FTs: List[VertexStructDb]): VertexStructDb = {
+  def initMT(MT: VertexServer = null, FTs: List[VertexServer]): VertexServer = {
     val newMTprops = List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString))
     if (MT == null) {
       for (i <- 0 to 3) {
-        AddVertices().addTwoVerticesCached(FTs(i))(VertexToAdd(newMTprops, "MASTER_TREE"))(EdgeToAdd(edgeProps, "FT->MT"))
+        AddVertices().addTwoVerticesCached(FTs(i))(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "FT->MT"))
       }
     } else {
-      AddVertices().addTwoVerticesCached(MT)(VertexToAdd(newMTprops, "MASTER_TREE"))(EdgeToAdd(edgeProps, "MT->MT"))
+      AddVertices().addTwoVerticesCached(MT)(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "MT->MT"))
       for (i <- 0 to 2) {
-        AddVertices().addTwoVerticesCached(FTs(i))(VertexToAdd(newMTprops, "MASTER_TREE"))(EdgeToAdd(edgeProps, "FT->MT"))
+        AddVertices().addTwoVerticesCached(FTs(i))(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "FT->MT"))
       }
     }
-    new VertexStructDb(VertexToAdd(newMTprops, "MASTER_TREE"), gc.g)
+    new VertexServer(VertexCore(newMTprops, "MASTER_TREE"), gc.g)
   }
 
-  def initBcx(MT: VertexStructDb) = {
+  def initBcx(MT: VertexServer) = {
     val iotaProps = List(
       KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString),
       KeyValue(KEY_BC, "IOTA")
@@ -112,7 +112,7 @@ object PopulateNewStruct extends LazyLogging {
       KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString),
       KeyValue(KEY_BC, "ETH")
     )
-    AddVertices().addTwoVerticesCached(MT)(VertexToAdd(iotaProps, "PUBLIC_CHAIN"))(EdgeToAdd(edgeProps, "MT->BCX"))
-    AddVertices().addTwoVerticesCached(MT)(VertexToAdd(ethProps, "PUBLIC_CHAIN"))(EdgeToAdd(edgeProps, "MT->BCX"))
+    AddVertices().addTwoVerticesCached(MT)(VertexCore(iotaProps, "PUBLIC_CHAIN"))(EdgeCore(edgeProps, "MT->BCX"))
+    AddVertices().addTwoVerticesCached(MT)(VertexCore(ethProps, "PUBLIC_CHAIN"))(EdgeCore(edgeProps, "MT->BCX"))
   }
 }

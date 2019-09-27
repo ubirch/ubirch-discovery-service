@@ -9,7 +9,7 @@ import org.joda.time.format.ISODateTimeFormat
 import org.scalatest.{FeatureSpec, Matchers}
 import org.slf4j.{Logger, LoggerFactory}
 
-class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
+class VertexServerSpec extends FeatureSpec with Matchers with LazyLogging {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
@@ -40,7 +40,7 @@ class VertexStructDbSpec extends FeatureSpec with Matchers with LazyLogging {
       )
       implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(properties)
 
-      val vertexInternal = VertexToAdd(properties, label)
+      val vertexInternal = VertexCore(properties, label)
       val vSDb = vertexInternal.toVertexStructDb(gc.g)
 
       vSDb.addVertexWithProperties(gc.b)

@@ -1,5 +1,6 @@
 package com.ubirch.discovery.core.structure
 
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import gremlin.scala.{KeyValue, TraversalSource}
 
@@ -31,32 +32,38 @@ object Elements {
 
 }
 
-abstract class ElementToAdd(properties: List[KeyValue[String]], label: String) {
+abstract class ElementCore(properties: List[KeyValue[String]], label: String) {
 
-  def equals(that: ElementToAdd): Boolean
+  def equals(that: ElementCore): Boolean
 
   def sortProperties: List[KeyValue[String]] = {
     properties.sortBy(x => x.key.name)
   }
 }
 
-case class VertexToAdd(properties: List[KeyValue[String]], label: String) extends ElementToAdd(properties, label) {
-  def toVertexStructDb(g: TraversalSource)(implicit propSet: Set[Property]): VertexStructDb = {
-    new VertexStructDb(this, g)
+case class VertexCore(properties: List[KeyValue[String]], label: String) extends ElementCore(properties, label) {
+  def toVertexStructDb(g: TraversalSource)(implicit propSet: Set[Property]): VertexServer = {
+    new VertexServer(this, g)
   }
 
-  def equals(that: ElementToAdd): Boolean = {
+  def equals(that: ElementCore): Boolean = {
     this.sortProperties equals that.sortProperties
   }
 }
 
-case class EdgeToAdd(properties: List[KeyValue[String]], label: String) extends ElementToAdd(properties, label) {
+case class EdgeCore(properties: List[KeyValue[String]], label: String) extends ElementCore(properties, label) {
 
-  def equals(that: ElementToAdd): Boolean = {
+  def equals(that: ElementCore): Boolean = {
     this.sortProperties equals that.sortProperties
   }
 }
 
-case class Relation(vFrom: VertexToAdd, vTo: VertexToAdd, edge: EdgeToAdd)
+case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
+  def toRelationServer(implicit propSet: Set[Property], gc: GremlinConnector): RelationServer = {
+    val vFrom: VertexServer = this.vFrom.toVertexStructDb(gc.g)
+    val vTo: VertexServer = this.vTo.toVertexStructDb(gc.g)
+    RelationServer(vFrom, vTo, edge)
+  }
+}
 
-case class RelationDb(vFromDb: VertexStructDb, vToDb: VertexStructDb, edge: EdgeToAdd)
+case class RelationServer(vFromDb: VertexServer, vToDb: VertexServer, edge: EdgeCore)

@@ -1,5 +1,5 @@
-environment: ubirch-dev
-namespace: ubirch-dev
+environment: ubirch-ENV
+namespace: ubirch-ENV
 ingestFQDN: ingest.ubirch.dev.ubirch.com
 keyServiceURL: key-svc.core-dev:8095
 kafkaURL: kafka.core-dev:9092
@@ -9,3 +9,6 @@ image:
 redis:
   masterURL: "redis-master:6379"
   slaveURL: "redis-slave:6379"
+
+prometheus:
+  namespace: prometheus

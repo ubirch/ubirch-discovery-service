@@ -6,7 +6,7 @@ import org.apache.commons.configuration.PropertiesConfiguration
 
 object GremlinConnectorFactory {
 
-  private lazy val instanceTest = new GremlinConnectorTest
+  private lazy val instanceTest = new GremlinConnectorForTests
   private lazy val instanceJanusGraph = new JanusGraphConnector
 
   def getInstance(connectorType: ConnectorType): GremlinConnector = {

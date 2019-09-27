@@ -3,7 +3,7 @@ package com.ubirch.discovery.kafka.models
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.operation.AddVertices
-import com.ubirch.discovery.core.structure.{Relation, VertexStructDb, VertexToAdd}
+import com.ubirch.discovery.core.structure.{Relation, VertexCore, VertexServer}
 import com.ubirch.discovery.core.structure.Elements.{Label, Property}
 import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
 import gremlin.scala.{Key, KeyValue}
@@ -70,7 +70,7 @@ object Store extends LazyLogging {
     }
   }
 
-  def vertexToCache(vertexToConvert: VertexToAdd): VertexStructDb = {
+  def vertexToCache(vertexToConvert: VertexCore): VertexServer = {
     val vertex = vertexToConvert.toVertexStructDb(gc.g)
     if (!vertex.existInJanusGraph) vertex.addVertexWithProperties(gc.b)
     vertex
@@ -105,7 +105,7 @@ object Store extends LazyLogging {
     checkAllProps(props)
   }
 
-  def addVCached(relation: Relation, vCached: VertexStructDb): Unit = {
+  def addVCached(relation: Relation, vCached: VertexServer): Unit = {
     val vertexNotCached = relation.vTo
     val edge = relation.edge
     val isAllowed = checkIfLabelIsAllowed(vertexNotCached.label) && checkIfPropertiesAreAllowed(vertexNotCached.properties)

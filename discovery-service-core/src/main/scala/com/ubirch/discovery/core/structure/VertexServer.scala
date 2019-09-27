@@ -12,7 +12,7 @@ import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 
 import scala.collection.JavaConverters._
 
-class VertexStructDb(val internalVertex: VertexToAdd, val g: TraversalSource)(implicit propSet: Set[Property]) extends LazyLogging {
+class VertexServer(val internalVertex: VertexCore, val g: TraversalSource)(implicit propSet: Set[Property]) extends LazyLogging {
 
   var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
     def searchForVertexByProperties(properties: List[KeyValue[String]]): gremlin.scala.Vertex = {

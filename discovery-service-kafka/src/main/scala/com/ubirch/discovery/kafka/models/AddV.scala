@@ -1,6 +1,6 @@
 package com.ubirch.discovery.kafka.models
 
-import com.ubirch.discovery.core.structure.{EdgeToAdd, Relation, VertexToAdd}
+import com.ubirch.discovery.core.structure.{EdgeCore, Relation, VertexCore}
 import gremlin.scala.{Key, KeyValue}
 
 case class AddV(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edge: EdgeKafkaStruct) {
@@ -21,9 +21,9 @@ case class VertexKafkaStruct(properties: Map[String, String], label: String = "a
     s"label: $label; properties: ${properties.mkString(", ")}"
   }
 
-  def toVertexToAdd: VertexToAdd = {
+  def toVertexToAdd: VertexCore = {
     val propertiesToAdd = properties map { kv => new KeyValue[String](Key(kv._1), kv._2) }
-    VertexToAdd(propertiesToAdd.toList, label)
+    VertexCore(propertiesToAdd.toList, label)
   }
 }
 
@@ -32,8 +32,8 @@ case class EdgeKafkaStruct(properties: Map[String, String], label: String = "aLa
     s"label: $label; properties: ${properties.mkString(", ")}"
   }
 
-  def toEdgeToAdd: EdgeToAdd = {
+  def toEdgeToAdd: EdgeCore = {
     val propertiesToAdd = properties map { kv => new KeyValue[String](Key(kv._1), kv._2) }
-    EdgeToAdd(propertiesToAdd.toList, label)
+    EdgeCore(propertiesToAdd.toList, label)
   }
 }
