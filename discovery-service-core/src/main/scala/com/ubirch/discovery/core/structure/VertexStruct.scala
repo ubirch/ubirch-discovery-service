@@ -9,9 +9,7 @@ case class VertexStruct(label: String, properties: Map[String, String]) extends 
   override def toString: String = {
     var s: String = s"Label: $label"
     for ((k, v) <- properties) {
-      logger.debug("k: " + k)
       s += s"\n$k: ${v.toString}"
-      logger.debug("end")
     }
     s
   }

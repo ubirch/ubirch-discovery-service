@@ -1,7 +1,7 @@
 
 install:
 ```
-helm.sh dev install --name discovery-service-kafka discovery-service-kafka/ --values discovery-service-kafka/values.dev.yaml --namespace ubirch-dev
+helm.sh dev install --name discovery-service-kafka discovery-service-kafka --values discovery-service-kafka/values.dev.yaml --namespace ubirch-dev
 ```
 
 remove:

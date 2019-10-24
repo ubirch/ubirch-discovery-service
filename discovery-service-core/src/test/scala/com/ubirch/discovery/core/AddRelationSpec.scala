@@ -4,7 +4,7 @@ import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
-import com.ubirch.discovery.core.operation.AddVertices
+import com.ubirch.discovery.core.operation.AddRelation
 import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
@@ -14,7 +14,7 @@ import org.scalatest.{FeatureSpec, Matchers}
 
 import scala.io.Source
 
-class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
+class AddRelationSpec extends FeatureSpec with Matchers with LazyLogging {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
@@ -30,11 +30,11 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       // commit
       relations foreach { relation =>
         implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
-        AddVertices().createRelation(relation)
+        AddRelation().createRelation(relation)
       }
       // verif
       relations foreach { relation =>
-        implicit val propSet: Set[Elements.Property] =  putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
+        implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
 
         try {
           verificationRelation(relation)
@@ -74,8 +74,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       relations foreach { relation =>
         implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
 
-        AddVertices().createRelation(relation)
-
+        AddRelation().createRelation(relation)
 
         // verif
         try {
@@ -83,7 +82,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
         } catch {
           case e: Throwable =>
-          logger.error("", e)
+            logger.error("", e)
             fail()
         }
       }
@@ -117,7 +116,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
         try {
           implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.vFrom.properties) ++ putPropsOnPropSet(relationTest.vTo.properties)
 
-          AddVertices().createRelation(relationTest)
+          AddRelation().createRelation(relationTest)
         } catch {
           case e: ImportToGremlinException =>
             logger.info(e.getMessage)
@@ -187,7 +186,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
       // commit
       implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(p1)
-      AddVertices().createRelation(relation)
+      AddRelation().createRelation(relation)
 
       // create false data
       val pFalse: List[KeyValue[String]] = List(new KeyValue[String](Number, "1"))
@@ -200,10 +199,10 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       nbVertices shouldBe 2
       nbEdges shouldBe 1
       //    vertices
-      val v1Reconstructed = internalVertexFrom.toVertexStructDb(gc.g)
-      val v2Reconstructed = internalVertexTo.toVertexStructDb(gc.g)
+      val v1Reconstructed = internalVertexFrom.toVertexStructDb(gc)
+      val v2Reconstructed = internalVertexTo.toVertexStructDb(gc)
       try {
-        AddVertices().verifVertex(v1Reconstructed, pFalse)
+        AddRelation().verifVertex(v1Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -211,7 +210,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       }
 
       try {
-        AddVertices().verifEdge(v1Reconstructed, v2Reconstructed, pFalse)
+        AddRelation().verifEdge(v1Reconstructed, v2Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -219,7 +218,7 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
       }
 
       try {
-        AddVertices().verifEdge(v1Reconstructed, v1Reconstructed, pFalse)
+        AddRelation().verifEdge(v1Reconstructed, v1Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -231,11 +230,11 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
   // ----------- helpers -----------
 
   def verificationRelation(relation: Relation)(implicit propSet: Set[Elements.Property]): Unit = {
-    val vFromDb = relation.vFrom.toVertexStructDb(gc.g)
-    val vToDb = relation.vTo.toVertexStructDb(gc.g)
-    AddVertices().verifVertex(vFromDb, relation.vFrom.properties)
-    AddVertices().verifVertex(vToDb, relation.vTo.properties)
-    AddVertices().verifEdge(vFromDb, vToDb, relation.edge.properties)
+    val vFromDb = relation.vFrom.toVertexStructDb(gc)
+    val vToDb = relation.vTo.toVertexStructDb(gc)
+    AddRelation().verifVertex(vFromDb, relation.vFrom.properties)
+    AddRelation().verifVertex(vToDb, relation.vTo.properties)
+    AddRelation().verifEdge(vFromDb, vToDb, relation.edge.properties)
   }
 
   def getRelations[T](accu: (List[Relation], T), toParse: (List[String], T)): (List[Relation], T) = {
@@ -260,7 +259,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     allReq zip allExpectedResults
   }
 
-
   def readAllFilesInvalid(directory: String): List[(List[String], TestConfInvalid)] = {
     val filesExpectedResults = getFilesInDirectory(directory + "expectedResults/")
     val filesReq = getFilesInDirectory(directory + "requests/")
@@ -273,7 +271,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
 
     allReq zip allExpectedResults
   }
-
 
   def stringToVertex(vertexStruct: String): VertexCore = {
     val listValues = vertexStruct.split(";").toList
@@ -304,7 +301,6 @@ class AddVerticesSpec extends FeatureSpec with Matchers with LazyLogging {
     source.close
     lines
   }
-
 
   def StringToEdge(edgeStruct: String): EdgeCore = {
     val listValues = edgeStruct.split(";").toList

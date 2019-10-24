@@ -147,8 +147,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
       true
     } catch {
       case e: Exception =>
-        logger.error("Error storing graph: " + e.getMessage)
-        throw StoreException("Error storing graph: " + e.getMessage)
+        logger.error("Error storing graph: " + s"""${e.getMessage}""")
+        throw StoreException("Error storing graph: " + s"""${e.getMessage}""")
     }
   }
 

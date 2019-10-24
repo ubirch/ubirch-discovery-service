@@ -5,8 +5,8 @@ import com.ubirch.discovery.core.structure.Elements._
 object KafkaElements {
 
   val propertiesToIterate: Set[Property] = Set(SIGNATURE, HASH, DEVICE_ID)
-  val listOfAllProperties: Set[Property] = Set(SIGNATURE, TYPE, HASH, DEVICE_ID, BLOCKCHAIN_TYPE)
-  val listOfAllLabels: Set[Label] = Set(DEVICE, UPP, ROOT_TREE, FOUNDATION_TREE, BLOCKCHAIN)
+  val propertiesAllowed: Set[Property] = Set(SIGNATURE, TYPE, HASH, DEVICE_ID, BLOCKCHAIN_TYPE)
+  val labelsAllowed: Set[Label] = Set(DEVICE, UPP, ROOT_TREE, FOUNDATION_TREE, BLOCKCHAIN)
 
   /* Define properties type */
   case object SIGNATURE extends Property("signature", true)
@@ -18,9 +18,9 @@ object KafkaElements {
   /* Define label type */
   case object DEVICE extends Label("DEVICE")
   case object UPP extends Label("UPP")
-  case object ROOT_TREE extends Label("ROOT_TREE")
+  case object ROOT_TREE extends Label("MASTER_TREE")
   case object FOUNDATION_TREE extends Label("SLAVE_TREE")
-  case object BLOCKCHAIN extends Label("BLOCKCHAIN")
+  case object BLOCKCHAIN extends Label("PUBLIC_CHAIN")
 
 }
 

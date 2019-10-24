@@ -4,16 +4,16 @@ import com.typesafe.scalalogging.LazyLogging
 
 class Timer() extends LazyLogging {
 
-  var t0: Long = 0
+  var timeTimerStart: Long = 0
 
   def init(): Unit = {
-    t0 = System.currentTimeMillis()
+    timeTimerStart = System.currentTimeMillis()
   }
 
   init()
 
   def finish(arg: String): String = {
-    val timeTotal = System.currentTimeMillis() - t0
+    val timeTotal = System.currentTimeMillis() - timeTimerStart
     if (timeTotal > 1000) {
       logger.warn(s"Time to do $arg took ${timeTotal.toString} ms!")
     } else {

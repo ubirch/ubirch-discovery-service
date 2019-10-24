@@ -2,7 +2,7 @@ package com.ubirch.discovery.core.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.structure.{VertexServer, VertexStruct}
+import com.ubirch.discovery.core.structure.{VertexDatabase, VertexStruct}
 import com.ubirch.discovery.core.util.Exceptions.{KeyNotInList, NumberOfEdgesNotCorrect}
 import gremlin.scala.{Key, KeyValue}
 import org.apache.tinkerpop.gremlin.structure.Edge
@@ -86,7 +86,7 @@ object Util extends LazyLogging {
     * @param size  Number of expected edges connecting the vertexes (default: 1).
     * @return The edge.
     */
-  def getEdge(implicit gc: GremlinConnector, vFrom: VertexServer, vTo: VertexServer, size: Int = 1): List[Edge] = {
+  def getEdge(implicit gc: GremlinConnector, vFrom: VertexDatabase, vTo: VertexDatabase, size: Int = 1): List[Edge] = {
     val edgeList = gc.g.V(vFrom.vertex).outE().as("e").inV().is(vTo.vertex).select("e").l() //filter(_.inV().is(vTo.vertex)).toList()
     edgeList match {
       case x: List[Edge] =>
@@ -103,6 +103,8 @@ object Util extends LazyLogging {
     val edgePropertiesAsJava = gc.g.E(edge).valueMap().toList().head.asScala.toMap.asInstanceOf[Map[Any, Any]]
     edgePropertiesAsJava map { x => x._1 -> List(x._2.asInstanceOf[String]) }
   }
+
+  def kvToJson(keyValue: KeyValue[String]): (String, String) = keyValue.key.name -> keyValue.value
 
 }
 

@@ -3,13 +3,13 @@ package com.ubirch.discovery.core.structure
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.util.Util._
+import com.ubirch.discovery.core.TestUtil
 import gremlin.scala._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
 import org.scalatest.{FeatureSpec, Matchers}
-import org.slf4j.{Logger, LoggerFactory}
 
-class VertexServerSpec extends FeatureSpec with Matchers with LazyLogging {
+class VertexDatabaseSpec extends FeatureSpec with Matchers with LazyLogging {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
@@ -20,8 +20,6 @@ class VertexServerSpec extends FeatureSpec with Matchers with LazyLogging {
   val Created: Key[String] = Key[String]("created")
   val test: Key[String] = Key[String]("truc")
   val IdAssigned: Key[String] = Key[String]("IdAssigned")
-
-  def log: Logger = LoggerFactory.getLogger(this.getClass)
 
   def deleteDatabase(): Unit = {
     gc.g.V().drop().iterate()
@@ -38,12 +36,12 @@ class VertexServerSpec extends FeatureSpec with Matchers with LazyLogging {
         new KeyValue[String](Name, "aName"),
         new KeyValue[String](Created, dateTimeFormat.print(now))
       )
-      implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(properties)
+      implicit val propSet: Set[Elements.Property] = TestUtil.putPropsOnPropSet(properties)
 
       val vertexInternal = VertexCore(properties, label)
-      val vSDb = vertexInternal.toVertexStructDb(gc.g)
+      val vSDb = vertexInternal.toVertexStructDb(gc)
 
-      vSDb.addVertexWithProperties(gc.b)
+      vSDb.addVertexWithProperties()
 
       val response = vSDb.getPropertiesMap
       logger.debug(response.mkString)
@@ -53,7 +51,7 @@ class VertexServerSpec extends FeatureSpec with Matchers with LazyLogging {
 
       val propertiesReceived = recompose(response, propertiesKey)
 
-      logger.info("respomnse: " + response.mkString(", "))
+      logger.info("response: " + response.mkString(", "))
       logger.info("properties received: " + propertiesReceived.mkString(", "))
 
       propertiesReceived.sortBy(x => x.key.name) shouldBe properties.sortBy(x => x.key.name)
@@ -61,15 +59,5 @@ class VertexServerSpec extends FeatureSpec with Matchers with LazyLogging {
 
   }
 
-  def putPropsOnPropSet(propList: List[KeyValue[String]]): Set[Elements.Property] = {
-    def iterateOnListProp(it: List[KeyValue[String]], accu: Set[Elements.Property]): Set[Elements.Property] = {
-      it match {
-        case Nil => accu
-        case x :: xs => iterateOnListProp(xs, accu ++ Set(new Elements.Property(x.key.name, true)))
-      }
-    }
-
-    iterateOnListProp(propList, Set())
-  }
 }
 

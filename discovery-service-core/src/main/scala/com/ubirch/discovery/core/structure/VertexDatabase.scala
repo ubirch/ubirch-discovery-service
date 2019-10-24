@@ -4,6 +4,7 @@ import java.util
 import java.util.concurrent.CompletionException
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
@@ -12,7 +13,10 @@ import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 
 import scala.collection.JavaConverters._
 
-class VertexServer(val internalVertex: VertexCore, val g: TraversalSource)(implicit propSet: Set[Property]) extends LazyLogging {
+class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(implicit propSet: Set[Property]) extends LazyLogging {
+
+  val g: TraversalSource = gc.g
+  val b: Bindings = gc.b
 
   var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
     def searchForVertexByProperties(properties: List[KeyValue[String]]): gremlin.scala.Vertex = {
@@ -27,11 +31,11 @@ class VertexServer(val internalVertex: VertexCore, val g: TraversalSource)(impli
       }
     }
     val timer = new Timer()
-    val possibleVertex = searchForVertexByProperties(internalVertex.properties)
+    val possibleVertex = searchForVertexByProperties(coreVertex.properties)
     if (possibleVertex != null) {
       addNewPropertiesToVertex(possibleVertex)
     }
-    timer.finish(s"check if vertex with properties ${internalVertex.properties.mkString(", ")} was already in the DB")
+    timer.finish(s"check if vertex with properties ${coreVertex.properties.mkString(", ")} was already in the DB")
     possibleVertex
   }
 
@@ -55,17 +59,15 @@ class VertexServer(val internalVertex: VertexCore, val g: TraversalSource)(impli
 
   /**
     * Adds a vertex in the database with his label and properties.
-    *
-    * @param b          Bindings for indexing.
     */
-  def addVertexWithProperties(b: Bindings): Unit = {
+  def addVertexWithProperties(): Unit = {
     if (existInJanusGraph) throw new ImportToGremlinException("Vertex already exist in the database")
     try {
-      logger.debug(s"adding vertex: label: ${internalVertex.label}; properties: ${internalVertex.properties.mkString(", ")}")
-      vertex = initialiseVertex(b)
-      for (property <- internalVertex.properties.tail) {
-        logger.info(s"adding property ${property.key.name} , ${property.value}")
-        logger.info("vertexId: " + vertexId)
+      logger.debug(s"adding vertex: label: ${coreVertex.label}; properties: ${coreVertex.properties.mkString(", ")}")
+      vertex = initialiseVertex
+      for (property <- coreVertex.properties.tail) {
+        logger.debug(s"adding property ${property.key.name} , ${property.value}")
+        logger.debug("vertexId: " + vertexId)
         addPropertyToVertex(property)
       }
     } catch {
@@ -73,8 +75,8 @@ class VertexServer(val internalVertex: VertexCore, val g: TraversalSource)(impli
     }
   }
 
-  private def initialiseVertex(b: Bindings): Vertex = {
-    g.addV(b.of("label", internalVertex.label)).property(internalVertex.properties.head).l().head
+  private def initialiseVertex: Vertex = {
+    g.addV(b.of("label", coreVertex.label)).property(coreVertex.properties.head).l().head
   }
 
   private def addPropertyToVertex(property: KeyValue[String], vertex: Vertex = vertex) = {
@@ -83,7 +85,7 @@ class VertexServer(val internalVertex: VertexCore, val g: TraversalSource)(impli
 
   private def addNewPropertiesToVertex(vertex: Vertex): Unit = {
     val timer = new Timer()
-    for (property <- internalVertex.properties) {
+    for (property <- coreVertex.properties) {
       if (!doesPropExist(property)) {
         addPropertyToVertex(property, vertex: Vertex)
         logger.debug(s"Adding property: ${property.key.name}")
