@@ -11,22 +11,22 @@ class ElementsSpec extends FeatureSpec with Matchers with LazyLogging {
   val label2 = "label2"
   val labelEdge = "labelEdge"
 
-  val Number: Key[String] = Key[String]("number")
-  val Name: Key[String] = Key[String]("name")
-  val Created: Key[String] = Key[String]("created")
-  val Test: Key[String] = Key[String]("truc")
-  val IdAssigned: Key[String] = Key[String]("IdAssigned")
+  val Number: Key[Any] = Key[Any]("number")
+  val Name: Key[Any] = Key[Any]("name")
+  val Created: Key[Any] = Key[Any]("created")
+  val Test: Key[Any] = Key[Any]("truc")
+  val IdAssigned: Key[Any] = Key[Any]("IdAssigned")
 
-  val properties1: List[KeyValue[String]] = List(
-    new KeyValue[String](Number, "5"),
-    new KeyValue[String](Name, "name1"),
+  val properties1: List[ElementProperty] = List(
+    ElementProperty(KeyValue[Any](Number, 5.toLong), PropertyType.Long),
+    ElementProperty(KeyValue[Any](Name, "name1"), PropertyType.String)
   )
-  val properties2: List[KeyValue[String]] = List(
-    new KeyValue[String](Number, "6"),
-    new KeyValue[String](Name, "name2"),
+  val properties2: List[ElementProperty] = List(
+    ElementProperty(KeyValue[Any](Number, 6.toLong), PropertyType.Long),
+    ElementProperty(KeyValue[Any](Name, "name2"), PropertyType.String)
   )
-  val propertiesEdge: List[KeyValue[String]] = List(
-    new KeyValue[String](Test, "an Edge")
+  val propertiesEdge: List[ElementProperty] = List(
+    ElementProperty(KeyValue[Any](Test, "an Edge"), PropertyType.String)
   )
 
   feature("relation class") {
@@ -43,16 +43,6 @@ class ElementsSpec extends FeatureSpec with Matchers with LazyLogging {
       logger.info(relation.toString)
     }
 
-    scenario("delete this") {
-      def generateTime = {
-        val t = System.currentTimeMillis
-        s"""g.addV("testVertex").property("timestamp", $t)"""
-      }
-      while(true) {
-        println(generateTime)
-        Thread.sleep(1100)
-      }
-    }
   }
 
 }

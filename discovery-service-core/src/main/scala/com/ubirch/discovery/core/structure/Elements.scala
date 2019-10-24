@@ -2,8 +2,9 @@ package com.ubirch.discovery.core.structure
 
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
+import com.ubirch.discovery.core.structure.PropertyType.PropertyType
 import com.ubirch.discovery.core.util.Util
-import gremlin.scala.KeyValue
+import gremlin.scala.{Key, KeyValue}
 import org.json4s
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -38,12 +39,12 @@ object Elements {
 
 }
 
-abstract class ElementCore(properties: List[KeyValue[String]], label: String) {
+abstract class ElementCore(properties: List[ElementProperty], label: String) {
 
   def equals(that: ElementCore): Boolean
 
-  def sortProperties: List[KeyValue[String]] = {
-    properties.sortBy(x => x.key.name)
+  def sortProperties: List[ElementProperty] = {
+    properties.sortBy(x => x.keyName)
   }
 
   def toJson = {
@@ -53,7 +54,7 @@ abstract class ElementCore(properties: List[KeyValue[String]], label: String) {
   }
 }
 
-case class VertexCore(properties: List[KeyValue[String]], label: String) extends ElementCore(properties, label) {
+case class VertexCore(properties: List[ElementProperty], label: String) extends ElementCore(properties, label) {
   def toVertexStructDb(gc: GremlinConnector)(implicit propSet: Set[Property]): VertexDatabase = {
     new VertexDatabase(this, gc)
   }
@@ -63,7 +64,7 @@ case class VertexCore(properties: List[KeyValue[String]], label: String) extends
   }
 }
 
-case class EdgeCore(properties: List[KeyValue[String]], label: String) extends ElementCore(properties, label) {
+case class EdgeCore(properties: List[ElementProperty], label: String) extends ElementCore(properties, label) {
 
   def equals(that: ElementCore): Boolean = {
     this.sortProperties equals that.sortProperties
@@ -91,3 +92,26 @@ case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
 }
 
 case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: EdgeCore)
+
+object PropertyType extends Enumeration {
+  type PropertyType = Value
+  val String, Long = Value
+}
+
+case class ElementProperty(keyValue: KeyValue[Any], propType: PropertyType) {
+  def toKeyValue: KeyValue[_ >: String with Long] = {
+    propType match {
+      case PropertyType.String => KeyValue[String](Key(keyValue.key.name), keyValue.value.asInstanceOf[String])
+      case PropertyType.Long => KeyValue[Long](Key(keyValue.key.name), keyValue.value.asInstanceOf[Long])
+    }
+  }
+
+  def keyName: String = keyValue.key.name
+
+  def value = {
+    propType match {
+      case PropertyType.String => keyValue.value.asInstanceOf[String]
+      case PropertyType.Long => keyValue.value.asInstanceOf[Long]
+    }
+  }
+}

@@ -7,7 +7,6 @@ import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList, PropertiesNotCorrect}
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
-import gremlin.scala.{Key, KeyValue}
 
 import scala.language.postfixOps
 
@@ -147,9 +146,9 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     if (relation.edge.properties.isEmpty) {
       gc.g.V(relation.vFromDb.vertex).as("a").V(relation.vToDb.vertex).addE(relation.edge.label).from(relation.vFromDb.vertex).toSet().head
     } else {
-      val edge = gc.g.V(relation.vFromDb.vertex).as("a").V(relation.vToDb.vertex).addE(relation.edge.label).property(relation.edge.properties.head).from(relation.vFromDb.vertex).toSet().head
+      val edge = gc.g.V(relation.vFromDb.vertex).as("a").V(relation.vToDb.vertex).addE(relation.edge.label).property(relation.edge.properties.head.toKeyValue).from(relation.vFromDb.vertex).toSet().head
       for (keyV <- relation.edge.properties.tail) {
-        gc.g.E(edge).property(keyV).iterate()
+        gc.g.E(edge).property(keyV.toKeyValue).iterate()
       }
     }
     timer.finish(s"link vertices of vertices ${relation.vFromDb.vertex.id} and ${relation.vToDb.vertex.id}, len(properties) = ${relation.edge.properties.size} .")
@@ -162,10 +161,10 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     * @param properties   properties of the vertex that should have been added correctly.
     * @param l            label of the vertex.
     */
-  def verifVertex(vertexStruct: VertexDatabase, properties: List[KeyValue[String]], l: String = label): Unit = {
+  def verifVertex(vertexStruct: VertexDatabase, properties: List[ElementProperty], l: String = label): Unit = {
     if (!vertexStruct.existInJanusGraph) throw new ImportToGremlinException("Vertex wasn't imported to the Gremlin Server")
 
-    val keyList: Array[Key[String]] = properties.map(x => x.key).toArray
+    val keyList = properties.map(x => x.keyName)
     val propertiesInServer = vertexStruct.getPropertiesMap
     val propertiesInServerAsListKV = try {
       recompose(propertiesInServer, keyList)
@@ -173,7 +172,7 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
       case _: KeyNotInList => throw new ImportToGremlinException(s"Vertex with properties = ${properties.mkString(", ")} wasn't correctly imported to the database: properties are not correct")
       case x: Throwable => throw x
     }
-    if (!(propertiesInServerAsListKV.sortBy(x => x.key.name) == properties.sortBy(x => x.key.name))) {
+    if (!(propertiesInServerAsListKV.sortBy(p => p.keyName) == properties.sortBy(p => p.keyName))) {
       logger.debug(s"properties = ${properties.mkString(", ")}")
       logger.debug(s"propertiesInServer = ${propertiesInServerAsListKV.mkString(", ")}")
       throw new ImportToGremlinException(s"Vertex with properties = ${properties.mkString(", ")} wasn't correctly imported to the database: properties are not correct")
@@ -187,12 +186,12 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     * @param vTo        Id of the vertex to where the edge goes.
     * @param properties properties of the edge.
     */
-  def verifEdge(vFrom: VertexDatabase, vTo: VertexDatabase, properties: List[KeyValue[String]]): Unit = {
+  def verifEdge(vFrom: VertexDatabase, vTo: VertexDatabase, properties: List[ElementProperty]): Unit = {
     val edge = getEdge(gc, vFrom, vTo).head
 
     if (edge == null) throw new ImportToGremlinException(s"Edge between $vFrom and $vTo wasn't created")
 
-    val keyList = properties map (x => x.key) toArray
+    val keyList = properties map (x => x.keyName)
     val propertiesInServer = try {
       recompose(getEdgeProperties(gc, edge), keyList)
     } catch {
@@ -200,7 +199,7 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
       case x: Throwable => throw x
     }
 
-    if (!(propertiesInServer.sortBy(x => x.key.name) == properties.sortBy(x => x.key.name)))
+    if (!(propertiesInServer.sortBy(x => x.keyName) == properties.sortBy(x => x.keyName)))
       throw new ImportToGremlinException(s"Edge between $vFrom and $vTo wasn't correctly created: properties are not correct")
   }
 
@@ -210,7 +209,7 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
 
   def stopIfVerticesAreEquals(vertex1: VertexCore, vertex2: VertexCore): Unit = {
     if (vertex1 equals vertex2) {
-      throw PropertiesNotCorrect(s"p1 = ${vertex1.properties.map(x => s"${x.key.name} = ${x.value}, ")} should not be equal to the properties of the second vertex")
+      throw PropertiesNotCorrect(s"p1 = ${vertex1.properties.map(x => s"${x.keyName} = ${x.value}, ")} should not be equal to the properties of the second vertex")
     }
   }
 }

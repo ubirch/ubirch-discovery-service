@@ -5,7 +5,7 @@ import java.util.concurrent.CountDownLatch
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsManagerCounter, DefaultMetricsLoggerCounter}
-import com.ubirch.discovery.kafka.models.{AddV, Store}
+import com.ubirch.discovery.kafka.models.{RelationKafka, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import com.ubirch.kafka.express.ExpressKafkaApp
@@ -87,10 +87,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
     implicit val formats: DefaultFormats = DefaultFormats
     stopIfEmptyMessage(data)
     try {
-      val relationAsInternalStruct = jackson.parseJson(data).extract[Seq[AddV]]
+      val relationAsInternalStruct = jackson.parseJson(data).extract[Seq[RelationKafka]]
       relationAsInternalStruct map { r => r.toCoreRelation }
     } catch {
-      case e: Exception => throw ParsingException(s"Error parsing data [${e.getMessage}]")
+      case e: Exception => throw ParsingException(s"""Error parsing data [${e.getMessage}]""")
     }
   }
 

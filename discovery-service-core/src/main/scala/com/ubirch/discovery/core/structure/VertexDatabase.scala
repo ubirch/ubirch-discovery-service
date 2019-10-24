@@ -19,12 +19,12 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   val b: Bindings = gc.b
 
   var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
-    def searchForVertexByProperties(properties: List[KeyValue[String]]): gremlin.scala.Vertex = {
+    def searchForVertexByProperties(properties: List[ElementProperty]): gremlin.scala.Vertex = {
       properties match {
         case Nil => null
         case property :: restOfProperties =>
-          if (!isPropertyIterable(property.key.name)) searchForVertexByProperties(restOfProperties) else
-            g.V().has(property).headOption() match {
+          if (!isPropertyIterable(property.keyName)) searchForVertexByProperties(restOfProperties) else
+            g.V().has(property.toKeyValue).headOption() match {
               case Some(v) => v
               case None => searchForVertexByProperties(restOfProperties)
             }
@@ -66,9 +66,9 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       logger.debug(s"adding vertex: label: ${coreVertex.label}; properties: ${coreVertex.properties.mkString(", ")}")
       vertex = initialiseVertex
       for (property <- coreVertex.properties.tail) {
-        logger.debug(s"adding property ${property.key.name} , ${property.value}")
+        logger.debug(s"adding property ${property.keyName} , ${property.value}")
         logger.debug("vertexId: " + vertexId)
-        addPropertyToVertex(property)
+        addPropertyToVertex(property.toKeyValue)
       }
     } catch {
       case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
@@ -76,24 +76,24 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   }
 
   private def initialiseVertex: Vertex = {
-    g.addV(b.of("label", coreVertex.label)).property(coreVertex.properties.head).l().head
+    g.addV(b.of("label", coreVertex.label)).property(coreVertex.properties.head.toKeyValue).l().head
   }
 
-  private def addPropertyToVertex(property: KeyValue[String], vertex: Vertex = vertex) = {
+  private def addPropertyToVertex[T](property: KeyValue[T], vertex: Vertex = vertex) = {
     g.V(vertex).property(property).iterate()
   }
 
   private def addNewPropertiesToVertex(vertex: Vertex): Unit = {
     val timer = new Timer()
     for (property <- coreVertex.properties) {
-      if (!doesPropExist(property)) {
-        addPropertyToVertex(property, vertex: Vertex)
-        logger.debug(s"Adding property: ${property.key.name}")
+      if (!doesPropExist(property.toKeyValue)) {
+        addPropertyToVertex(property.toKeyValue, vertex: Vertex)
+        logger.debug(s"Adding property: ${property.keyName}")
       }
     }
     timer.finish(s"add properties to vertex with id: ${vertex.id().toString}")
 
-    def doesPropExist(keyV: KeyValue[String]): Boolean = g.V(vertex).properties(keyV.key.name).toList().nonEmpty
+    def doesPropExist[T](keyV: KeyValue[T]): Boolean = g.V(vertex).properties(keyV.key.name).toList().nonEmpty
   }
 
   /**

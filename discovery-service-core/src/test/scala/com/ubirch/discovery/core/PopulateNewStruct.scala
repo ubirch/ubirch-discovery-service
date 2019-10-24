@@ -3,7 +3,7 @@ package com.ubirch.discovery.core
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.operation.AddRelation
-import com.ubirch.discovery.core.structure.{EdgeCore, VertexCore, VertexDatabase}
+import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.structure.Elements.Property
 import gremlin.scala.{Key, KeyValue}
 
@@ -20,9 +20,10 @@ object PopulateNewStruct extends LazyLogging {
   case object HASH extends Property("hash", true)
   case object DEVICE_ID extends Property("device_id", true)
 
-  val KEY_HASH: Key[String] = Key[String]("hash")
-  val KEY_BC: Key[String] = Key[String]("blockchain_type")
-  val edgeProps = List(KeyValue(KEY_HASH, "blabla"))
+  val KEY_HASH: Key[Any] = Key[Any]("hash")
+  val KEY_BC: Key[Any] = Key[Any]("blockchain_type")
+  val KEY_TIMESTAMP: Key[Any] = Key[Any]("timestamp")
+  val edgeProps = List(ElementProperty(KeyValue(KEY_HASH, "blabla"), PropertyType.String))
 
   implicit val propSet: Set[Property] = Set(SIGNATURE, HASH, DEVICE_ID)
 
@@ -56,7 +57,8 @@ object PopulateNewStruct extends LazyLogging {
   }
 
   def initDevice(): VertexDatabase = {
-    val internalDevice = VertexCore(List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString)), "DEVICE")
+    val internalDevice = VertexCore(
+      List(ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String), getTimestampProp), "DEVICE")
     val device = new VertexDatabase(internalDevice, gc)
     device.addVertexWithProperties()
     device
@@ -65,7 +67,10 @@ object PopulateNewStruct extends LazyLogging {
   def initUPP(device: VertexDatabase, number: Int): List[VertexDatabase] = {
     var v = new ListBuffer[VertexDatabase]
     for (_ <- 0 until number) {
-      val UPPprops = List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString))
+      val UPPprops = List(
+        ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String),
+        getTimestampProp
+      )
       val internalUPP = VertexCore(UPPprops, "UPP")
       AddRelation().addTwoVerticesCached(device)(internalUPP)(EdgeCore(edgeProps, "DEVICE->UPP"))
       v += internalUPP.toVertexStructDb(gc)
@@ -74,7 +79,10 @@ object PopulateNewStruct extends LazyLogging {
   }
 
   def initFT(FT: VertexDatabase = null, UPPs: List[VertexDatabase]): VertexDatabase = {
-    val newFTprops = List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString))
+    val newFTprops = List(
+      ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String),
+      getTimestampProp
+    )
     if (FT == null) {
       for (i <- 0 to 3) {
         AddRelation().addTwoVerticesCached(UPPs(i))(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "UPP->FT"))
@@ -89,7 +97,9 @@ object PopulateNewStruct extends LazyLogging {
   }
 
   def initMT(MT: VertexDatabase = null, FTs: List[VertexDatabase]): VertexDatabase = {
-    val newMTprops = List(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString))
+    val newMTprops = List(
+      ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String),
+      getTimestampProp)
     if (MT == null) {
       for (i <- 0 to 3) {
         AddRelation().addTwoVerticesCached(FTs(i))(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "FT->MT"))
@@ -103,16 +113,22 @@ object PopulateNewStruct extends LazyLogging {
     new VertexDatabase(VertexCore(newMTprops, "MASTER_TREE"), gc)
   }
 
-  def initBcx(MT: VertexDatabase) = {
+  def initBcx(MT: VertexDatabase): String = {
     val iotaProps = List(
-      KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString),
-      KeyValue(KEY_BC, "IOTA")
+      ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String),
+      ElementProperty(KeyValue(KEY_BC, "IOTA"), PropertyType.String),
+      getTimestampProp
     )
     val ethProps = List(
-      KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString),
-      KeyValue(KEY_BC, "ETH")
+      ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String),
+      ElementProperty(KeyValue(KEY_BC, "ETH"), PropertyType.String),
+      getTimestampProp
     )
     AddRelation().addTwoVerticesCached(MT)(VertexCore(iotaProps, "PUBLIC_CHAIN"))(EdgeCore(edgeProps, "MT->BCX"))
     AddRelation().addTwoVerticesCached(MT)(VertexCore(ethProps, "PUBLIC_CHAIN"))(EdgeCore(edgeProps, "MT->BCX"))
   }
+
+  def getTimestampProp = ElementProperty(KeyValue(KEY_TIMESTAMP, getTime), PropertyType.Long)
+  def getTime = System.currentTimeMillis()
+
 }

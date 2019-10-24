@@ -1,1 +1,1 @@
-[{"v_from":{"properties":{"name":"Grenoble-INP-ENSIMAG","country":"France"},"label": "school"},"v_to":{"properties": {"name": "Berlin","language": "German","country": "Germany"},"label": "city"},"edge":{"properties":{"number": "1","surname":"Benoit"},"label":"Students-in-city"}}]
+[{"v_from":{"properties":{"signature":"abcde","timestamp":1571913832575},"label": "DEVICE"},"v_to":{"properties": {"timestamp": 1571913844392,"language": "German","signature": "Germany"},"label": "UPP"},"edge":{"properties":{"number": 1,"surname":"Benoit"},"label":"DEVICE-UPP"}}]

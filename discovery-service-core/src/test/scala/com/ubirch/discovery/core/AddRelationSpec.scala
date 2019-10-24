@@ -6,9 +6,9 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.operation.AddRelation
 import com.ubirch.discovery.core.structure._
+import com.ubirch.discovery.core.TestUtil._
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
-import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
 import org.scalatest.{FeatureSpec, Matchers}
 
@@ -154,9 +154,11 @@ class AddRelationSpec extends FeatureSpec with Matchers with LazyLogging {
 
       val dateTimeFormat = ISODateTimeFormat.dateTime()
 
-      val Number: Key[String] = Key[String]("number")
-      val Name: Key[String] = Key[String]("name")
-      val Created: Key[String] = Key[String]("created")
+      val Number: Key[Any] = Key[Any]("number")
+      val Name: Key[Any] = Key[Any]("name")
+      val Created: Key[Any] = Key[Any]("created")
+      val Test: Key[Any] = Key[Any]("truc")
+
       implicit val ordering: (KeyValue[String] => String) => Ordering[KeyValue[String]] = Ordering.by[KeyValue[String], String](_)
 
       // clean database
@@ -164,20 +166,20 @@ class AddRelationSpec extends FeatureSpec with Matchers with LazyLogging {
 
       // prepare
 
-      val now1 = DateTime.now(DateTimeZone.UTC)
-      val p1: List[KeyValue[String]] = List(
-        new KeyValue[String](Number, "5"),
-        new KeyValue[String](Name, "aName1"),
-        new KeyValue[String](Created, dateTimeFormat.print(now1))
+      val now1 = System.currentTimeMillis()
+      val p1: List[ElementProperty] = List(
+        ElementProperty(KeyValue[Any](Number, 5.toLong), PropertyType.Long),
+        ElementProperty(KeyValue[Any](Name, "name1"), PropertyType.String),
+        ElementProperty(KeyValue[Any](Created, now1), PropertyType.Long)
       )
-      val now2 = DateTime.now(DateTimeZone.UTC)
-      val p2: List[KeyValue[String]] = List(
-        new KeyValue[String](Number, "6"),
-        new KeyValue[String](Name, "aName2"),
-        new KeyValue[String](Created, dateTimeFormat.print(now2))
+      val now2 = System.currentTimeMillis()
+      val p2: List[ElementProperty] = List(
+        ElementProperty(KeyValue[Any](Number, 6.toLong), PropertyType.Long),
+        ElementProperty(KeyValue[Any](Name, "name2"), PropertyType.String),
+        ElementProperty(KeyValue[Any](Created, now2), PropertyType.Long)
       )
-      val pE: List[KeyValue[String]] = List(
-        new KeyValue[String](Name, "edge")
+      val pE: List[ElementProperty] = List(
+        ElementProperty(KeyValue[Any](Name, "edge"), PropertyType.String)
       )
 
       val internalVertexFrom = VertexCore(p1, "aLabel")
@@ -189,7 +191,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with LazyLogging {
       AddRelation().createRelation(relation)
 
       // create false data
-      val pFalse: List[KeyValue[String]] = List(new KeyValue[String](Number, "1"))
+      val pFalse: List[ElementProperty] = List(ElementProperty(KeyValue[Any](Number, 1.toLong), PropertyType.Long))
 
       // analyse
       //    count number of vertices and edges
@@ -276,7 +278,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with LazyLogging {
     val listValues = vertexStruct.split(";").toList
     assert(listValues.nonEmpty, s"Test is incorrect: $vertexStruct is missing some values")
     val label = listValues.head
-    val listProperties = extractProps(Nil, listValues.tail)
+    val listProperties = extractProps(listValues.tail)
     VertexCore(listProperties, label)
 
   }
@@ -307,29 +309,20 @@ class AddRelationSpec extends FeatureSpec with Matchers with LazyLogging {
     assert(listValues.nonEmpty, s"Test is incorrect: $edgeStruct is missing some values")
     val label = listValues.head
     if (listValues.length > 1) {
-      val listProps = extractProps(Nil, listValues.drop(1))
+      val listProps = extractProps(listValues.drop(1))
       EdgeCore(listProps, label)
     } else EdgeCore(Nil, label)
   }
 
-  def extractProps(accu: List[KeyValue[String]], list: List[String]): List[KeyValue[String]] = {
-    list match {
-      case Nil => accu
-      case x :: xs =>
-        val kvAsListOfTwoString = x.split(":")
-        val kv = new KeyValue[String](new Key[String](kvAsListOfTwoString.head), kvAsListOfTwoString(1))
-        extractProps(kv :: accu, xs)
-    }
-  }
-
-  def putPropsOnPropSet(propList: List[KeyValue[String]]): Set[Elements.Property] = {
-    def iterateOnListProp(it: List[KeyValue[String]], accu: Set[Elements.Property]): Set[Elements.Property] = {
-      it match {
-        case Nil => accu
-        case x :: xs => iterateOnListProp(xs, accu ++ Set(new Elements.Property(x.key.name, true)))
+  def extractProps(list: List[String]): List[ElementProperty] = {
+    list map { kv =>
+      val kvAsListOfTwoString = kv.split(":")
+      val vType = if (isAllDigits(kvAsListOfTwoString(1))) PropertyType.Long else PropertyType.String
+      vType match {
+        case PropertyType.Long => ElementProperty(new KeyValue[Any](new Key[Any](kvAsListOfTwoString.head), kvAsListOfTwoString(1).toLong), vType)
+        case PropertyType.String => ElementProperty(new KeyValue[Any](new Key[Any](kvAsListOfTwoString.head), kvAsListOfTwoString(1)), vType)
       }
     }
-
-    iterateOnListProp(propList, Set())
   }
+
 }

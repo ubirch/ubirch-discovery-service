@@ -5,7 +5,6 @@ import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, Gre
 import com.ubirch.discovery.core.util.Util._
 import com.ubirch.discovery.core.TestUtil
 import gremlin.scala._
-import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
 import org.scalatest.{FeatureSpec, Matchers}
 
@@ -15,11 +14,11 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with LazyLogging {
 
   private val dateTimeFormat = ISODateTimeFormat.dateTime()
   val label = "aLabel"
-  val Number: Key[String] = Key[String]("number")
-  val Name: Key[String] = Key[String]("name")
-  val Created: Key[String] = Key[String]("created")
-  val test: Key[String] = Key[String]("truc")
-  val IdAssigned: Key[String] = Key[String]("IdAssigned")
+  val Number: Key[Any] = Key[Any]("number")
+  val Name: Key[Any] = Key[Any]("name")
+  val TimeStamp: Key[Any] = Key[Any]("timestamp")
+  val Test: Key[Any] = Key[Any]("truc")
+  val IdAssigned: Key[Any] = Key[Any]("IdAssigned")
 
   def deleteDatabase(): Unit = {
     gc.g.V().drop().iterate()
@@ -30,14 +29,13 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with LazyLogging {
     scenario("test") {
       deleteDatabase()
 
-      val now = DateTime.now(DateTimeZone.UTC)
-      val properties: List[KeyValue[String]] = List(
-        new KeyValue[String](Number, "5"),
-        new KeyValue[String](Name, "aName"),
-        new KeyValue[String](Created, dateTimeFormat.print(now))
+      val now = System.currentTimeMillis
+      val properties: List[ElementProperty] = List(
+        ElementProperty(KeyValue[Any](Number, 6.toLong), PropertyType.Long),
+        ElementProperty(KeyValue[Any](Name, "name2"), PropertyType.String),
+        ElementProperty(KeyValue[Any](TimeStamp, now), PropertyType.Long)
       )
       implicit val propSet: Set[Elements.Property] = TestUtil.putPropsOnPropSet(properties)
-
       val vertexInternal = VertexCore(properties, label)
       val vSDb = vertexInternal.toVertexStructDb(gc)
 
@@ -47,14 +45,14 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with LazyLogging {
       logger.debug(response.mkString)
       logger.debug(label)
 
-      val propertiesKey = Array(Number, Name, Created, IdAssigned)
+      val propertiesKey = List(Number.name, Name.name, TimeStamp.name, IdAssigned.name)
 
       val propertiesReceived = recompose(response, propertiesKey)
 
       logger.info("response: " + response.mkString(", "))
       logger.info("properties received: " + propertiesReceived.mkString(", "))
 
-      propertiesReceived.sortBy(x => x.key.name) shouldBe properties.sortBy(x => x.key.name)
+      propertiesReceived.sortBy(x => x.keyName) shouldBe properties.sortBy(x => x.keyName)
     }
 
   }

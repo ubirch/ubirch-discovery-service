@@ -2,7 +2,8 @@ package com.ubirch.discovery.core.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.structure.{VertexDatabase, VertexStruct}
+import com.ubirch.discovery.core.structure.{ElementProperty, PropertyType, VertexDatabase, VertexStruct}
+import com.ubirch.discovery.core.structure.PropertyType.PropertyType
 import com.ubirch.discovery.core.util.Exceptions.{KeyNotInList, NumberOfEdgesNotCorrect}
 import gremlin.scala.{Key, KeyValue}
 import org.apache.tinkerpop.gremlin.structure.Edge
@@ -46,20 +47,17 @@ object Util extends LazyLogging {
     arrayVertexReformated
   }
 
-  /**
-    * Get the value associated to a map<<String>, List<T>> based on the parameter.
-    *
-    * @param map       The map.
-    * @param nameValue the name on which we want the value.
-    * @tparam T Type of value we're looking for.
-    * @return value of type T.
-    */
-  def extractValue[T](map: Map[Any, List[Any]], nameValue: String): T = {
-    map.get(nameValue) match {
-      case Some(x) => x.head.asInstanceOf[T]
+
+  def extractValue(map: Map[Any, List[Any]], nameValue: String):(Any, PropertyType) = {
+    val value = map.get(nameValue) match {
+      case Some(x) => x.head.toString
       case None => throw new IllegalArgumentException("response is null")
     }
+    if (isAllDigits(value)) (value.toLong, PropertyType.Long) else (value, PropertyType.String)
   }
+
+  def isAllDigits(x: String): Boolean = x forall Character.isDigit
+
 
   /**
     * Converts a Map<<String>, List<String>> into a List<KeyValues<String>>.
@@ -68,14 +66,19 @@ object Util extends LazyLogging {
     * @param keys   array of <Key> contained in the map.
     * @return a List<KeyValues<String>>.
     */
-  def recompose(theMap: Map[Any, List[Any]], keys: Array[Key[String]]): List[KeyValue[String]] = {
+  def recompose(theMap: Map[Any, List[Any]], keys: List[String]): List[ElementProperty] = {
     val resWithId = theMap map {
       x =>
-        val pos = keys.indexOf(Key[String](x._1.asInstanceOf[String]))
+        val pos = keys.indexOf(x._1)
         if (pos == -1) throw KeyNotInList(s"key ${x._1.asInstanceOf[String]} is not contained in the list of keys")
-        keys(pos) -> KeyValue(keys(pos), extractValue(theMap, keys(pos).name))
+        val keyName = keys(pos)
+        val value: (Any, PropertyType) = extractValue(theMap, keyName)
+        value._2 match {
+          case PropertyType.String => ElementProperty(KeyValue(new Key[Any](keyName), value._1.asInstanceOf[String]) , PropertyType.String)
+          case PropertyType.Long => ElementProperty(KeyValue(new Key[Any](keyName), value._1.asInstanceOf[Long]) , PropertyType.Long)
+        }
     }
-    resWithId.values.toList
+    resWithId.toList
   }
 
   /**
@@ -104,7 +107,7 @@ object Util extends LazyLogging {
     edgePropertiesAsJava map { x => x._1 -> List(x._2.asInstanceOf[String]) }
   }
 
-  def kvToJson(keyValue: KeyValue[String]): (String, String) = keyValue.key.name -> keyValue.value
+  def kvToJson(keyValue: ElementProperty): (String, String) = keyValue.keyName -> keyValue.value.toString
 
 }
 
