@@ -3,9 +3,10 @@ package com.ubirch.discovery.kafka.models
 import com.ubirch.discovery.core.structure.{EdgeCore, Relation, VertexCore}
 import com.ubirch.discovery.kafka.util.Util._
 
+
 case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edge: EdgeKafkaStruct) {
   override def toString: String = {
-    s"vFrom: ${v_from.toString} \n vTo: ${v_to.toString} \n edge: ${edge.toString}"
+    s"vFrom: ${v_from.toString} \nvTo: ${v_to.toString} \nedge: ${edge.toString}"
   }
 
   def toCoreRelation: Relation = {

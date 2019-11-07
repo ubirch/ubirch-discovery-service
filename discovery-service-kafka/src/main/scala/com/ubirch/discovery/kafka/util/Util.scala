@@ -15,7 +15,5 @@ object Util {
     if (isAllDigits(vAsString)) (vAsString.toLong, PropertyType.Long) else (vAsString, PropertyType.String)
   }
 
-
-
   def isAllDigits(x: String): Boolean = x forall Character.isDigit
 }

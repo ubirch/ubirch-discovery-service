@@ -1,11 +1,12 @@
 package com.ubirch.discovery.kafka.util
 
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods.{ compact, render }
+import org.json4s.jackson.JsonMethods.{compact, render}
 
 trait ErrorsStruct {
   val errorName: String
+
   val messageError: String
 }
 
@@ -20,10 +21,10 @@ case class StorageError(message: String) extends ErrorsStruct {
 }
 
 object ErrorsHandler {
-  def generateException(exception: Exception): String = {
+  def generateException(exception: Exception, relation: String = ""): String = {
     val errorsStruct = exception match {
-      case e: ParsingException => ParsingError(e.message)
-      case e: StoreException => StorageError(e.message)
+      case e: ParsingException => ParsingError(e.message + " relation: " + relation)
+      case e: StoreException => StorageError(e.message + " relation: " + relation)
     }
     toJson(errorsStruct)
   }

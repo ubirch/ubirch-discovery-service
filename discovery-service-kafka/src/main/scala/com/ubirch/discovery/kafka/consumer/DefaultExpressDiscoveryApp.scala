@@ -4,7 +4,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsManagerCounter, DefaultMetricsLoggerCounter}
+import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter, DefaultMetricsLoggerSummary}
 import com.ubirch.discovery.kafka.models.{RelationKafka, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
@@ -42,39 +42,44 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   override val valueDeserializer: Deserializer[String] = new StringDeserializer
 
-  val errorCounter: Counter = new DefaultConsumerRecordsManagerCounter
-  val storeCounter: Counter = new DefaultMetricsLoggerCounter
+  val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
+  val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
+  val timeSummary = new DefaultMetricsLoggerSummary
+
+  case class RelationWrapper(tpe: String, data: RelationKafka)
 
   override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
     consumerRecords.foreach { cr =>
 
       logger.debug("Received value: " + cr.value())
       storeCounter.counter.labels("ReceivedMessage").inc()
-
-      Try(parseRelations(cr.value())).recover {
-        case exception: ParsingException =>
-          errorCounter.counter.labels("ParsingException").inc()
-          send(producerErrorTopic, ErrorsHandler.generateException(exception))
-          logger.error(ErrorsHandler.generateException(exception))
-          Nil
-      }.filter(_.nonEmpty).map { x =>
-        if (checkIfAllVertexAreTheSame(x)) {
-          Try(storeCache(x)) recover {
-            case e: StoreException =>
-              errorCounter.counter.labels("StoreException").inc()
-              send(producerErrorTopic, ErrorsHandler.generateException(e))
-              logger.error(ErrorsHandler.generateException(e))
-          }
-        } else {
-          Try(store(x)) recover {
-            case e: StoreException =>
-              errorCounter.counter.labels("StoreException").inc()
-              send(producerErrorTopic, ErrorsHandler.generateException(e))
-              logger.error(ErrorsHandler.generateException(e))
+      timeSummary.summary.time{ () =>
+        Try(parseRelations(cr.value())).recover {
+          case exception: ParsingException =>
+            errorCounter.counter.labels("ParsingException").inc()
+            send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+            logger.error(ErrorsHandler.generateException(exception, cr.value()))
+            Nil
+        }.filter(_.nonEmpty).map { x =>
+          if (checkIfAllVertexAreTheSame(x)) {
+            Try(storeCache(x)) recover {
+              case e: StoreException =>
+                errorCounter.counter.labels("StoreException").inc()
+                send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
+                logger.error(ErrorsHandler.generateException(e, cr.value()))
+            }
+          } else {
+            Try(store(x)) recover {
+              case e: StoreException =>
+                errorCounter.counter.labels("StoreException").inc()
+                send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
+                logger.error(ErrorsHandler.generateException(e, cr.value()))
+            }
           }
         }
       }
-    }
+      }
+
   }
 
   def checkIfAllVertexAreTheSame(relations: Seq[Relation]): Boolean = {
@@ -85,6 +90,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
   def parseRelations(data: String): Seq[Relation] = {
 
     implicit val formats: DefaultFormats = DefaultFormats
+    // val messageType = (jackson.parseJson(data) \ "type").extract[String]
     stopIfEmptyMessage(data)
     try {
       val relationAsInternalStruct = jackson.parseJson(data).extract[Seq[RelationKafka]]

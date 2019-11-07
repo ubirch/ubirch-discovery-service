@@ -58,7 +58,8 @@ object PopulateNewStruct extends LazyLogging {
 
   def initDevice(): VertexDatabase = {
     val internalDevice = VertexCore(
-      List(ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String), getTimestampProp), "DEVICE")
+      List(ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String), getTimestampProp), "DEVICE"
+    )
     val device = new VertexDatabase(internalDevice, gc)
     device.addVertexWithProperties()
     device
@@ -99,7 +100,8 @@ object PopulateNewStruct extends LazyLogging {
   def initMT(MT: VertexDatabase = null, FTs: List[VertexDatabase]): VertexDatabase = {
     val newMTprops = List(
       ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String),
-      getTimestampProp)
+      getTimestampProp
+    )
     if (MT == null) {
       for (i <- 0 to 3) {
         AddRelation().addTwoVerticesCached(FTs(i))(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "FT->MT"))

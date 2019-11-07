@@ -32,7 +32,6 @@ class ElementsSpec extends FeatureSpec with Matchers with LazyLogging {
   feature("relation class") {
     scenario("toString") {
 
-
       implicit val propSet: Set[Elements.Property] = TestUtil.putPropsOnPropSet(properties1)
 
       val v1 = VertexCore(properties1, label1)

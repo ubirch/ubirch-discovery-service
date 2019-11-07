@@ -47,8 +47,7 @@ object Util extends LazyLogging {
     arrayVertexReformated
   }
 
-
-  def extractValue(map: Map[Any, List[Any]], nameValue: String):(Any, PropertyType) = {
+  def extractValue(map: Map[Any, List[Any]], nameValue: String): (Any, PropertyType) = {
     val value = map.get(nameValue) match {
       case Some(x) => x.head.toString
       case None => throw new IllegalArgumentException("response is null")
@@ -57,7 +56,6 @@ object Util extends LazyLogging {
   }
 
   def isAllDigits(x: String): Boolean = x forall Character.isDigit
-
 
   /**
     * Converts a Map<<String>, List<String>> into a List<KeyValues<String>>.
@@ -74,8 +72,8 @@ object Util extends LazyLogging {
         val keyName = keys(pos)
         val value: (Any, PropertyType) = extractValue(theMap, keyName)
         value._2 match {
-          case PropertyType.String => ElementProperty(KeyValue(new Key[Any](keyName), value._1.asInstanceOf[String]) , PropertyType.String)
-          case PropertyType.Long => ElementProperty(KeyValue(new Key[Any](keyName), value._1.asInstanceOf[Long]) , PropertyType.Long)
+          case PropertyType.String => ElementProperty(KeyValue(new Key[Any](keyName), value._1.asInstanceOf[String]), PropertyType.String)
+          case PropertyType.Long => ElementProperty(KeyValue(new Key[Any](keyName), value._1.asInstanceOf[Long]), PropertyType.Long)
         }
     }
     resWithId.toList
