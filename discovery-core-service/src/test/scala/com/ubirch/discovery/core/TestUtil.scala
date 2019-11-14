@@ -1,6 +1,6 @@
 package com.ubirch.discovery.core
 
-import com.ubirch.discovery.core.structure.{ElementProperty, Elements}
+import com.ubirch.discovery.core.structure.{ ElementProperty, Elements }
 
 object TestUtil {
 

@@ -6,12 +6,12 @@
     <parent>
         <groupId>com.ubirch.discovery</groupId>
         <artifactId>discovery-service</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </parent>
 
     <!-- basic info -->
     <artifactId>discovery-kafka-service</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.1</version>
     <name>${project.artifactId}</name>
     <description>Kafka API of the discovery service</description>
     <inceptionYear>2019</inceptionYear>
@@ -23,8 +23,8 @@
         <!-- Core -->
         <dependency>
             <groupId>com.ubirch.discovery</groupId>
-            <artifactId>discovery-service-core</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
+            <artifactId>discovery-core-service</artifactId>
+            <version>0.1.1</version>
         </dependency>
 
         <!-- /Core -->

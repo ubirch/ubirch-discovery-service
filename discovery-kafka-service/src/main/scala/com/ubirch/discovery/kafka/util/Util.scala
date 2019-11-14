@@ -1,7 +1,7 @@
 package com.ubirch.discovery.kafka.util
 
-import com.ubirch.discovery.core.structure.{ElementProperty, PropertyType}
-import gremlin.scala.{Key, KeyValue}
+import com.ubirch.discovery.core.structure.{ ElementProperty, PropertyType }
+import gremlin.scala.{ Key, KeyValue }
 
 object Util {
 

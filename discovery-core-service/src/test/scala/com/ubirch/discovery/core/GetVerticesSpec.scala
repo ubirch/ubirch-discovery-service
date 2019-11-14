@@ -1,7 +1,7 @@
 package com.ubirch.discovery.core
 
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
-import org.scalatest.{FeatureSpec, Matchers}
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import org.scalatest.{ FeatureSpec, Matchers }
 
 class GetVerticesSpec extends FeatureSpec with Matchers {
 

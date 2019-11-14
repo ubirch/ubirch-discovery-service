@@ -6,7 +6,7 @@
     <!-- info -->
     <groupId>com.ubirch.discovery</groupId>
     <artifactId>discovery-service</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
     <packaging>pom</packaging>
 
     <organization>
@@ -33,17 +33,6 @@
         <url>https://github.com/ubirch/ubirch-discovery-service</url>
         <tag>HEAD</tag>
     </scm>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
 
     <licenses>
         <license>
@@ -345,9 +334,9 @@
     <!-- sub modules -->
     <modules>
         <module>discovery-core-service</module>
+        <module>discovery-kafka-service</module>
         <module>discovery-rest-service</module>
         <module>discovery-docker-jg-service</module>
-        <module>discovery-kafka-service</module>
     </modules>
 
 </project>
