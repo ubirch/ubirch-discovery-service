@@ -2,20 +2,15 @@ package com.ubirch.discovery.core.util
 
 import com.typesafe.scalalogging.LazyLogging
 
-class Timer(event: Event) extends LazyLogging {
+class Timer() extends LazyLogging {
 
   var timeTimerStart: Long = 0
 
-  var events: Map[Event, Interval] = Map.empty
-
-  def init(event: Event): Unit = {
-    timeTimerStart = getTime
-    start(event)
+  def init(): Unit = {
+    timeTimerStart = System.currentTimeMillis()
   }
 
-  private def getTime = System.currentTimeMillis()
-  init(event)
-
+  init()
 
   def finish(arg: String): String = {
     val timeTotal = System.currentTimeMillis() - timeTimerStart
@@ -26,17 +21,4 @@ class Timer(event: Event) extends LazyLogging {
     }
     timeTotal.toString
   }
-
-  def start(event: Event): Unit = {
-    val eventStart = Interval(getTime, null)
-    events = events + (event -> eventStart)
-  }
-
-  def stop(event: Event) = {
-    val r = events.get(event)
-  }
 }
-
-case class Interval(start: Long, finish: Option[Long])
-
-case class Event(name: String)
