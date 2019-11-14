@@ -34,7 +34,7 @@ discoveryservice:
       maxWaitForConnection: 6000
 
 prometheus:
-  namespace: prometheus
+  namespace: prometheus-demo
 
 redis:
   masterURL: "redis-stable-master.core-demo.svc.cluster.local:6379"
