@@ -344,10 +344,10 @@
 
     <!-- sub modules -->
     <modules>
-        <module>discovery-service-kafka</module>
-        <module>discovery-service-core</module>
-        <module>discovery-service-rest</module>
-        <module>discovery-service-docker-jg</module>
+        <module>discovery-core-service</module>
+        <module>discovery-rest-service</module>
+        <module>discovery-docker-jg-service</module>
+        <module>discovery-kafka-service</module>
     </modules>
 
 </project>
