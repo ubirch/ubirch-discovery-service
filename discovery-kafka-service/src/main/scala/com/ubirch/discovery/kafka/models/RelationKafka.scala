@@ -1,6 +1,6 @@
 package com.ubirch.discovery.kafka.models
 
-import com.ubirch.discovery.core.structure.{EdgeCore, Relation, VertexCore}
+import com.ubirch.discovery.core.structure.{ EdgeCore, Relation, VertexCore }
 import com.ubirch.discovery.kafka.util.Util._
 
 case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edge: EdgeKafkaStruct) {

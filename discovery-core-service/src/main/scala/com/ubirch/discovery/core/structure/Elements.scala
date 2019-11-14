@@ -4,7 +4,7 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.structure.PropertyType.PropertyType
 import com.ubirch.discovery.core.util.Util
-import gremlin.scala.{Key, KeyValue}
+import gremlin.scala.{ Key, KeyValue }
 import org.json4s
 import org.json4s._
 import org.json4s.jackson.JsonMethods._

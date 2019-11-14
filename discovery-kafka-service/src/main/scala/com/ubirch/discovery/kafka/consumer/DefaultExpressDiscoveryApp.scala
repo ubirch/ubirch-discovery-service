@@ -4,20 +4,20 @@ import java.util.concurrent.CountDownLatch
 
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter, MessageMetricsLoggerSummary}
-import com.ubirch.discovery.kafka.models.{RelationKafka, Store}
+import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter, MessageMetricsLoggerSummary }
+import com.ubirch.discovery.kafka.models.{ RelationKafka, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
+import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
 import org.json4s.jackson.Serialization
 
 import scala.concurrent.Future
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 

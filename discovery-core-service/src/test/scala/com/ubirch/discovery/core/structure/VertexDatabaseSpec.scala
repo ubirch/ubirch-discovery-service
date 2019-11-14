@@ -1,12 +1,12 @@
 package com.ubirch.discovery.core.structure
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.util.Util._
 import com.ubirch.discovery.core.TestUtil
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
-import org.scalatest.{FeatureSpec, Matchers}
+import org.scalatest.{ FeatureSpec, Matchers }
 
 class VertexDatabaseSpec extends FeatureSpec with Matchers with LazyLogging {
 

@@ -1,14 +1,14 @@
 package com.ubirch.discovery.kafka.models
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.operation.AddRelation
-import com.ubirch.discovery.core.structure.{Relation, VertexCore, VertexDatabase}
+import com.ubirch.discovery.core.structure.{ Relation, VertexCore, VertexDatabase }
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.RelationMetricsLoggerSummary
 import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
-import gremlin.scala.{Key, KeyValue}
+import gremlin.scala.{ Key, KeyValue }
 
 import scala.language.postfixOps
 

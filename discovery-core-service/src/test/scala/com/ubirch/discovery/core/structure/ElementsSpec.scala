@@ -2,8 +2,8 @@ package com.ubirch.discovery.core.structure
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.TestUtil
-import gremlin.scala.{Key, KeyValue}
-import org.scalatest.{FeatureSpec, Matchers}
+import gremlin.scala.{ Key, KeyValue }
+import org.scalatest.{ FeatureSpec, Matchers }
 
 class ElementsSpec extends FeatureSpec with Matchers with LazyLogging {
 
