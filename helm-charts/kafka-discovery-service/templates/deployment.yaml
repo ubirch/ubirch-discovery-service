@@ -79,6 +79,10 @@ spec:
               value: {{ .Values.discoveryservice.core.connectionPool.maxWaitForConnection | quote }}
             - name: DISC_ENV_KAFKA_PROMETHEUS_NAMESPACE
               value: {{ .Values.discoveryservice.prometheus.namespace | quote }}
+            - name: DISC_ENV_KAFKA_HEALTHCHECK_ENABLED
+              value: "true"
+            - name: DISC_ENV_KAFKA_HEALTHCHECK_PORT
+              value: "8888"
 
       dnsPolicy: ClusterFirst
       restartPolicy: Always

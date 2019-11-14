@@ -272,6 +272,12 @@
         </dependency>
         <!-- /Ubirch -->
 
+        <dependency>
+            <groupId>com.ubirch.niomon</groupId>
+            <artifactId>health-check</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
     </dependencies>
 
 
