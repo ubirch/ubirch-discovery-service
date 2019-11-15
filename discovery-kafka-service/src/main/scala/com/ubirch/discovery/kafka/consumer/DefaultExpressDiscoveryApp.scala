@@ -227,7 +227,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
     def addChecksForConsumerRunner(name: String, consumerRunner: ConsumerRunner[_, _]): Unit = {
       val getConsumerWorkaround: ConsumerRunner[_, _] => Option[Consumer[_, _]] = {
-        val f = consumerRunner.getClass.getField("consumer")
+        val f = consumerRunner.getClass.getDeclaredField("consumer")
         f.setAccessible(true)
 
         { cr: ConsumerRunner[_, _] => Option(f.get(cr).asInstanceOf[Consumer[_, _]]) }
