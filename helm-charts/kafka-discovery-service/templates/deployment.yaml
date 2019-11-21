@@ -35,13 +35,15 @@ spec:
               cpu: 1
               memory: 0.5Gi
           readinessProbe:
-            tcpSocket:
-              port: 9010
+            httpGet:
+              path: "/health/ready"
+              port: 8888
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
-            tcpSocket:
-              port: 9010
+            httpGet:
+              path: "/health/live"
+              port: 8888
             initialDelaySeconds: 20
             periodSeconds: 60
           env:
