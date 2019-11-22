@@ -9,7 +9,6 @@ import com.ubirch.discovery.kafka.models.{ RelationKafka, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
@@ -19,7 +18,7 @@ import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
 
-trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
+trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   override val producerBootstrapServers: String = conf.getString("kafkaApi.kafkaProducer.bootstrapServers")
 
@@ -39,6 +38,14 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   override val consumerGracefulTimeout: Int = conf.getInt("kafkaApi.kafkaConsumer.gracefulTimeout")
 
+  override def lingerMs: Int = conf.getInt("kafkaApi.kafkaProducer.lingerMs")
+
+  override def metricsSubNamespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
+
+  override def consumerReconnectBackoffMsConfig: Long = conf.getLong("eventLog.kafkaConsumer.reconnectBackoffMsConfig")
+
+  override def consumerReconnectBackoffMaxMsConfig: Long = conf.getLong("eventLog.kafkaConsumer.reconnectBackoffMaxMsConfig")
+
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
 
   override val valueDeserializer: Deserializer[String] = new StringDeserializer
@@ -51,35 +58,38 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   case class RelationWrapper(tpe: String, data: RelationKafka)
 
-  override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
-    consumerRecords.foreach { cr =>
+  override def process: Process = Process { crs =>
+    crs.foreach { cr =>
 
       logger.debug("Received value: " + cr.value())
       storeCounter.counter.labels("ReceivedMessage").inc()
       messageTimeSummary.summary.time { () =>
-        Try(parseRelations(cr.value())).recover {
-          case exception: ParsingException =>
-            errorCounter.counter.labels("ParsingException").inc()
-            send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-            logger.error(ErrorsHandler.generateException(exception, cr.value()))
-            Nil
-        }.filter(_.nonEmpty).map { x =>
-          if (checkIfAllVertexAreTheSame(x)) {
-            Try(storeCache(x)) recover {
-              case e: StoreException =>
-                errorCounter.counter.labels("StoreException").inc()
-                send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
-                logger.error(ErrorsHandler.generateException(e, cr.value()))
-            }
-          } else {
-            Try(store(x)) recover {
-              case e: StoreException =>
-                errorCounter.counter.labels("StoreException").inc()
-                send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
-                logger.error(ErrorsHandler.generateException(e, cr.value()))
+        Try(parseRelations(cr.value()))
+          .recover {
+            case exception: ParsingException =>
+              errorCounter.counter.labels("ParsingException").inc()
+              send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+              logger.error(ErrorsHandler.generateException(exception, cr.value()))
+              Nil
+          }
+          .filter(_.nonEmpty)
+          .map { x =>
+            if (checkIfAllVertexAreTheSame(x)) {
+              Try(storeCache(x)) recover {
+                case e: StoreException =>
+                  errorCounter.counter.labels("StoreException").inc()
+                  send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
+                  logger.error(ErrorsHandler.generateException(e, cr.value()))
+              }
+            } else {
+              Try(store(x)) recover {
+                case e: StoreException =>
+                  errorCounter.counter.labels("StoreException").inc()
+                  send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
+                  logger.error(ErrorsHandler.generateException(e, cr.value()))
+              }
             }
           }
-        }
       }
     }
 
