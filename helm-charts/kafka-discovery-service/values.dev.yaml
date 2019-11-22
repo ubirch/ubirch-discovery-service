@@ -35,23 +35,3 @@ discoveryservice:
 
 prometheus:
   namespace: prometheus-dev
-
-redis:
-  masterURL: "redis-stable-master.core-dev.svc.cluster.local:6379"
-  slaveURL: "redis-stable-slave.core-dev.svc.cluster.local:6379"
-
-
-ingress:
-  enabled: true
-  annotations:
-    certmanager.k8s.io/acme-challenge-type: "dns01"
-    certmanager.k8s.io/cluster-issuer: "letsencrypt-dev"
-    certmanager.k8s.io/acme-dns01-provider: "dev-dns"
-    kubernetes.io/ingress.allow-http: "false"
-  path: /
-  hosts:
-    - niomon.dev.ubirch.com
-  tls:
-    - secretName: niomon-dev-ubirch-com-certificate
-      hosts:
-        - niomon.dev.ubirch.com
