@@ -52,6 +52,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
 
+  //TODO use built-in prometheus from express kafka
   val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
   val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
   val messageTimeSummary = new MessageMetricsLoggerSummary
