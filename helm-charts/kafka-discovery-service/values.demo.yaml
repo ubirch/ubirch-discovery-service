@@ -5,11 +5,6 @@ image:
 
 # settings for ingest
 discoveryservice:
-  noHost: true
-  ingestFQDN: localhost
-  kafkaURL: "kafka.core-demo.svc.cluster.local:9092"
-  redisSecretName: "redis-secrets"
-  serverUuid: "9d3c78ff-22f3-4441-a5d1-85c636d486ff"
   kafka:
     bootstrapServers: "kafka.core-demo:9092"
     timeout: 2
