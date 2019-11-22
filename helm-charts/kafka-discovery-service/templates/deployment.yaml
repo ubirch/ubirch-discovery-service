@@ -33,13 +33,15 @@ spec:
             requests:
               memory: 740Mi
           readinessProbe:
-            tcpSocket:
-              port: 9010
+            httpGet:
+              path: "/health/ready"
+              port: 8888
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
-            tcpSocket:
-              port: 9010
+            httpGet:
+              path: "/health/live"
+              port: 8888
             initialDelaySeconds: 20
             periodSeconds: 60
           env:
@@ -77,6 +79,10 @@ spec:
               value: {{ .Values.discoveryservice.core.connectionPool.maxWaitForConnection | quote }}
             - name: DISC_ENV_KAFKA_PROMETHEUS_NAMESPACE
               value: {{ .Values.discoveryservice.prometheus.namespace | quote }}
+            - name: DISC_ENV_KAFKA_HEALTHCHECK_ENABLED
+              value: "true"
+            - name: DISC_ENV_KAFKA_HEALTHCHECK_PORT
+              value: "8888"
 
       dnsPolicy: ClusterFirst
       restartPolicy: Always

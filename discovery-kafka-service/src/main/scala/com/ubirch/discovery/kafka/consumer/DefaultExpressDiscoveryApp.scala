@@ -4,20 +4,24 @@ import java.util.concurrent.CountDownLatch
 
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter, MessageMetricsLoggerSummary }
-import com.ubirch.discovery.kafka.models.{ RelationKafka, Store }
+import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter, MessageMetricsLoggerSummary}
+import com.ubirch.discovery.kafka.models.{RelationKafka, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
+import com.ubirch.kafka.consumer.ConsumerRunner
 import com.ubirch.kafka.express.ExpressKafkaApp
-import org.apache.kafka.clients.consumer.ConsumerRecord
+import com.ubirch.kafka.producer.ProducerRunner
+import com.ubirch.niomon.healthcheck.HealthCheckServer.CheckerFn
+import com.ubirch.niomon.healthcheck.{Checks, HealthCheckServer}
+import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecord}
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 import org.json4s.jackson.Serialization
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
@@ -48,6 +52,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
   val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
   val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
   val messageTimeSummary = new MessageMetricsLoggerSummary
+
+  val healthCheckServer = new HealthCheckServer(Map(), Map())
+  initHealthChecks()
 
   case class RelationWrapper(tpe: String, data: RelationKafka)
 
@@ -204,6 +211,58 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
         logger.error("Error storing graph: " + e.getMessage)
         throw StoreException("Error storing graph: " + e.getMessage)
     }
+  }
+
+  def initHealthChecks(): Unit = {
+    if (!conf.getBoolean("kafkaApi.healthcheck.enabled")) return
+
+    def addChecksForProducerRunner(name: String, producerRunner: ProducerRunner[_, _]): Unit = {
+      healthCheckServer.setReadinessCheck(name) { implicit ec =>
+        producerRunner.getProducerAsOpt match {
+          case Some(producer) => Checks.kafka(name, producer, connectionCountMustBeNonZero = false)._2(ec)
+          case None => Checks.notInitialized(name)._2(ec)
+        }
+      }
+    }
+
+    def addChecksForConsumerRunner(name: String, consumerRunner: ConsumerRunner[_, _]): Unit = {
+      val getConsumerWorkaround: ConsumerRunner[_, _] => Option[Consumer[_, _]] = {
+        val f = consumerRunner.getClass.getDeclaredField("consumer")
+        f.setAccessible(true)
+
+        { cr: ConsumerRunner[_, _] => Option(f.get(cr).asInstanceOf[Consumer[_, _]]) }
+      }
+
+      healthCheckServer.setReadinessCheck(name) { implicit ec =>
+        // consumerRunner.getConsumerAsOpt match { // the library needs updating
+        getConsumerWorkaround(consumerRunner) match {
+          case Some(producer) => Checks.kafka(name, producer, connectionCountMustBeNonZero = false)._2(ec)
+          case None => Checks.notInitialized(name)._2(ec)
+        }
+      }
+    }
+
+    def addReachabilityCheckForProducerRunner(checkName: String, producerRunner: ProducerRunner[_, _]): Unit = {
+      def checkReachabilityForRunner(producerRunner: ProducerRunner[_, _]): CheckerFn = { ec: ExecutionContext =>
+        producerRunner.getProducerAsOpt match {
+          case Some(producer) => Checks.kafkaNodesReachable(producer)._2(ec)
+          case None =>
+            Checks.notInitialized(checkName)._2(ec)
+        }
+      }
+
+      healthCheckServer.setReadinessCheck(checkName)(checkReachabilityForRunner(producerRunner))
+      healthCheckServer.setLivenessCheck(checkName)(checkReachabilityForRunner(producerRunner))
+    }
+
+    healthCheckServer.setLivenessCheck(Checks.process())
+    healthCheckServer.setReadinessCheck(Checks.process())
+
+    addChecksForProducerRunner("express-kafka-producer", production)
+    addChecksForConsumerRunner("express-kafka-consumer", consumption)
+    addReachabilityCheckForProducerRunner("kafka-nodes-reachable", production)
+
+    healthCheckServer.run(conf.getInt("kafkaApi.healthcheck.port"))
   }
 
 }
