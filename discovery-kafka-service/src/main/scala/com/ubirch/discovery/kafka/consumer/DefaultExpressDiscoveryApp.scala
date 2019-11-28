@@ -4,7 +4,7 @@ import java.util.concurrent.CountDownLatch
 
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter, MessageMetricsLoggerSummary }
+import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
 import com.ubirch.discovery.kafka.models.{ RelationKafka, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
@@ -38,13 +38,13 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   override val consumerGracefulTimeout: Int = conf.getInt("kafkaApi.kafkaConsumer.gracefulTimeout")
 
-  override def lingerMs: Int = conf.getInt("kafkaApi.kafkaProducer.lingerMs")
+  override val lingerMs: Int = conf.getInt("kafkaApi.kafkaProducer.lingerMS")
 
-  override def metricsSubNamespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
+  override val metricsSubNamespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
 
-  override def consumerReconnectBackoffMsConfig: Long = conf.getLong("eventLog.kafkaConsumer.reconnectBackoffMsConfig")
+  override val consumerReconnectBackoffMsConfig: Long = conf.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMsConfig")
 
-  override def consumerReconnectBackoffMaxMsConfig: Long = conf.getLong("eventLog.kafkaConsumer.reconnectBackoffMaxMsConfig")
+  override val consumerReconnectBackoffMaxMsConfig: Long = conf.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMaxMsConfig")
 
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
 
@@ -52,10 +52,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
 
-  //TODO use built-in prometheus from express kafka
-  val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
-  val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
-  val messageTimeSummary = new MessageMetricsLoggerSummary
+  private val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
+
+  private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
 
   case class RelationWrapper(tpe: String, data: RelationKafka)
 
@@ -64,34 +63,34 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
       logger.debug("Received value: " + cr.value())
       storeCounter.counter.labels("ReceivedMessage").inc()
-      messageTimeSummary.summary.time { () =>
-        Try(parseRelations(cr.value()))
-          .recover {
-            case exception: ParsingException =>
-              errorCounter.counter.labels("ParsingException").inc()
-              send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-              logger.error(ErrorsHandler.generateException(exception, cr.value()))
-              Nil
-          }
-          .filter(_.nonEmpty)
-          .map { x =>
-            if (checkIfAllVertexAreTheSame(x)) {
-              Try(storeCache(x)) recover {
-                case e: StoreException =>
-                  errorCounter.counter.labels("StoreException").inc()
-                  send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
-                  logger.error(ErrorsHandler.generateException(e, cr.value()))
-              }
-            } else {
-              Try(store(x)) recover {
-                case e: StoreException =>
-                  errorCounter.counter.labels("StoreException").inc()
-                  send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
-                  logger.error(ErrorsHandler.generateException(e, cr.value()))
-              }
+
+      Try(parseRelations(cr.value()))
+        .recover {
+          case exception: ParsingException =>
+            errorCounter.counter.labels("ParsingException").inc()
+            send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+            logger.error(ErrorsHandler.generateException(exception, cr.value()))
+            Nil
+        }
+        .filter(_.nonEmpty)
+        .map { x =>
+          if (checkIfAllVertexAreTheSame(x)) {
+            Try(storeCache(x)) recover {
+              case e: StoreException =>
+                errorCounter.counter.labels("StoreException").inc()
+                send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
+                logger.error(ErrorsHandler.generateException(e, cr.value()))
+            }
+          } else {
+            Try(store(x)) recover {
+              case e: StoreException =>
+                errorCounter.counter.labels("StoreException").inc()
+                send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
+                logger.error(ErrorsHandler.generateException(e, cr.value()))
             }
           }
-      }
+        }
+
     }
 
   }

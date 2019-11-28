@@ -13,7 +13,6 @@ trait Summary extends ConfigBase {
   val summary: PrometheusSummary
 }
 
-//@Singleton
 class DefaultConsumerRecordsErrorCounter extends Counter {
 
   final val counter: PrometheusCounter = PrometheusCounter.build()
@@ -25,7 +24,6 @@ class DefaultConsumerRecordsErrorCounter extends Counter {
 
 }
 
-//@Singleton
 class DefaultConsumerRecordsSuccessCounter extends Counter {
 
   final val counter: PrometheusCounter = PrometheusCounter.build()

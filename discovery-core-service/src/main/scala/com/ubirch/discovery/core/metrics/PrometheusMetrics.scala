@@ -1,37 +1,25 @@
 package com.ubirch.discovery.core.metrics
 
-import java.net.BindException
-
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.Lifecycle
 import com.ubirch.kafka.express.ConfigBase
+import com.ubirch.kafka.metrics.PrometheusMetricsHelper
 import io.prometheus.client.exporter.HTTPServer
-import io.prometheus.client.hotspot.DefaultExports
 
 import scala.concurrent.Future
 
 object PrometheusMetrics {
   private val instance = new PrometheusMetrics(Lifecycle.get)
-
   def get: PrometheusMetrics = instance
 }
 
 class PrometheusMetrics(lifecycle: Lifecycle) extends LazyLogging with ConfigBase {
 
-  DefaultExports.initialize()
-
   val port: Int = conf.getInt("core.metrics.prometheus.port")
 
-  logger.info("Creating Prometheus Server on Port[{}]", port)
+  logger.debug("Creating Prometheus Server on Port[{}]", port)
 
-  val server: HTTPServer = try {
-    new HTTPServer(port)
-  } catch {
-    case _: BindException =>
-      val newPort = port + new scala.util.Random().nextInt(50)
-      logger.debug("Port[{}] is busy, trying Port[{}]", port, newPort)
-      new HTTPServer(newPort)
-  }
+  val server: HTTPServer = PrometheusMetricsHelper.create(port)
 
   lifecycle.addStopHook { () =>
     logger.info("Shutting down Prometheus")
