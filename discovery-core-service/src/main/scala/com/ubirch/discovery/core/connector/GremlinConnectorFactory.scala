@@ -18,7 +18,14 @@ object GremlinConnectorFactory {
 
   def buildProperties(config: Config): PropertiesConfiguration = {
     val conf = new PropertiesConfiguration()
-    conf.addProperty("hosts", config.getString("core.connector.hosts"))
+
+    val hosts: List[String] = config.getString("core.connector.hosts")
+      .split(",")
+      .toList
+      .map(_.trim)
+      .filter(_.nonEmpty)
+
+    conf.addProperty("hosts", hosts)
     conf.addProperty("port", config.getString("core.connector.port"))
     conf.addProperty("serializer.className", config.getString("core.connector.serializer.className"))
     conf.addProperty("connectionPool.maxWaitForConnection", config.getString("core.connector.connectionPool.maxWaitForConnection"))
