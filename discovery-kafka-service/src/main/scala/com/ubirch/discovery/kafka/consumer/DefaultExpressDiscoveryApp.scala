@@ -4,12 +4,11 @@ import java.util.concurrent.CountDownLatch
 
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter, MessageMetricsLoggerSummary }
+import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
 import com.ubirch.discovery.kafka.models.{ RelationKafka, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
@@ -19,7 +18,7 @@ import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
 
-trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
+trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   override val producerBootstrapServers: String = conf.getString("kafkaApi.kafkaProducer.bootstrapServers")
 
@@ -39,31 +38,42 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
 
   override val consumerGracefulTimeout: Int = conf.getInt("kafkaApi.kafkaConsumer.gracefulTimeout")
 
+  override val lingerMs: Int = conf.getInt("kafkaApi.kafkaProducer.lingerMS")
+
+  override val metricsSubNamespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
+
+  override val consumerReconnectBackoffMsConfig: Long = conf.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMsConfig")
+
+  override val consumerReconnectBackoffMaxMsConfig: Long = conf.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMaxMsConfig")
+
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
 
   override val valueDeserializer: Deserializer[String] = new StringDeserializer
 
   implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
 
-  val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
-  val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
-  val messageTimeSummary = new MessageMetricsLoggerSummary
+  private val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
+
+  private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
 
   case class RelationWrapper(tpe: String, data: RelationKafka)
 
-  override def process(consumerRecords: Vector[ConsumerRecord[String, String]]): Unit = {
-    consumerRecords.foreach { cr =>
+  override def process: Process = Process { crs =>
+    crs.foreach { cr =>
 
       logger.debug("Received value: " + cr.value())
       storeCounter.counter.labels("ReceivedMessage").inc()
-      messageTimeSummary.summary.time { () =>
-        Try(parseRelations(cr.value())).recover {
+
+      Try(parseRelations(cr.value()))
+        .recover {
           case exception: ParsingException =>
             errorCounter.counter.labels("ParsingException").inc()
             send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
             logger.error(ErrorsHandler.generateException(exception, cr.value()))
             Nil
-        }.filter(_.nonEmpty).map { x =>
+        }
+        .filter(_.nonEmpty)
+        .map { x =>
           if (checkIfAllVertexAreTheSame(x)) {
             Try(storeCache(x)) recover {
               case e: StoreException =>
@@ -80,7 +90,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String] {
             }
           }
         }
-      }
+
     }
 
   }

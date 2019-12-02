@@ -2,8 +2,8 @@ package com.ubirch.discovery.core.operation
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.structure.Elements.Property
+import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, KeyNotInList, PropertiesNotCorrect }
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.core.util.Util.{ getEdge, getEdgeProperties, recompose }

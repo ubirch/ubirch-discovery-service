@@ -3,10 +3,10 @@ package com.ubirch.discovery.core
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.discovery.core.TestUtil._
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.operation.AddRelation
 import com.ubirch.discovery.core.structure._
-import com.ubirch.discovery.core.TestUtil._
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
 import org.joda.time.format.ISODateTimeFormat
