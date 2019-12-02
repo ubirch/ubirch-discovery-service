@@ -4,6 +4,8 @@ import com.typesafe.config.Config
 import com.ubirch.discovery.core.connector.ConnectorType.ConnectorType
 import org.apache.commons.configuration.PropertiesConfiguration
 
+import scala.collection.JavaConverters._
+
 object GremlinConnectorFactory {
 
   private lazy val instanceTest = new GremlinConnectorForTests
@@ -25,7 +27,9 @@ object GremlinConnectorFactory {
       .map(_.trim)
       .filter(_.nonEmpty)
 
-    conf.addProperty("hosts", hosts)
+    println("hosts: " + hosts)
+
+    conf.addProperty("hosts", hosts.asJava)
     conf.addProperty("port", config.getString("core.connector.port"))
     conf.addProperty("serializer.className", config.getString("core.connector.serializer.className"))
     conf.addProperty("connectionPool.maxWaitForConnection", config.getString("core.connector.connectionPool.maxWaitForConnection"))
