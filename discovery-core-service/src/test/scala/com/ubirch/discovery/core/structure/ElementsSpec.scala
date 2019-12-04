@@ -3,9 +3,15 @@ package com.ubirch.discovery.core.structure
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.TestUtil
 import gremlin.scala.{ Key, KeyValue }
-import org.scalatest.{ FeatureSpec, Matchers }
+import io.prometheus.client.CollectorRegistry
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
-class ElementsSpec extends FeatureSpec with Matchers with LazyLogging {
+class ElementsSpec
+  extends FeatureSpec
+  with Matchers
+  with BeforeAndAfterEach
+  with BeforeAndAfterAll
+  with LazyLogging {
 
   val label1 = "label1"
   val label2 = "label2"
@@ -42,6 +48,10 @@ class ElementsSpec extends FeatureSpec with Matchers with LazyLogging {
       logger.info(relation.toString)
     }
 
+  }
+
+  override protected def beforeEach(): Unit = {
+    CollectorRegistry.defaultRegistry.clear()
   }
 
 }

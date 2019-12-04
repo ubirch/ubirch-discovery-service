@@ -9,12 +9,18 @@ import com.ubirch.discovery.core.operation.AddRelation
 import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
+import io.prometheus.client.CollectorRegistry
 import org.joda.time.format.ISODateTimeFormat
-import org.scalatest.{ FeatureSpec, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.io.Source
 
-class AddRelationSpec extends FeatureSpec with Matchers with LazyLogging {
+class AddRelationSpec
+  extends FeatureSpec
+  with Matchers
+  with BeforeAndAfterEach
+  with BeforeAndAfterAll
+  with LazyLogging {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
@@ -323,6 +329,10 @@ class AddRelationSpec extends FeatureSpec with Matchers with LazyLogging {
         case PropertyType.String => ElementProperty(new KeyValue[Any](new Key[Any](kvAsListOfTwoString.head), kvAsListOfTwoString(1)), vType)
       }
     }
+  }
+
+  override protected def beforeEach(): Unit = {
+    CollectorRegistry.defaultRegistry.clear()
   }
 
 }

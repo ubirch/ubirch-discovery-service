@@ -5,10 +5,15 @@ import com.ubirch.discovery.core.TestUtil
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.util.Util._
 import gremlin.scala._
+import io.prometheus.client.CollectorRegistry
 import org.joda.time.format.ISODateTimeFormat
-import org.scalatest.{ FeatureSpec, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
-class VertexDatabaseSpec extends FeatureSpec with Matchers with LazyLogging {
+class VertexDatabaseSpec extends FeatureSpec
+  with Matchers
+  with BeforeAndAfterEach
+  with BeforeAndAfterAll
+  with LazyLogging {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
@@ -55,6 +60,10 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with LazyLogging {
       propertiesReceived.sortBy(x => x.keyName) shouldBe properties.sortBy(x => x.keyName)
     }
 
+  }
+
+  override protected def beforeEach(): Unit = {
+    CollectorRegistry.defaultRegistry.clear()
   }
 
 }
