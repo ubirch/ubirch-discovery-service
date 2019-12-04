@@ -52,7 +52,6 @@
         <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
         <maven-jar-plugin.version>2.6</maven-jar-plugin.version>
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
-        <scalatest-embedded-kafka>2.0.0</scalatest-embedded-kafka>
         <maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
         <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
         <embedded-kafka>2.3.0</embedded-kafka>

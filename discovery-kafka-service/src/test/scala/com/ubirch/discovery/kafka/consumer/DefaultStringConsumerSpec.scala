@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.util.PortGiver
+import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 
@@ -25,6 +26,7 @@ class DefaultStringConsumerSpec extends TestBase {
       withRunningKafka {
 
         val consumer = new DefaultExpressDiscoveryApp {}
+        consumer.consumption.setForceExit(false)
         consumer.consumption.start()
         cleanDb()
         publishStringMessageToKafka(topic, test.request)
@@ -51,6 +53,7 @@ class DefaultStringConsumerSpec extends TestBase {
       withRunningKafka {
 
         val consumer = new DefaultExpressDiscoveryApp {}
+        consumer.consumption.setForceExit(false)
         consumer.consumption.start()
         cleanDb()
         publishStringMessageToKafka(topic, test.request)
@@ -76,6 +79,7 @@ class DefaultStringConsumerSpec extends TestBase {
       withRunningKafka {
 
         val consumer = new DefaultExpressDiscoveryApp {}
+        consumer.consumption.setForceExit(false)
         consumer.consumption.start()
         cleanDb()
         publishStringMessageToKafka(topic, test.request)
@@ -177,6 +181,10 @@ class DefaultStringConsumerSpec extends TestBase {
     val nVertices = values.substring(0, values.indexOf(",")).toInt
     val nEdges = values.substring(values.indexOf(",") + 1).toInt
     (nVertices, nEdges)
+  }
+
+  override protected def beforeEach(): Unit = {
+    CollectorRegistry.defaultRegistry.clear()
   }
 
 }

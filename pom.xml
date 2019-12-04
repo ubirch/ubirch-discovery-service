@@ -80,7 +80,6 @@
         <javaxServlet.version>3.1.0</javaxServlet.version>
 
         <json4s.version>3.5.2</json4s.version>
-        <embedded-kafka>2.3.0</embedded-kafka>
 
         <gremlinScala.version>3.4.1.4</gremlinScala.version>
         <janusGraph.version>0.3.1</janusGraph.version>

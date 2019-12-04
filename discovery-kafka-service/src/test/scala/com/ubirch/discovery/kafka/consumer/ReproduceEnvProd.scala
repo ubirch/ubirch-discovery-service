@@ -3,6 +3,7 @@ package com.ubirch.discovery.kafka.consumer
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.util.PortGiver
+import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 
 import scala.collection.immutable
@@ -204,6 +205,10 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     val res = header + prop.mkString("").dropRight(1) + bottom
     //s"""\"properties\":{\"signature\":\"$signature\"}"""
     res
+  }
+
+  override protected def beforeEach(): Unit = {
+    CollectorRegistry.defaultRegistry.clear()
   }
 
 }
