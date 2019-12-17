@@ -27,8 +27,6 @@ object GremlinConnectorFactory {
       .map(_.trim)
       .filter(_.nonEmpty)
 
-    println("hosts: " + hosts)
-
     conf.addProperty("hosts", hosts.asJava)
     conf.addProperty("port", config.getString("core.connector.port"))
     conf.addProperty("serializer.className", config.getString("core.connector.serializer.className"))
