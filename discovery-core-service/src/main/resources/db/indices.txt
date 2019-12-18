@@ -11,6 +11,7 @@ mgmt.makePropertyKey('device_id').dataType(String.class).cardinality(SINGLE).mak
 mgmt.makePropertyKey('blockchain_type').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('transaction_id').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('timestamp').dataType(Date.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('producer_id').dataType(String.class).cardinality(SINGLE).make()
 mgmt.commit()
 
 
@@ -21,7 +22,7 @@ idx_hash = mgmt.buildIndex('indexHash', Vertex.class)
 idx_device_id = mgmt.buildIndex('indexDeviceId', Vertex.class)
 idx_blockchain = mgmt.buildIndex('indexBlockchain', Vertex.class)
 idx_transaction_id = mgmt.buildIndex('indexTransactionId', Vertex.class)
-idx_timestamp = mgmt.buildIndex('indexTimestamp', Vertex.class)
+idx_timestamp_and_producer = mgmt.buildIndex('indexTimestampAndOwner', Vertex.class)
 
 idx_signature.addKey(mgmt.getPropertyKey('signature')).buildCompositeIndex()
 idx_type.addKey(mgmt.getPropertyKey('type')).buildCompositeIndex()
@@ -29,7 +30,7 @@ idx_blockchain.addKey(mgmt.getPropertyKey('blockchain_type')).buildCompositeInde
 idx_hash.addKey(mgmt.getPropertyKey('hash')).unique().buildCompositeIndex()
 idx_device_id.addKey(mgmt.getPropertyKey('device_id')).unique().buildCompositeIndex()
 idx_transaction_id.addKey(mgmt.getPropertyKey('transaction_id')).unique().buildCompositeIndex()
-idx_timestamp.addKey(mgmt.getPropertyKey('timestamp')).buildMixedIndex("search")
+idx_timestamp_and_producer.addKey(mgmt.getPropertyKey('timestamp')).addKey(mgmt.getPropertyKey('producer_id')).buildMixedIndex("search")
 
 mgmt.commit()
 
@@ -40,7 +41,7 @@ ManagementSystem.awaitGraphIndexStatus(graph, 'indexHash').call()
 ManagementSystem.awaitGraphIndexStatus(graph, 'indexDeviceId').call()
 ManagementSystem.awaitGraphIndexStatus(graph, 'indexBlockchain').call()
 ManagementSystem.awaitGraphIndexStatus(graph, 'indexTransactionId').call()
-ManagementSystem.awaitGraphIndexStatus(graph, 'indexTimestamp').call()
+ManagementSystem.awaitGraphIndexStatus(graph, 'indexTimestampAndOwner').call()
 
 
 mgmt = graph.openManagement()
@@ -50,5 +51,5 @@ mgmt.updateIndex(mgmt.getGraphIndex('indexHash'), SchemaAction.REINDEX).get()
 mgmt.updateIndex(mgmt.getGraphIndex('indexDeviceId'), SchemaAction.REINDEX).get()
 mgmt.updateIndex(mgmt.getGraphIndex('indexBlockchain'), SchemaAction.REINDEX).get()
 mgmt.updateIndex(mgmt.getGraphIndex('indexTransactionId'), SchemaAction.REINDEX).get()
-mgmt.updateIndex(mgmt.getGraphIndex('indexTimestamp'), SchemaAction.REINDEX).get()
+mgmt.updateIndex(mgmt.getGraphIndex('indexTimestampAndOwner'), SchemaAction.REINDEX).get()
 mgmt.commit()
