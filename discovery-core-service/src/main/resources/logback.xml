@@ -31,7 +31,7 @@
     </appender>
 
     <logger name="com.datastax.driver" level="WARN"/>
-    <logger name="com.ubirch" level="DEBUG"/>
+    <logger name="com.ubirch" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
