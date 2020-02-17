@@ -53,13 +53,13 @@ idx_device_id.addKey(mgmt.getPropertyKey('device_id')).unique().buildCompositeIn
 idx_transaction_id.addKey(mgmt.getPropertyKey('transaction_id')).unique().buildCompositeIndex()
 idx_timestamp_and_producer.addKey(mgmt.getPropertyKey('timestamp')).addKey(mgmt.getPropertyKey('producer_id')).buildMixedIndex("search")
 
-idx_edge_UPP_DEVICE=mgmt.buildEdgeIndex(eLabelDeviceUpp, 'indexEdgeUppDevice', Direction.IN, Order.desc, timestamp)
-idx_edge_SLAVE_UPP=mgmt.buildEdgeIndex(eLabelSlaveUpp, 'indexEdgeSlaveUpp', Direction.BOTH, Order.desc, timestamp)
-idx_edge_SLAVE_SLAVE=mgmt.buildEdgeIndex(eLabelSlaveSlave, 'indexEdgeSlaveSlave', Direction.BOTH, Order.desc, timestamp)
-idx_edge_MASTER_SLAVE=mgmt.buildEdgeIndex(eLabelMasterSlave, 'indexEdgeMasterSlave', Direction.BOTH, Order.desc, timestamp)
-idx_edge_MASTER_MASTER=mgmt.buildEdgeIndex(eLabelMasterMaster, 'indexEdgeMasterMaster', Direction.BOTH, Order.desc, timestamp)
-idx_edge_MASTER_MASTER=mgmt.buildEdgeIndex(eLabelMasterUpgrade, 'indexEdgeMasterUpgrade', Direction.BOTH, Order.desc, timestamp)
-idx_edge_BLOCKCHAIN_MASTER=mgmt.buildEdgeIndex(eLabelBlockchainMaster, 'indexEdgeBlockchainMaster', Direction.BOTH, Order.desc, timestamp)
+idx_edge_UPP_DEVICE=mgmt.buildEdgeIndex(eLabelDeviceUpp, 'indexEdgeUppDevice', Direction.IN, Order.decr, timestamp)
+idx_edge_SLAVE_UPP=mgmt.buildEdgeIndex(eLabelSlaveUpp, 'indexEdgeSlaveUpp', Direction.BOTH, Order.decr, timestamp)
+idx_edge_SLAVE_SLAVE=mgmt.buildEdgeIndex(eLabelSlaveSlave, 'indexEdgeSlaveSlave', Direction.BOTH, Order.decr, timestamp)
+idx_edge_MASTER_SLAVE=mgmt.buildEdgeIndex(eLabelMasterSlave, 'indexEdgeMasterSlave', Direction.BOTH, Order.decr, timestamp)
+idx_edge_MASTER_MASTER=mgmt.buildEdgeIndex(eLabelMasterMaster, 'indexEdgeMasterMaster', Direction.BOTH, Order.decr, timestamp)
+idx_edge_MASTER_MASTER=mgmt.buildEdgeIndex(eLabelMasterUpgrade, 'indexEdgeMasterUpgrade', Direction.BOTH, Order.decr, timestamp)
+idx_edge_BLOCKCHAIN_MASTER=mgmt.buildEdgeIndex(eLabelBlockchainMaster, 'indexEdgeBlockchainMaster', Direction.BOTH, Order.decr, timestamp)
 
 mgmt.commit()
 
@@ -97,3 +97,6 @@ mgmt.updateIndex(mgmt.getRelationIndex(eLabelMasterUpgrade, 'indexEdgeMasterUpgr
 mgmt.updateIndex(mgmt.getRelationIndex(eLabelBlockchainMaster, 'indexEdgeBlockchainMaster'), SchemaAction.REINDEX).get()
 
 mgmt.commit()
+
+
+qwertzuiopüasdfghjklöä+#yxcvbnm,.-.-_;N1234567890ß´´098765432
