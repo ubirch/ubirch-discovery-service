@@ -3,11 +3,11 @@ package com.ubirch.discovery.core.structure
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.structure.PropertyType.PropertyType
-import com.ubirch.discovery.core.util.Util
-import gremlin.scala.{ Key, KeyValue }
+import com.ubirch.discovery.core.util.{Timer, Util}
+import gremlin.scala.{Edge, Key, KeyValue}
 import org.json4s
-import org.json4s.JsonDSL._
 import org.json4s._
+import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization
 
@@ -91,7 +91,30 @@ case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
   }
 }
 
-case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: EdgeCore)
+case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: EdgeCore) {
+
+  def createEdge(implicit gc: GremlinConnector): Unit = {
+
+    val timer = new Timer
+    if (edge.properties.isEmpty) {
+      gc.g.V(vFromDb.vertex).as("a").V(vToDb.vertex).addE(edge.label).from(vFromDb.vertex).toSet().head
+    } else {
+      val edgeOnDb: Edge = gc.g
+        .V(vFromDb.vertex)
+        .as("a")
+        .V(vToDb.vertex)
+        .addE(edge.label)
+        .property(edge.properties.head.toKeyValue)
+        .from(vFromDb.vertex)
+        .toSet().head
+      for (keyV <- edge.properties.tail) {
+        gc.g.E(edgeOnDb).property(keyV.toKeyValue).iterate()
+      }
+    }
+    timer.finish(s"link vertices of vertices ${vFromDb.vertex.id} and ${vToDb.vertex.id}, len(properties) = ${edge.properties.size} .")
+
+  }
+}
 
 object PropertyType extends Enumeration {
   type PropertyType = Value

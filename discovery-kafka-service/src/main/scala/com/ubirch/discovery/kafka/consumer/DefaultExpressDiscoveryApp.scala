@@ -123,7 +123,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   def store(data: Seq[Relation]): Boolean = {
     try {
-      val t0 = System.nanoTime()
+      val timer = new Timer()
 
       // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
       // that could create a ConnectionTimeOutException.
@@ -131,6 +131,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
         val dataPartition = data.grouped(16).toList
 
         dataPartition foreach { batchOfAddV =>
+          //          logger.info("sleeping")
+          //          Thread.sleep(310000)
+          //          logger.info("Finished the siesta")
           val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
           batchOfAddV.foreach { x =>
             logger.debug(s"relationship: ${x.toString}")
@@ -153,14 +156,16 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
         }
       } else {
         data.foreach { x =>
+          /*          logger.info("sleeping")
+          Thread.sleep(310000)
+          logger.info("Finished the siesta")*/
           logger.debug(s"relationship: ${x.toString}")
           Store.addV(x)
           storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
         }
       }
 
-      val t1 = System.nanoTime()
-      logger.debug(s"message MSG: ${Serialization.write(data)} of size ${data.size} processed in ${(t1 / 1000000 - t0 / 1000000).toString} ms")
+      timer.finish(s"process message MSG: ${Serialization.write(data)} of size ${data.size} ")
       storeCounter.counter.labels("MessageStoredSuccessfully").inc()
       true
     } catch {
@@ -180,6 +185,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       val dataPartition = data.grouped(16).toList
 
       dataPartition foreach { batchOfAddV =>
+        /*        logger.info("sleeping")
+        Thread.sleep(310000)
+        logger.info("Finished the siesta")*/
         logger.debug(s"STARTED sending a batch of ${batchOfAddV.size} asynchronously")
         val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
         batchOfAddV.foreach { x =>
@@ -204,7 +212,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
       }
 
-      storeCounter.counter.labels("RelationshipStoredSuccessfully").inc(data.length)
+      storeCounter.counter.labels("MessageStoredSuccessfully").inc(data.length)
       timer.finish(s"process CACHED message MSG: ${Serialization.write(data)} of size ${data.size} ")
       true
     } catch {

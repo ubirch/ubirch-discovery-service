@@ -9,9 +9,9 @@ import scala.concurrent.ExecutionContext
 
 object Service extends Boot with DefaultExpressDiscoveryApp {
 
-  override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+  override implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
-  override def prefix: String = "Ubirch"
+  override val prefix: String = "Ubirch"
 
-  override def maxTimeAggregationSeconds: Long = 180
+  override val maxTimeAggregationSeconds: Long = 180
 }
