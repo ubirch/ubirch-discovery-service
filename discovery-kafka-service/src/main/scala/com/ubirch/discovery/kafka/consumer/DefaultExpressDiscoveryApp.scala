@@ -4,19 +4,19 @@ import java.util.concurrent.CountDownLatch
 
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
-import com.ubirch.discovery.kafka.models.{ RelationKafka, Store }
+import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter}
+import com.ubirch.discovery.kafka.models.{RelationKafka, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 import org.json4s.jackson.Serialization
 
 import scala.concurrent.Future
 import scala.language.postfixOps
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
@@ -132,7 +132,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
         dataPartition foreach { batchOfAddV =>
           val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
-          import scala.concurrent.ExecutionContext.Implicits.global
           batchOfAddV.foreach { x =>
             logger.debug(s"relationship: ${x.toString}")
             val process = Future(Store.addV(x))
@@ -183,7 +182,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       dataPartition foreach { batchOfAddV =>
         logger.debug(s"STARTED sending a batch of ${batchOfAddV.size} asynchronously")
         val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
-        import scala.concurrent.ExecutionContext.Implicits.global
         batchOfAddV.foreach { x =>
           logger.debug(s"relationship: ${x.toString}")
           val process = Future(Store.addVCached(x, vertexCached))

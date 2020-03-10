@@ -1,15 +1,16 @@
 package com.ubirch.discovery.kafka.consumer
 
 import java.io.File
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Executors, TimeUnit}
 
-import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.kafka.TestBase
-import com.ubirch.util.PortGiver
+import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 
+import scala.concurrent.ExecutionContext
 import scala.io.Source
 
 //TODO: We need to rethink the tests here are they are causing issues on the ci pipelines
@@ -26,7 +27,11 @@ class DefaultStringConsumerSpec extends TestBase {
       implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
       withRunningKafka {
 
-        val consumer = new DefaultExpressDiscoveryApp {}
+        val consumer = new DefaultExpressDiscoveryApp {
+          override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+          override def prefix: String = "Ubirch"
+          override def maxTimeAggregationSeconds: Long = 180
+        }
         consumer.consumption.setForceExit(false)
         consumer.consumption.start()
         cleanDb()
@@ -56,7 +61,11 @@ class DefaultStringConsumerSpec extends TestBase {
       implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
       withRunningKafka {
 
-        val consumer = new DefaultExpressDiscoveryApp {}
+        val consumer = new DefaultExpressDiscoveryApp {
+          override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+          override def prefix: String = "Ubirch"
+          override def maxTimeAggregationSeconds: Long = 180
+        }
         consumer.consumption.setForceExit(false)
         consumer.consumption.start()
         cleanDb()
@@ -88,7 +97,11 @@ class DefaultStringConsumerSpec extends TestBase {
       implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
       withRunningKafka {
 
-        val consumer = new DefaultExpressDiscoveryApp {}
+        val consumer = new DefaultExpressDiscoveryApp {
+          override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+          override def prefix: String = "Ubirch"
+          override def maxTimeAggregationSeconds: Long = 180
+        }
         consumer.consumption.setForceExit(false)
         consumer.consumption.start()
         cleanDb()
