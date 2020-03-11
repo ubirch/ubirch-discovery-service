@@ -95,23 +95,23 @@ case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: 
 
   def createEdge(implicit gc: GremlinConnector): Unit = {
 
-    val timer = new Timer
-    if (edge.properties.isEmpty) {
-      gc.g.V(vFromDb.vertex).as("a").V(vToDb.vertex).addE(edge.label).from(vFromDb.vertex).toSet().head
-    } else {
-      val edgeOnDb: Edge = gc.g
-        .V(vFromDb.vertex)
-        .as("a")
-        .V(vToDb.vertex)
-        .addE(edge.label)
-        .property(edge.properties.head.toKeyValue)
-        .from(vFromDb.vertex)
-        .toSet().head
-      for (keyV <- edge.properties.tail) {
-        gc.g.E(edgeOnDb).property(keyV.toKeyValue).iterate()
+    Timer.time({
+      if (edge.properties.isEmpty) {
+        gc.g.V(vFromDb.vertex).as("a").V(vToDb.vertex).addE(edge.label).from(vFromDb.vertex).toSet().head
+      } else {
+        val edgeOnDb: Edge = gc.g
+          .V(vFromDb.vertex)
+          .as("a")
+          .V(vToDb.vertex)
+          .addE(edge.label)
+          .property(edge.properties.head.toKeyValue)
+          .from(vFromDb.vertex)
+          .toSet().head
+        for (keyV <- edge.properties.tail) {
+          gc.g.E(edgeOnDb).property(keyV.toKeyValue).iterate()
+        }
       }
-    }
-    timer.finish(s"link vertices of vertices ${vFromDb.vertex.id} and ${vToDb.vertex.id}, len(properties) = ${edge.properties.size} .")
+    }).logTimeTaken(s"link vertices of vertices ${vFromDb.vertex.id} and ${vToDb.vertex.id}, len(properties) = ${edge.properties.size} .")
 
   }
 }

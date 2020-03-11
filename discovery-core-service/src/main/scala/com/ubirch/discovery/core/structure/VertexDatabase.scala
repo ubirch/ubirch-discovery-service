@@ -8,7 +8,7 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
-import gremlin.scala.{ KeyValue, TraversalSource, Vertex }
+import gremlin.scala.{KeyValue, TraversalSource, Vertex}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 
 import scala.collection.JavaConverters._
@@ -30,13 +30,15 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
             }
       }
     }
-    val timer = new Timer()
-    val possibleVertex = searchForVertexByProperties(coreVertex.properties)
-    if (possibleVertex != null) {
-      addNewPropertiesToVertex(possibleVertex)
-    }
-    timer.finish(s"check if vertex with properties ${coreVertex.properties.mkString(", ")} was already in the DB")
-    possibleVertex
+    val timedPossibleVertex = Timer.time({
+      val possibleVertex = searchForVertexByProperties(coreVertex.properties)
+      if (possibleVertex != null) {
+        addNewPropertiesToVertex(possibleVertex)
+      }
+      possibleVertex
+    })
+    timedPossibleVertex.logTimeTaken(s"check if vertex with properties ${coreVertex.properties.mkString(", ")} was already in the DB")
+    timedPossibleVertex.result.get
   }
 
   def isPropertyIterable(prop: String): Boolean = {
@@ -84,14 +86,14 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   }
 
   private def addNewPropertiesToVertex(vertex: Vertex): Unit = {
-    val timer = new Timer()
-    for (property <- coreVertex.properties) {
-      if (!doesPropExist(property.toKeyValue)) {
-        addPropertyToVertex(property.toKeyValue, vertex: Vertex)
-        logger.debug(s"Adding property: ${property.keyName}")
+    Timer.time({
+      for (property <- coreVertex.properties) {
+        if (!doesPropExist(property.toKeyValue)) {
+          addPropertyToVertex(property.toKeyValue, vertex: Vertex)
+          logger.debug(s"Adding property: ${property.keyName}")
+        }
       }
-    }
-    timer.finish(s"add properties to vertex with id: ${vertex.id().toString}")
+    }).logTimeTaken(s"add properties to vertex with id: ${vertex.id().toString}")
 
     def doesPropExist[T](keyV: KeyValue[T]): Boolean = g.V(vertex).properties(keyV.key.name).toList().nonEmpty
   }

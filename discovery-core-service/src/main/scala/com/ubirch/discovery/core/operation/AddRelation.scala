@@ -9,6 +9,7 @@ import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
 
 import scala.language.postfixOps
+import scala.util.Success
 
 /**
   * Allows the storage of two nodes (vertices) in the janusgraph server. Link them together
@@ -21,11 +22,11 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
 
   /* main part of the program */
   def createRelation(relation: Relation)(implicit propSet: Set[Property]): String = {
-    val timer = new Timer()
-    stopIfVerticesAreEquals(relation.vFrom, relation.vTo)
-    val relationServer = relation.toRelationServer
-    executeRelationCreationStrategy(relationServer)
-    timer.finish("add two vertices")
+    Timer.time({
+      stopIfVerticesAreEquals(relation.vFrom, relation.vTo)
+      val relationServer = relation.toRelationServer
+      executeRelationCreationStrategy(relationServer)
+    }, "add two vertices").logTimeTaken()
     "OK BB" //TODO: change this return line
   }
 
@@ -85,16 +86,16 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
   def addTwoVerticesCached(vCached: VertexDatabase)(internalVertexTo: VertexCore)(edge: EdgeCore)
     (implicit propSet: Set[Property]): String = {
     logger.debug(s"Operating on two vertices: one cached: ${vCached.vertex.id()} and one not: ${internalVertexTo.label}")
-    val timer = new Timer()
-    stopIfVerticesAreEquals(vCached.coreVertex, internalVertexTo)
-    val vTo: VertexDatabase = internalVertexTo.toVertexStructDb(gc)
-    val relation = RelationServer(vCached, vTo, edge)
-    if (!vTo.existInJanusGraph) {
-      oneExistCache(relation)
-    } else {
-      twoExist(relation)
-    }
-    timer.finish("add two vertex with one CACHED")
+    Timer.time({
+      stopIfVerticesAreEquals(vCached.coreVertex, internalVertexTo)
+      val vTo: VertexDatabase = internalVertexTo.toVertexStructDb(gc)
+      val relation = RelationServer(vCached, vTo, edge)
+      if (!vTo.existInJanusGraph) {
+        oneExistCache(relation)
+      } else {
+        twoExist(relation)
+      }
+    }, "add two vertex with one CACHED").logTimeTaken()
     "Alles gut"
   }
 
@@ -132,10 +133,12 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     * @return boolean. True = linked, False = not linked.
     */
   def areVertexLinked(vFrom: VertexDatabase, vTo: VertexDatabase): Boolean = {
-    val timer = new Timer()
-    val res = gc.g.V(vFrom.vertex).bothE().bothV().is(vTo.vertex).l()
-    timer.finish(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${res.nonEmpty}")
-    res.nonEmpty
+    val timedResult = Timer.time(gc.g.V(vFrom.vertex).bothE().bothV().is(vTo.vertex).l())
+    timedResult.result match {
+      case Success(value) =>
+        timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}")
+        value.nonEmpty
+    }
   }
 
   /**
