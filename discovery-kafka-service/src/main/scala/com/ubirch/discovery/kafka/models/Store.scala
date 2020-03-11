@@ -1,14 +1,14 @@
 package com.ubirch.discovery.kafka.models
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.operation.AddRelation
+import com.ubirch.discovery.core.structure.{Relation, VertexCore, VertexDatabase}
 import com.ubirch.discovery.core.structure.Elements.Property
-import com.ubirch.discovery.core.structure.{ Relation, VertexCore, VertexDatabase }
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.RelationMetricsLoggerSummary
+import com.ubirch.discovery.kafka.metrics.PrometheusRelationMetricsLoggerSummary
 import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
-import gremlin.scala.{ Key, KeyValue }
+import gremlin.scala.{Key, KeyValue}
 
 import scala.language.postfixOps
 
@@ -19,7 +19,7 @@ object Store extends LazyLogging {
   implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
   val addVertices = AddRelation()
-  val relationTimeSummary = new RelationMetricsLoggerSummary
+  val relationTimeSummary = new PrometheusRelationMetricsLoggerSummary
 
   /**
     * Transforms a map[String, String] to a list of KeyValue[String].
@@ -58,11 +58,13 @@ object Store extends LazyLogging {
     */
   def addV(relation: Relation): Unit = {
     relationTimeSummary.summary.time { () =>
-      val timer = new Timer()
-      logger.debug("l1:" + relation.vFrom.label)
-      stopIfRelationNotAllowed(relation)
-      addVertices.createRelation(relation)
-      timer.finish("to inscribe a new relation")
+      val res = Timer.time({
+        logger.debug("l1:" + relation.vFrom.label)
+        stopIfRelationNotAllowed(relation)
+        addVertices.createRelation(relation)
+      })
+      res.logTimeTaken("to inscribe a new relation")
+      res
     }
   }
 
