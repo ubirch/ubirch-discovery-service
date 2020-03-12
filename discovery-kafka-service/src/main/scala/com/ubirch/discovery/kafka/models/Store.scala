@@ -38,32 +38,20 @@ object Store extends LazyLogging {
     * "propNName": "propNValue"
     * "label": "label"
     * }
-    * "v2":{
-    * "properties": {
-    * "prop1Name": "prop1Value",
-    * ...
-    * "propNName": "propNValue"
-    * "label": "label"
-    * }
-    * "edge":{
-    * "properties":{
-    * "prop1Name": "prop1Value",
-    * ...
-    * "propNName": "propNValue"
-    * "label": "label"
-    * }}}
+    * "v2":{ same }
+    * "edge":{ same }
+    * }}
     *
     * @param relation The parsed JSON
     * @return
     */
-  def addV(relation: Relation): Unit = {
+  def addRealation(relation: Relation): Unit = {
     relationTimeSummary.summary.time { () =>
       val res = Timer.time({
-        logger.debug("l1:" + relation.vFrom.label)
         stopIfRelationNotAllowed(relation)
         addVertices.createRelation(relation)
       })
-      res.logTimeTaken("to inscribe a new relation")
+      res.logTimeTaken(s"inscribe relation: ${relation.toString}")
       res
     }
   }
@@ -78,8 +66,18 @@ object Store extends LazyLogging {
 
   def vertexToCache(vertexToConvert: VertexCore): VertexDatabase = {
     val vertex = vertexToConvert.toVertexStructDb(gc)
-    if (!vertex.existInJanusGraph) vertex.addVertexWithProperties()
+    if (!vertex.existInJanusGraph) vertex.addVertexWithProperties() else vertex.update()
     vertex
+  }
+
+  def addVertex(vertex: VertexCore) = {
+    val vDb = vertex.toVertexStructDb(gc)
+    if (!vDb.existInJanusGraph) {
+      vDb.addVertexWithProperties()
+    } else {
+      vDb.update()
+    }
+
   }
 
   def checkIfLabelIsAllowed(label: String): Boolean = {
@@ -115,6 +113,30 @@ object Store extends LazyLogging {
       }
       addVertices.addTwoVerticesCached(vCached)(vertexNotCached)(edge)
     }
+  }
+
+  def addVerticesPresentMultipleTimes(relations: List[Relation]) = {
+    val verticesPresentMultipleTimes = getVerticesPresentMultipleTime(relations)
+    verticesPresentMultipleTimes.foreach { v =>
+      Store.addVertex(v)
+    }
+  }
+
+  def getVerticesPresentMultipleTime(relations: List[Relation]): Set[VertexCore] = {
+    val vertices = relations.flatMap(r => List(r.vFrom, r.vTo))
+
+    // check for vertices who have the same unique properties but are not "exactly" equal
+    val verticesCheck1: Set[VertexCore] = vertices.toSet
+    val resCheck1 = verticesCheck1.filter { v =>
+      (verticesCheck1 - v) exists { v2 => v2.equalsUniqueProperty(v) }
+    }
+
+    // general equality check
+    val resCheck2 = vertices.groupBy(identity).collect { case (v, List(_, _, _*)) => v }.toSet
+
+    val resTotal = resCheck1 ++ resCheck2
+    logger.debug(s"vertices duplicates: ${resTotal.map { v => v.toString }}")
+    resTotal
   }
 
 }

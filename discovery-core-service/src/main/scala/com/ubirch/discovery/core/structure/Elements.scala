@@ -50,8 +50,18 @@ abstract class ElementCore(properties: List[ElementProperty], label: String) {
   def toJson = {
     ("label" -> label) ~
       ("properties" -> properties.map { p => Util.kvToJson(p) })
-
   }
+
+  override def toString: String = compact(render(toJson))
+
+  def equalsUniqueProperty(that: ElementCore)(implicit propSet: Set[Property]): Boolean = {
+    this.getUniqueProperties.exists(uniqueProp => that.getUniqueProperties.contains(uniqueProp))
+  }
+
+  def getUniqueProperties(implicit propSet: Set[Property]): List[ElementProperty] = {
+    properties filter (p => p.isUnique)
+  }
+
 }
 
 case class VertexCore(properties: List[ElementProperty], label: String) extends ElementCore(properties, label) {
@@ -62,6 +72,7 @@ case class VertexCore(properties: List[ElementProperty], label: String) extends 
   def equals(that: ElementCore): Boolean = {
     this.sortProperties equals that.sortProperties
   }
+
 }
 
 case class EdgeCore(properties: List[ElementProperty], label: String) extends ElementCore(properties, label) {
@@ -92,6 +103,18 @@ case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
 }
 
 case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: EdgeCore) {
+
+  implicit val formats: AnyRef with Formats = Serialization.formats(NoTypeHints)
+
+  override def toString: String = {
+    compact(render(toJson))
+  }
+
+  def toJson = {
+    ("vFrom" -> vFromDb.coreVertex.toJson) ~
+      ("vTo" -> vToDb.coreVertex.toJson) ~
+      ("edge" -> edge.toJson)
+  }
 
   def createEdge(implicit gc: GremlinConnector): Unit = {
 
@@ -137,4 +160,10 @@ case class ElementProperty(keyValue: KeyValue[Any], propType: PropertyType) {
       case PropertyType.Long => keyValue.value.asInstanceOf[Long]
     }
   }
+
+  def isUnique(implicit propSet: Set[Property]): Boolean = {
+    propSet.exists(p => p.name.equalsIgnoreCase(this.keyName) && p.isPropertyUnique)
+  }
+
+  def equals(that: ElementProperty): Boolean = this.keyName.equals(that.keyName) && this.value.equals(that.value)
 }

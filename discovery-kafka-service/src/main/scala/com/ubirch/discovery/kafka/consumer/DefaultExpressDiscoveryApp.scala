@@ -12,8 +12,8 @@ import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
-import org.json4s.jackson.Serialization
 
+import scala.collection.immutable
 import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -75,6 +75,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
         .filter(_.nonEmpty)
         .map { x =>
           if (checkIfAllVertexAreTheSame(x)) {
+            logger.debug("Storing with cache")
             Try(storeCache(x)) recover {
               case e: StoreException =>
                 errorCounter.counter.labels("StoreException").inc()
@@ -82,6 +83,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
                 logger.error(ErrorsHandler.generateException(e, cr.value()))
             }
           } else {
+            logger.debug("Storing without cache")
             Try(store(x)) recover {
               case e: StoreException =>
                 errorCounter.counter.labels("StoreException").inc()
@@ -125,13 +127,16 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     try {
       Timer.time({
         if (data.size > 3) {
-          val dataPartition = data.grouped(16).toList
+          val relationsPartition: immutable.Seq[Seq[Relation]] = data.grouped(16).toList
 
-          dataPartition foreach { batchOfAddV =>
+          relationsPartition foreach { batchOfRelations =>
             val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
-            batchOfAddV.foreach { x =>
-              logger.debug(s"relationship: ${x.toString}")
-              val process = Future(Store.addV(x))
+            Timer.time {
+              Store.addVerticesPresentMultipleTimes(batchOfRelations.toList)
+            }.logTimeTaken("add vertices present multiple times")
+            batchOfRelations.foreach { relation =>
+              logger.debug(s"relationship: ${relation.toString}")
+              val process = Future(Store.addRealation(relation))
               storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
               processesOfFutures += process
             }
@@ -149,13 +154,16 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
             latch.await()
           }
         } else {
+          Timer.time {
+            Store.addVerticesPresentMultipleTimes(data.toList)
+          }.logTimeTaken("add vertices present multiple times")
           data.foreach { x =>
             logger.debug(s"relationship: ${x.toString}")
-            Store.addV(x)
+            Store.addRealation(x)
             storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
           }
         }
-      }).logTimeTaken(s"process message MSG: ${Serialization.write(data)} of size ${data.size} ")
+      }).logTimeTaken(s"processed message MSG of size ${data.size} : ${data.map(d => d.toString).mkString(", ")} ")
       // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
       // that could create a ConnectionTimeOutException.
       storeCounter.counter.labels("MessageStoredSuccessfully").inc()
@@ -176,15 +184,14 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
         // that could create a ConnectionTimeOutException.
         val dataPartition = data.grouped(16).toList
 
-        dataPartition foreach { batchOfAddV =>
-          /*        logger.info("sleeping")
-          Thread.sleep(310000)
-          logger.info("Finished the siesta")*/
-          logger.debug(s"STARTED sending a batch of ${batchOfAddV.size} asynchronously")
+        dataPartition foreach { batchOfRelations =>
+          logger.debug(s"STARTED sending a batch of ${batchOfRelations.size} asynchronously")
           val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
-          batchOfAddV.foreach { x =>
-            logger.debug(s"relationship: ${x.toString}")
-            val process = Future(Store.addVCached(x, vertexCached))
+          Store.addVerticesPresentMultipleTimes(batchOfRelations.toList)
+
+          batchOfRelations.foreach { relation =>
+            logger.debug(s"relationship: ${relation.toString}")
+            val process = Future(Store.addVCached(relation, vertexCached))
             storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
             processesOfFutures += process
           }
@@ -200,10 +207,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
               latch.countDown()
           }
           latch.await()
-          logger.debug(s"FINISHED sending a batch of ${batchOfAddV.size} asynchronously")
+          logger.debug(s"FINISHED sending a batch of ${batchOfRelations.size} asynchronously")
 
         }
-      }).logTimeTaken(s"process CACHED message MSG: ${Serialization.write(data)} of size ${data.size}")
+      }).logTimeTaken(s"processed CACHED message MSG of size ${data.size} : ${data.map(d => d.toString).mkString(", ")} ")
 
       storeCounter.counter.labels("MessageStoredSuccessfully").inc(data.length)
       true
