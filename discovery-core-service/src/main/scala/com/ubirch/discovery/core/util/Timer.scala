@@ -49,8 +49,8 @@ object Timer extends LazyLogging {
   private def logMessageJson(arg: (String, List[JObject]), time: Long, state: String = "ok") = {
     "Timer" ->
       ("timeTaken" -> time) ~
-        ("to" -> arg) ~
-        ("state" -> state)
+      ("to" -> arg) ~
+      ("state" -> state)
   }
 
 }

@@ -166,7 +166,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
             storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
           }
         }
-      }).logTimeTakenJson(s"process_relations" -> List(("size" -> data.size) ~ ("value" ->  data.map{ r => r.toJson}.toList)))
+      }).logTimeTakenJson(s"process_relations" -> List(("size" -> data.size) ~ ("value" -> data.map { r => r.toJson }.toList)))
 
       storeCounter.counter.labels("MessageStoredSuccessfully").inc()
       true

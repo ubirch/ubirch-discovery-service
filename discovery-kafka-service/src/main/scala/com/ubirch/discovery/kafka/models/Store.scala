@@ -56,7 +56,6 @@ object Store extends LazyLogging {
     }
   }
 
-
   def stopIfRelationNotAllowed(relation: Relation): Unit = {
     val isRelationAllowed = checkIfLabelIsAllowed(relation.vFrom.label) &&
       checkIfLabelIsAllowed(relation.vTo.label)

@@ -117,11 +117,11 @@ class DefaultStringConsumerSpec extends TestBase {
 
     ignore("NeedForJanus") {
 
-    allTests foreach { test =>
-      scenario(test.nameOfTest) {
-        runTest(test)
+      allTests foreach { test =>
+        scenario(test.nameOfTest) {
+          runTest(test)
+        }
       }
-    }
 
     }
 

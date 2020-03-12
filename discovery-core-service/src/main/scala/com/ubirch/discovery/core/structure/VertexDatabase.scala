@@ -40,8 +40,8 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       }
       possibleVertex
     })
-    timedPossibleVertex.logTimeTakenJson("check_vertex_in_db" -> List(("result" -> timedPossibleVertex.result.get.toString) ~ ("vertex" -> coreVertex.toJson)))
-    timedPossibleVertex.result.get
+    timedPossibleVertex.logTimeTakenJson("check_vertex_in_db" -> List(("result" -> Option(timedPossibleVertex.result.getOrElse("false")).getOrElse("false").toString) ~ ("vertex" -> coreVertex.toJson)))
+    timedPossibleVertex.result.getOrElse(null)
   }
 
   def isPropertyIterable(propertyName: String): Boolean = {
