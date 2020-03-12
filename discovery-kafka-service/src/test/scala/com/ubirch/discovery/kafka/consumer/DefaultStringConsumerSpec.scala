@@ -115,7 +115,7 @@ class DefaultStringConsumerSpec extends TestBase {
 
     val allTests = getAllTests("/invalid/storing/")
 
-    //ignore("NeedForJanus") {
+    ignore("NeedForJanus") {
 
     allTests foreach { test =>
       scenario(test.nameOfTest) {
@@ -123,7 +123,7 @@ class DefaultStringConsumerSpec extends TestBase {
       }
     }
 
-    //}
+    }
 
   }
 
