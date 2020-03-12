@@ -12,6 +12,7 @@ import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
+import org.json4s.JsonDSL._
 
 import scala.collection.immutable
 import scala.concurrent.Future
@@ -127,6 +128,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     try {
       Timer.time({
         if (data.size > 3) {
+          // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
+          // that could create a ConnectionTimeOutException.
           val relationsPartition: immutable.Seq[Seq[Relation]] = data.grouped(16).toList
 
           relationsPartition foreach { batchOfRelations =>
@@ -135,7 +138,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
               Store.addVerticesPresentMultipleTimes(batchOfRelations.toList)
             }.logTimeTaken("add vertices present multiple times")
             batchOfRelations.foreach { relation =>
-              logger.debug(s"relationship: ${relation.toString}")
+
               val process = Future(Store.addRealation(relation))
               storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
               processesOfFutures += process
@@ -158,14 +161,13 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
             Store.addVerticesPresentMultipleTimes(data.toList)
           }.logTimeTaken("add vertices present multiple times")
           data.foreach { x =>
-            logger.debug(s"relationship: ${x.toString}")
+
             Store.addRealation(x)
             storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
           }
         }
-      }).logTimeTaken(s"processed message MSG of size ${data.size} : ${data.map(d => d.toString).mkString(", ")} ")
-      // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
-      // that could create a ConnectionTimeOutException.
+      }).logTimeTakenJson(s"process_relations" -> List(("size" -> data.size) ~ ("value" ->  data.map{ r => r.toJson}.toList)))
+
       storeCounter.counter.labels("MessageStoredSuccessfully").inc()
       true
     } catch {
@@ -190,7 +192,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
           Store.addVerticesPresentMultipleTimes(batchOfRelations.toList)
 
           batchOfRelations.foreach { relation =>
-            logger.debug(s"relationship: ${relation.toString}")
             val process = Future(Store.addVCached(relation, vertexCached))
             storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
             processesOfFutures += process

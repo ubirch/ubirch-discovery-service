@@ -1,6 +1,9 @@
 package com.ubirch.discovery.core.util
 
 import com.typesafe.scalalogging.LazyLogging
+import org.json4s._
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 
 import scala.util.Try
 
@@ -10,9 +13,17 @@ object Timer extends LazyLogging {
     lazy val elapsed: Long = timeTaken.time
     def logTimeTaken(arg: String = description): Unit = {
       if (elapsed > 1000) {
-        logger.warn(s"Time to $arg took $elapsed ms!")
+        logger.warn(compact(render(logMessage(arg, elapsed, "warn"))))
       } else {
-        logger.debug("Took " + elapsed + " ms to " + arg)
+        logger.warn(compact(render(logMessage(arg, elapsed))))
+      }
+    }
+
+    def logTimeTakenJson(arg: (String, List[JObject])): Unit = {
+      if (elapsed > 1000) {
+        logger.warn(compact(render(logMessageJson(arg, elapsed, "warn"))))
+      } else {
+        logger.warn(compact(render(logMessageJson(arg, elapsed))))
       }
     }
   }
@@ -26,6 +37,20 @@ object Timer extends LazyLogging {
 
   case class Interval(start: Long, end: Long) {
     def time: Long = end - start
+  }
+
+  private def logMessage(arg: String, time: Long, state: String = "ok") = {
+    "Timer" ->
+      ("timeTaken" -> time) ~
+      ("to" -> arg) ~
+      ("state" -> state)
+  }
+
+  private def logMessageJson(arg: (String, List[JObject]), time: Long, state: String = "ok") = {
+    "Timer" ->
+      ("timeTaken" -> time) ~
+        ("to" -> arg) ~
+        ("state" -> state)
   }
 
 }

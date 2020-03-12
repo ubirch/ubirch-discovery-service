@@ -10,6 +10,7 @@ import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
 import gremlin.scala.{KeyValue, TraversalSource, Vertex}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
+import org.json4s.JsonDSL._
 
 import scala.collection.JavaConverters._
 
@@ -39,7 +40,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       }
       possibleVertex
     })
-    timedPossibleVertex.logTimeTaken(s"check if vertex ${coreVertex.toString} was already in the DB. result: ${timedPossibleVertex.result.get}")
+    timedPossibleVertex.logTimeTakenJson("check_vertex_in_db" -> List(("result" -> timedPossibleVertex.result.get.toString) ~ ("vertex" -> coreVertex.toJson)))
     timedPossibleVertex.result.get
   }
 

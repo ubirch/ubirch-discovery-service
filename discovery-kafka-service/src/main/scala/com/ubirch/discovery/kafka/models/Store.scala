@@ -51,10 +51,11 @@ object Store extends LazyLogging {
         stopIfRelationNotAllowed(relation)
         addVertices.createRelation(relation)
       })
-      res.logTimeTaken(s"inscribe relation: ${relation.toString}")
+      res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
       res
     }
   }
+
 
   def stopIfRelationNotAllowed(relation: Relation): Unit = {
     val isRelationAllowed = checkIfLabelIsAllowed(relation.vFrom.label) &&

@@ -4,8 +4,8 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.structure.Elements.Property
+import com.ubirch.discovery.core.util.{Timer, Util}
 import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList, PropertiesNotCorrect}
-import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
 
 import scala.language.postfixOps
@@ -46,7 +46,7 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
   2/ link them.
    */
   private def noneExist(relation: RelationServer): Unit = {
-    logger.debug(s"RelationStrategy: noneExist between ${relation.toString}")
+    logger.debug(Util.relationStrategyJson(relation, "non exist"))
     try {
       relation.vFromDb.addVertexWithProperties()
       relation.vToDb.addVertexWithProperties()
@@ -77,10 +77,10 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     }
 
     if (relation.vFromDb.existInJanusGraph) {
-      logger.debug(s"RelationStrategy: one exist: ${relation.vFromDb.vertexId} between ${relation.toString}")
+      logger.debug(Util.relationStrategyJson(relation, "one exit: vFrom"))
       addOneVertexAndCreateEdge(relation.vToDb)
     } else {
-      logger.debug(s"RelationStrategy: one exist: ${relation.vToDb.vertexId} between ${relation.toString}")
+      logger.debug(Util.relationStrategyJson(relation, "one exit: vTo"))
       addOneVertexAndCreateEdge(relation.vFromDb)
     }
   }
@@ -104,7 +104,7 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     * vFrom is the cached vertex
     */
   private def oneExistCache(relation: RelationServer): Unit = {
-    logger.debug(s"RelationStrategy: one exist cached vFrom: ${relation.toString} ")
+    logger.debug(Util.relationStrategyJson(relation, "one exit cached: vFrom"))
     try {
       relation.vToDb.addVertexWithProperties()
       relation.createEdge
@@ -120,7 +120,7 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
   1/ link them if they're not already linked.
    */
   private def twoExist(relation: RelationServer): Unit = {
-    logger.debug(s"RelationStrategy: two exist: ${relation.toString} ")
+    logger.debug(Util.relationStrategyJson(relation, "two exist"))
 
     if (!areVertexLinked(relation.vFromDb, relation.vToDb)) {
       relation.createEdge
