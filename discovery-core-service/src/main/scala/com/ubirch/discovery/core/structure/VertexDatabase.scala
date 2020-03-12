@@ -15,6 +15,8 @@ import scala.collection.JavaConverters._
 
 class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(implicit propSet: Set[Property]) extends LazyLogging {
 
+  override def toString: String = coreVertex.toString
+
   val g: TraversalSource = gc.g
   val b: Bindings = gc.b
 
@@ -37,16 +39,16 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       }
       possibleVertex
     })
-    timedPossibleVertex.logTimeTaken(s"check if vertex with properties ${coreVertex.properties.mkString(", ")} was already in the DB")
+    timedPossibleVertex.logTimeTaken(s"check if vertex ${coreVertex.toString} was already in the DB. result: ${timedPossibleVertex.result.get}")
     timedPossibleVertex.result.get
   }
 
-  def isPropertyIterable(prop: String): Boolean = {
+  def isPropertyIterable(propertyName: String): Boolean = {
 
     def checkOnProps(set: Set[Property]): Boolean = {
       set.toList match {
         case Nil => false
-        case x => if (x.head.name == prop) {
+        case x => if (x.head.name == propertyName) {
           if (x.head.isPropertyUnique) true else checkOnProps(x.tail.toSet)
         } else {
           checkOnProps(x.tail.toSet)
@@ -65,15 +67,17 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   def addVertexWithProperties(): Unit = {
     if (existInJanusGraph) throw new ImportToGremlinException("Vertex already exist in the database")
     try {
-      logger.debug(s"adding vertex: label: ${coreVertex.label}; properties: ${coreVertex.properties.mkString(", ")}")
+      logger.debug(s"adding vertex ${coreVertex.toString}")
       vertex = initialiseVertex
       for (property <- coreVertex.properties.tail) {
-        logger.debug(s"adding property ${property.keyName} , ${property.value}")
-        logger.debug("vertexId: " + vertexId)
+        logger.debug(s"on vertex with id: $vertexId adding property [${property.keyName} : ${property.value}]")
         addPropertyToVertex(property.toKeyValue)
       }
     } catch {
-      case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
+      case e: CompletionException =>
+        logger.error(s"Error on adding properties to vertex ${coreVertex.toString}: " + e.getMessage)
+        throw new ImportToGremlinException(s"Error on adding properties to vertex ${coreVertex.toString}: " + e.getMessage) //TODO: do something
+      case e: Exception => throw e
     }
   }
 
@@ -83,6 +87,13 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
 
   private def addPropertyToVertex[T](property: KeyValue[T], vertex: Vertex = vertex) = {
     g.V(vertex).property(property).iterate()
+  }
+
+  /**
+    * Add new properties to vertex
+    */
+  def update() = {
+    addNewPropertiesToVertex(vertex)
   }
 
   private def addNewPropertiesToVertex(vertex: Vertex): Unit = {

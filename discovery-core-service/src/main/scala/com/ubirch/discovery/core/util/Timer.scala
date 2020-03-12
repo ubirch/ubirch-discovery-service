@@ -10,7 +10,7 @@ object Timer extends LazyLogging {
     lazy val elapsed: Long = timeTaken.time
     def logTimeTaken(arg: String = description): Unit = {
       if (elapsed > 1000) {
-        logger.warn(s"Time to do $arg took $elapsed ms!")
+        logger.warn(s"Time to $arg took $elapsed ms!")
       } else {
         logger.debug("Took " + elapsed + " ms to " + arg)
       }
