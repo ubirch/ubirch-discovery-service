@@ -1,8 +1,8 @@
 package com.ubirch.discovery.core.operation
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStruct
+import com.ubirch.janusgraph.GremlinConnector
 import gremlin.scala._
 
 import scala.collection.JavaConverters._

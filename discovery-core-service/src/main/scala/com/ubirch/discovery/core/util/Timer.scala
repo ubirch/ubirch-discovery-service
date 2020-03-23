@@ -15,7 +15,7 @@ object Timer extends LazyLogging {
       if (elapsed > 1000) {
         logger.warn(compact(render(logMessage(arg, elapsed, "warn"))))
       } else {
-        logger.warn(compact(render(logMessage(arg, elapsed))))
+        logger.debug(compact(render(logMessage(arg, elapsed))))
       }
     }
 
@@ -23,7 +23,7 @@ object Timer extends LazyLogging {
       if (elapsed > 1000) {
         logger.warn(compact(render(logMessageJson(arg, elapsed, "warn"))))
       } else {
-        logger.warn(compact(render(logMessageJson(arg, elapsed))))
+        logger.debug(compact(render(logMessageJson(arg, elapsed))))
       }
     }
   }

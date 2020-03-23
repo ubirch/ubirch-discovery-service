@@ -269,6 +269,12 @@
             <artifactId>ubirch-kafka-express</artifactId>
             <version>${ubirch-kafka-express.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.ubirch</groupId>
+            <artifactId>ubirch-janusgraph-express</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
         <!-- /Ubirch -->
 
     </dependencies>

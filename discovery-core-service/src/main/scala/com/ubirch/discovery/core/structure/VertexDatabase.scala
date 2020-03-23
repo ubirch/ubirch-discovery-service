@@ -4,10 +4,10 @@ import java.util
 import java.util.concurrent.CompletionException
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
+import com.ubirch.janusgraph.GremlinConnector
 import gremlin.scala.{KeyValue, TraversalSource, Vertex}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.json4s.JsonDSL._

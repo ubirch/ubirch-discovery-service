@@ -3,8 +3,8 @@ package com.ubirch.discovery.kafka.consumer
 import java.io.File
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.kafka.TestBase
+import com.ubirch.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
