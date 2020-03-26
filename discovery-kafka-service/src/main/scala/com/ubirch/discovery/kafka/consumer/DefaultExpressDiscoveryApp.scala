@@ -57,8 +57,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
 
-  case class RelationWrapper(tpe: String, data: RelationKafka)
-
   override def process: Process = Process { crs =>
     crs.foreach { cr =>
 

@@ -270,11 +270,11 @@
             <version>${ubirch-kafka-express.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.ubirch</groupId>
-            <artifactId>ubirch-janusgraph-express</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.ubirch</groupId>-->
+<!--            <artifactId>ubirch-janusgraph-express</artifactId>-->
+<!--            <version>1.0-SNAPSHOT</version>-->
+<!--        </dependency>-->
         <!-- /Ubirch -->
 
     </dependencies>
@@ -353,8 +353,6 @@
     <modules>
         <module>discovery-core-service</module>
         <module>discovery-kafka-service</module>
-        <module>discovery-rest-service</module>
-        <module>discovery-docker-jg-service</module>
     </modules>
 
 </project>

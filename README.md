@@ -23,7 +23,7 @@ of several modules:
 #### Add two Vertices and link them with
 ```scala
 // First, create a gremlinConnector 
-import com.ubirch.janusgraph.GremlinConnector
+import com.ubirch.discovery.core.connector.GremlinConnector
 implicit val gc: GremlinConnector = GremlinConnector.get
 
 // Use the AddVertices class to add two vertex
