@@ -1,11 +1,9 @@
 package com.ubirch.discovery.kafka.consumer
 
-import java.util.concurrent.CountDownLatch
-
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter}
-import com.ubirch.discovery.kafka.models.{RelationKafka, Store}
+import com.ubirch.discovery.kafka.models.{Executor, RelationKafka, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import com.ubirch.kafka.express.ExpressKafkaApp
@@ -14,10 +12,8 @@ import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, 
 import org.json4s._
 import org.json4s.JsonDSL._
 
-import scala.collection.immutable
-import scala.concurrent.Future
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
@@ -72,26 +68,30 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
             Nil
         }
         .filter(_.nonEmpty)
-        .map { x =>
-          if (checkIfAllVertexAreTheSame(x)) {
+        .map { relations =>
+          if (checkIfAllVertexAreTheSame(relations)) {
             logger.debug("Storing with cache")
-            Try(storeCache(x)) recover {
-              case e: StoreException =>
-                errorCounter.counter.labels("StoreException").inc()
-                send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
-                logger.error(ErrorsHandler.generateException(e, cr.value()))
-            }
+            storeCache(relations) foreach recoverStoreRelationIfNeeded
           } else {
             logger.debug("Storing without cache")
-            Try(store(x)) recover {
-              case e: StoreException =>
-                errorCounter.counter.labels("StoreException").inc()
-                send(producerErrorTopic, ErrorsHandler.generateException(e, cr.value()))
-                logger.error(ErrorsHandler.generateException(e, cr.value()))
-            }
+            store(relations) foreach recoverStoreRelationIfNeeded
           }
         }
 
+    }
+
+  }
+
+  def recoverStoreRelationIfNeeded(relationAndResult: (Relation, Try[String])): Try[Object] = {
+    relationAndResult._2 recover {
+      case e: StoreException =>
+        errorCounter.counter.labels("StoreException").inc()
+        logger.error(ErrorsHandler.generateException(e, relationAndResult._1.toString))
+        send(producerErrorTopic, ErrorsHandler.generateException(e, relationAndResult._1.toString))
+      case e: Exception =>
+        errorCounter.counter.labels("Exception").inc()
+        logger.error(ErrorsHandler.generateException(e, relationAndResult._1.toString))
+        send(producerErrorTopic, ErrorsHandler.generateException(e, relationAndResult._1.toString))
     }
 
   }
@@ -122,102 +122,47 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def store(data: Seq[Relation]): Boolean = {
-    try {
-      Timer.time({
-        if (data.size > 3) {
-          // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
-          // that could create a ConnectionTimeOutException.
-          val relationsPartition: immutable.Seq[Seq[Relation]] = data.grouped(16).toList
+  def store(relations: Seq[Relation]): List[(Relation, Try[String])] = {
 
-          relationsPartition foreach { batchOfRelations =>
-            val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
-            Timer.time {
-              Store.addVerticesPresentMultipleTimes(batchOfRelations.toList)
-            }.logTimeTaken("add vertices present multiple times")
-            batchOfRelations.foreach { relation =>
+    val res = Timer.time({
+      Store.addVerticesPresentMultipleTimes(relations.toList)
+      if (relations.size > 2) {
+        val executor = new Executor[Relation, Try[String]](relations, Store.addRelation, 16)
+        executor.startProcessing()
+        executor.latch.await()
+        executor.getResultsNoTry
+      } else {
+        relations.map { r => (r, Store.addRelation(r)) }.toList
+      }
+    })
+    res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)))
 
-              val process = Future(Store.addRealation(relation))
-              storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
-              processesOfFutures += process
-            }
+    storeCounter.counter.labels("MessageStoredSuccessfully").inc()
+    res.result.get
 
-            val futureProcesses = Future.sequence(processesOfFutures)
-
-            val latch = new CountDownLatch(1)
-            futureProcesses.onComplete {
-              case Success(_) =>
-                latch.countDown()
-              case Failure(e) =>
-                logger.error("Something happened", e)
-                latch.countDown()
-            }
-            latch.await()
-          }
-        } else {
-          Timer.time {
-            Store.addVerticesPresentMultipleTimes(data.toList)
-          }.logTimeTaken("add vertices present multiple times")
-          data.foreach { x =>
-
-            Store.addRealation(x)
-            storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
-          }
-        }
-      }).logTimeTakenJson(s"process_relations" -> List(("size" -> data.size) ~ ("value" -> data.map { r => r.toJson }.toList)))
-
-      storeCounter.counter.labels("MessageStoredSuccessfully").inc()
-      true
-    } catch {
-      case e: Exception =>
-        logger.error("Error storing graph: " + s"""${e.getMessage}""")
-        throw StoreException("Error storing graph: " + s"""${e.getMessage}""")
-    }
   }
 
-  def storeCache(data: Seq[Relation]): Boolean = {
-    try {
-      Timer.time({
-        val vertexCached = Store.vertexToCache(data.head.vFrom)
+  def storeCache(data: Seq[Relation]): List[(Relation, Try[String])] = {
 
-        // split data in batch of 8 in order to not exceed the number of gremlin pool worker * 2
-        // that could create a ConnectionTimeOutException.
-        val dataPartition = data.grouped(16).toList
+    logger.info(s"number of relations: ${data.size}")
 
-        dataPartition foreach { batchOfRelations =>
-          logger.debug(s"STARTED sending a batch of ${batchOfRelations.size} asynchronously")
-          val processesOfFutures = scala.collection.mutable.ListBuffer.empty[Future[Unit]]
-          Store.addVerticesPresentMultipleTimes(batchOfRelations.toList)
+    val res = Timer.time({
+      val vertexCached = Store.vertexToCache(data.head.vFrom)
+      Store.addVerticesPresentMultipleTimes(data.toList)
 
-          batchOfRelations.foreach { relation =>
-            val process = Future(Store.addVCached(relation, vertexCached))
-            storeCounter.counter.labels("RelationshipStoredSuccessfully").inc()
-            processesOfFutures += process
-          }
+      val executor = new Executor[Relation, Try[String]](data, Store.addRelationOneCached(_, vertexCached), 16)
+      executor.startProcessing()
 
-          val futureProcesses = Future.sequence(processesOfFutures)
+      executor.latch.await()
 
-          val latch = new CountDownLatch(1)
-          futureProcesses.onComplete {
-            case Success(_) =>
-              latch.countDown()
-            case Failure(e) =>
-              logger.error("Something happened", e)
-              latch.countDown()
-          }
-          latch.await()
-          logger.debug(s"FINISHED sending a batch of ${batchOfRelations.size} asynchronously")
+      executor.getResultsNoTry
 
-        }
-      }).logTimeTaken(s"processed CACHED message MSG of size ${data.size} : ${data.map(d => d.toString).mkString(", ")} ")
+    })
+    res.logTimeTaken(s"processed CACHED message MSG of size ${data.size} : ${data.map(d => d.toString).mkString(", ")} ")
 
-      storeCounter.counter.labels("MessageStoredSuccessfully").inc(data.length)
-      true
-    } catch {
-      case e: Exception =>
-        logger.error("Error storing graph: " + e.getMessage)
-        throw StoreException("Error storing graph: " + e.getMessage)
-    }
+    storeCounter.counter.labels("MessageStoredSuccessfully").inc(data.length)
+    res.result.get
+
   }
 
 }

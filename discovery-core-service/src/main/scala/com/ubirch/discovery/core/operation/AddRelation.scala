@@ -85,8 +85,8 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     }
   }
 
-  def addTwoVerticesCached(vCached: VertexDatabase)(internalVertexTo: VertexCore)(edge: EdgeCore)
-    (implicit propSet: Set[Property]): String = {
+  def createRelationOneCached(vCached: VertexDatabase)(internalVertexTo: VertexCore)(edge: EdgeCore)
+   (implicit propSet: Set[Property]): String = {
     Timer.time({
       stopIfVerticesAreEquals(vCached.coreVertex, internalVertexTo)
       val vTo: VertexDatabase = internalVertexTo.toVertexStructDb(gc)

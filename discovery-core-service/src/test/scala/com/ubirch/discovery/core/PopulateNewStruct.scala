@@ -73,7 +73,7 @@ object PopulateNewStruct extends LazyLogging {
         getTimestampProp
       )
       val internalUPP = VertexCore(UPPprops, "UPP")
-      AddRelation().addTwoVerticesCached(device)(internalUPP)(EdgeCore(edgeProps, "DEVICE->UPP"))
+      AddRelation().createRelationOneCached(device)(internalUPP)(EdgeCore(edgeProps, "DEVICE->UPP"))
       v += internalUPP.toVertexStructDb(gc)
     }
     v.toList
@@ -86,12 +86,12 @@ object PopulateNewStruct extends LazyLogging {
     )
     if (FT == null) {
       for (i <- 0 to 3) {
-        AddRelation().addTwoVerticesCached(UPPs(i))(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "UPP->FT"))
+        AddRelation().createRelationOneCached(UPPs(i))(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "UPP->FT"))
       }
     } else {
-      AddRelation().addTwoVerticesCached(FT)(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "FT->FT"))
+      AddRelation().createRelationOneCached(FT)(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "FT->FT"))
       for (i <- 0 to 2) {
-        AddRelation().addTwoVerticesCached(UPPs(i))(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "UPP->FT"))
+        AddRelation().createRelationOneCached(UPPs(i))(VertexCore(newFTprops, "FOUNDATION_TREE"))(EdgeCore(edgeProps, "UPP->FT"))
       }
     }
     new VertexDatabase(VertexCore(newFTprops, "FOUNDATION_TREE"), gc)
@@ -104,12 +104,12 @@ object PopulateNewStruct extends LazyLogging {
     )
     if (MT == null) {
       for (i <- 0 to 3) {
-        AddRelation().addTwoVerticesCached(FTs(i))(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "FT->MT"))
+        AddRelation().createRelationOneCached(FTs(i))(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "FT->MT"))
       }
     } else {
-      AddRelation().addTwoVerticesCached(MT)(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "MT->MT"))
+      AddRelation().createRelationOneCached(MT)(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "MT->MT"))
       for (i <- 0 to 2) {
-        AddRelation().addTwoVerticesCached(FTs(i))(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "FT->MT"))
+        AddRelation().createRelationOneCached(FTs(i))(VertexCore(newMTprops, "MASTER_TREE"))(EdgeCore(edgeProps, "FT->MT"))
       }
     }
     new VertexDatabase(VertexCore(newMTprops, "MASTER_TREE"), gc)
@@ -126,8 +126,8 @@ object PopulateNewStruct extends LazyLogging {
       ElementProperty(KeyValue(KEY_BC, "ETH"), PropertyType.String),
       getTimestampProp
     )
-    AddRelation().addTwoVerticesCached(MT)(VertexCore(iotaProps, "PUBLIC_CHAIN"))(EdgeCore(edgeProps, "MT->BCX"))
-    AddRelation().addTwoVerticesCached(MT)(VertexCore(ethProps, "PUBLIC_CHAIN"))(EdgeCore(edgeProps, "MT->BCX"))
+    AddRelation().createRelationOneCached(MT)(VertexCore(iotaProps, "PUBLIC_CHAIN"))(EdgeCore(edgeProps, "MT->BCX"))
+    AddRelation().createRelationOneCached(MT)(VertexCore(ethProps, "PUBLIC_CHAIN"))(EdgeCore(edgeProps, "MT->BCX"))
   }
 
   def getTimestampProp = ElementProperty(KeyValue(KEY_TIMESTAMP, getTime), PropertyType.Long)

@@ -73,6 +73,8 @@ case class VertexCore(properties: List[ElementProperty], label: String) extends 
     this.sortProperties equals that.sortProperties
   }
 
+  def addProperty(newProperty: ElementProperty): VertexCore = copy(properties = newProperty :: properties )
+
 }
 
 case class EdgeCore(properties: List[ElementProperty], label: String) extends ElementCore(properties, label) {
@@ -80,6 +82,9 @@ case class EdgeCore(properties: List[ElementProperty], label: String) extends El
   def equals(that: ElementCore): Boolean = {
     this.sortProperties equals that.sortProperties
   }
+
+  def addProperty(newProperty: ElementProperty): EdgeCore = copy(properties = newProperty :: properties )
+
 }
 
 case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
@@ -96,8 +101,8 @@ case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
   }
 
   def toJson: json4s.JObject = {
-    ("vFrom" -> vFrom.toJson) ~
-      ("vTo" -> vTo.toJson) ~
+    ("v_from" -> vFrom.toJson) ~
+      ("v_to" -> vTo.toJson) ~
       ("edge" -> edge.toJson)
   }
 }

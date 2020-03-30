@@ -130,7 +130,7 @@ class DefaultStringConsumerSpec extends TestBase {
   //   ------ helpers -------
 
   def getDefaultEmbeddedKafkaConfig: EmbeddedKafkaConfig = {
-    EmbeddedKafkaConfig(kafkaPort = 9092, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+    EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
   }
 
   case class TestStruct(request: String, expectedResult: String, nameOfTest: String)

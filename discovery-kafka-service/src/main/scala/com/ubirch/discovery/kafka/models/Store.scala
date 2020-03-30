@@ -9,8 +9,10 @@ import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.PrometheusRelationMetricsLoggerSummary
 import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
 import gremlin.scala.{Key, KeyValue}
+import io.prometheus.client.Summary
 
 import scala.language.postfixOps
+import scala.util.Try
 
 object Store extends LazyLogging {
 
@@ -45,15 +47,45 @@ object Store extends LazyLogging {
     * @param relation The parsed JSON
     * @return
     */
-  def addRealation(relation: Relation): Unit = {
-    relationTimeSummary.summary.time { () =>
-      val res = Timer.time({
-        stopIfRelationNotAllowed(relation)
-        addVertices.createRelation(relation)
-      })
-      res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
-      res
-    }
+  def addRelation(relation: Relation): Try[String] = {
+
+    val requestTimer: Summary.Timer = relationTimeSummary.summary
+      .labels("relation_process_time")
+      .startTimer
+
+    val res = Timer.time({
+      stopIfRelationNotAllowed(relation)
+      addVertices.createRelation(relation)
+    })
+    relationTimeSummary.summary.observe(requestTimer.observeDuration())
+
+    res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
+    res.result
+
+  }
+
+
+  def addRelationOneCached(relation: Relation, vCached: VertexDatabase): Try[String] = {
+
+    val requestTimer: Summary.Timer = relationTimeSummary.summary
+      .labels("relation_process_time")
+      .startTimer
+
+    val res = Timer.time({
+      val vertexNotCached = relation.vTo
+      val edge = relation.edge
+      val isAllowed = checkIfLabelIsAllowed(vertexNotCached.label) // && checkIfPropertiesAreAllowed(vertexNotCached.properties)
+      if (!isAllowed) {
+        logger.error(s"relation ${relation.toString} is not allowed")
+        throw ParsingException(s"relation ${relation.toString} is not allowed")
+      }
+      addVertices.createRelationOneCached(vCached)(vertexNotCached)(edge)
+    })
+
+    relationTimeSummary.summary.observe(requestTimer.observeDuration())
+    res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
+    res.result
+
   }
 
   def stopIfRelationNotAllowed(relation: Relation): Unit = {
@@ -70,7 +102,7 @@ object Store extends LazyLogging {
     vertex
   }
 
-  def addVertex(vertex: VertexCore) = {
+  def addVertex(vertex: VertexCore): Unit = {
     val vDb = vertex.toVertexStructDb(gc)
     if (!vDb.existInJanusGraph) {
       vDb.addVertexWithProperties()
@@ -79,6 +111,7 @@ object Store extends LazyLogging {
     }
 
   }
+
 
   def checkIfLabelIsAllowed(label: String): Boolean = {
     KafkaElements.labelsAllowed.exists(e => e.name.equals(label))
@@ -102,24 +135,14 @@ object Store extends LazyLogging {
     checkAllProps(props)
   }
 
-  def addVCached(relation: Relation, vCached: VertexDatabase): Unit = {
-    relationTimeSummary.summary.time { () =>
-      val vertexNotCached = relation.vTo
-      val edge = relation.edge
-      val isAllowed = checkIfLabelIsAllowed(vertexNotCached.label) // && checkIfPropertiesAreAllowed(vertexNotCached.properties)
-      if (!isAllowed) {
-        logger.error(s"relation ${relation.toString} is not allowed")
-        throw ParsingException(s"relation ${relation.toString} is not allowed")
-      }
-      addVertices.addTwoVerticesCached(vCached)(vertexNotCached)(edge)
-    }
-  }
 
-  def addVerticesPresentMultipleTimes(relations: List[Relation]) = {
+  /**
+  * This helper is here to speedup subsequent relations processing and avoid asynchronous collision error in JanusGraph
+    * (ie: two executor tries to update the same vertex)
+    */
+  def addVerticesPresentMultipleTimes(relations: List[Relation]): Unit = {
     val verticesPresentMultipleTimes = getVerticesPresentMultipleTime(relations)
-    verticesPresentMultipleTimes.foreach { v =>
-      Store.addVertex(v)
-    }
+    verticesPresentMultipleTimes.foreach { v => Store.addVertex(v) }
   }
 
   def getVerticesPresentMultipleTime(relations: List[Relation]): Set[VertexCore] = {

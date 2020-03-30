@@ -39,6 +39,7 @@ class PrometheusMessageMetricsLoggerSummary extends Summary {
 
   final val summary: PrometheusSummary = PrometheusSummary
     .build(s"processing_time", s"Message processing time in seconds")
+    .labelNames("message_process_time")
     .register()
 
 }
@@ -47,6 +48,7 @@ class PrometheusRelationMetricsLoggerSummary extends Summary {
 
   final val summary: PrometheusSummary = PrometheusSummary
     .build(s"relation_process_time", s"Message processing time in seconds")
+    .labelNames("relation_process_time")
     .register()
 
 }
