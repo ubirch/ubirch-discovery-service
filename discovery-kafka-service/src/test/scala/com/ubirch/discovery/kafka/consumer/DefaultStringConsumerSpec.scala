@@ -187,7 +187,7 @@ class DefaultStringConsumerSpec extends TestBase {
   }
 
   def getGremlinConnector: GremlinConnector = {
-    GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+    GremlinConnectorFactory.getInstance(ConnectorType.Test)
   }
 
   def cleanDb(): Unit = {

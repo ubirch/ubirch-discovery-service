@@ -14,7 +14,7 @@ import scala.util.{Failure, Random, Success}
 
 class ExecutorSpec extends TestBase {
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10, CustomThreadFactory))
 
@@ -84,17 +84,6 @@ class ExecutorSpec extends TestBase {
       executeAllJanus(500)
     }
 
-    scenario("1000 relations") {
-      executeAllJanus(1000)
-    }
-
-    scenario("2000 relations") {
-      executeAllJanus(2000)
-    }
-
-    scenario("5000 relations") {
-      executeAllJanus(5000)
-    }
 
 
   }

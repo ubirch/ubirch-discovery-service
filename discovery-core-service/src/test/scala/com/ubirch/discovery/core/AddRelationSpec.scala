@@ -22,7 +22,7 @@ class AddRelationSpec
   with BeforeAndAfterAll
   with LazyLogging {
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
   def deleteDatabase(): Unit = {
     gc.g.V().drop().iterate()
