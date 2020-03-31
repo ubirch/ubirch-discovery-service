@@ -3,8 +3,8 @@ package com.ubirch.discovery.kafka.consumer
 import java.io.File
 import java.util.concurrent.{Executors, TimeUnit}
 
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.kafka.TestBase
-import com.ubirch.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
@@ -130,7 +130,7 @@ class DefaultStringConsumerSpec extends TestBase {
   //   ------ helpers -------
 
   def getDefaultEmbeddedKafkaConfig: EmbeddedKafkaConfig = {
-    EmbeddedKafkaConfig(kafkaPort = 9092, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+    EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
   }
 
   case class TestStruct(request: String, expectedResult: String, nameOfTest: String)
@@ -187,7 +187,7 @@ class DefaultStringConsumerSpec extends TestBase {
   }
 
   def getGremlinConnector: GremlinConnector = {
-    GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+    GremlinConnectorFactory.getInstance(ConnectorType.Test)
   }
 
   def cleanDb(): Unit = {

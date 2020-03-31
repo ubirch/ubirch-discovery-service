@@ -2,8 +2,8 @@ package com.ubirch.discovery.core.structure
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.TestUtil
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.util.Util._
-import com.ubirch.janusgraph.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import gremlin.scala._
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.format.ISODateTimeFormat

@@ -102,6 +102,3 @@ mgmt.updateIndex(mgmt.getRelationIndex(eLabelMasterUpgrade, 'indexEdgeMasterUpgr
 mgmt.updateIndex(mgmt.getRelationIndex(eLabelBlockchainMaster, 'indexEdgeBlockchainMaster'), SchemaAction.REINDEX).get()
 
 mgmt.commit()
-
-
-qwertzuiopüasdfghjklöä+#yxcvbnm,.-.-_;N1234567890ß´´098765432
