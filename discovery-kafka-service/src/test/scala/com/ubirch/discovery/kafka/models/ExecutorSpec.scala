@@ -4,13 +4,12 @@ import java.util.concurrent.{CountDownLatch, Executors, ThreadFactory}
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
-import com.ubirch.discovery.core.structure.{EdgeCore, ElementProperty, Relation, VertexCore}
+import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.kafka.TestBase
-import com.ubirch.discovery.kafka.util.Util
 
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Random, Success}
+import scala.util.{Failure, Success}
 
 class ExecutorSpec extends TestBase {
 
@@ -19,7 +18,7 @@ class ExecutorSpec extends TestBase {
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10, CustomThreadFactory))
 
   /**
-  * Simple dummy operations to "warm-up" the connection between the spec and JanusGraph
+    * Simple dummy operations to "warm-up" the connection between the spec and JanusGraph
     */
   def warmUpJg = {
     gc.g.V().limit(1)
@@ -28,7 +27,7 @@ class ExecutorSpec extends TestBase {
     executeAllJanus(1)
   }
   def cleanUpJanus = {
-    while(gc.g.V().count().l().head != 0) {
+    while (gc.g.V().count().l().head != 0) {
       gc.g.V().limit(1000).drop().iterate()
     }
   }
@@ -39,7 +38,6 @@ class ExecutorSpec extends TestBase {
     warmUpJg
     Thread.sleep(4000)
   }
-
 
   feature("benchmarks on adding a relation") {
 
@@ -79,12 +77,9 @@ class ExecutorSpec extends TestBase {
       executeAllJanus(200)
     }
 
-
     scenario("500 relations") {
       executeAllJanus(500)
     }
-
-
 
   }
 
@@ -165,9 +160,7 @@ class ExecutorSpec extends TestBase {
     println(s"OLD STYLE - Took ${t1_1 - t1_0} ms to process $number f() => ${(t1_1 - t1_0) / number} ms/process")
     Thread.sleep(1000)
 
-
   }
-
 
   def execute[T, U](objects: Seq[T], f: T => U): Unit = {
     val executor = new Executor[T, U](objects, f, 8)
@@ -200,36 +193,6 @@ class ExecutorSpec extends TestBase {
 
   }
 
-  val random = new Random
-
-  def giveMeRandomString: String = Random.alphanumeric.take(32).mkString
-
-  def generateRelation = Relation(generateVertex, generateVertex, generateEdge)
-
-  def generateEdge: EdgeCore = {
-    val label = listLabelsEdge(random.nextInt(listLabelsEdge.length))
-    EdgeCore(Nil, label)
-      .addProperty(generateElementProperty("timestamp", giveMeATimestamp))
-  }
-
-  def generateVertex: VertexCore = {
-    val label = listLabelsVertex(random.nextInt(listLabelsVertex.length))
-    VertexCore(Nil, label)
-      .addProperty(generateElementProperty("hash"))
-      .addProperty(generateElementProperty("signature"))
-      .addProperty(generateElementProperty("timestamp", giveMeATimestamp))
-  }
-
-  def generateElementProperty(key: String, value: String = giveMeRandomString): ElementProperty = {
-    Util.convertProp(key, value)
-  }
-
-  def giveMeATimestamp: String = System.currentTimeMillis.toString
-
-  val listLabelsEdge = List("transaction", "link", "associate", "father", "generate")
-
-  val listLabelsVertex = List("DEVICE", "UPP", "MASTER_TREE", "SLAVE_TREE", "PUBLIC_CHAIN")
-
 }
 
 object CustomThreadFactory extends ThreadFactory {
@@ -242,7 +205,6 @@ object CustomThreadFactory extends ThreadFactory {
 
   val namePrefix: String = "executor-" + poolNumber.getAndIncrement + "-thread-"
 
-
   override def newThread(r: Runnable): Thread = {
     val t = new Thread(group, r, namePrefix + threadNumber.getAndIncrement, 0)
     if (t.isDaemon) t.setDaemon(false)
@@ -250,7 +212,4 @@ object CustomThreadFactory extends ThreadFactory {
     t
   }
 }
-
-
-
 

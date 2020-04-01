@@ -126,14 +126,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     val res = Timer.time({
       Store.addVerticesPresentMultipleTimes(relations.toList)
-      if (relations.size > 2) {
-        val executor = new Executor[Relation, Try[String]](relations, Store.addRelation, 16)
-        executor.startProcessing()
-        executor.latch.await()
-        executor.getResultsNoTry
-      } else {
-        relations.map { r => (r, Store.addRelation(r)) }.toList
-      }
+      val executor = new Executor[Relation, Try[String]](relations, Store.addRelation, 16)
+      executor.startProcessing()
+      executor.latch.await()
+      executor.getResultsNoTry
     })
     res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)))
 

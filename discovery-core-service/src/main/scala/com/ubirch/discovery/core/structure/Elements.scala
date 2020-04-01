@@ -73,7 +73,7 @@ case class VertexCore(properties: List[ElementProperty], label: String) extends 
     this.sortProperties equals that.sortProperties
   }
 
-  def addProperty(newProperty: ElementProperty): VertexCore = copy(properties = newProperty :: properties )
+  def addProperty(newProperty: ElementProperty): VertexCore = copy(properties = newProperty :: properties)
 
 }
 
@@ -83,7 +83,7 @@ case class EdgeCore(properties: List[ElementProperty], label: String) extends El
     this.sortProperties equals that.sortProperties
   }
 
-  def addProperty(newProperty: ElementProperty): EdgeCore = copy(properties = newProperty :: properties )
+  def addProperty(newProperty: ElementProperty): EdgeCore = copy(properties = newProperty :: properties)
 
 }
 

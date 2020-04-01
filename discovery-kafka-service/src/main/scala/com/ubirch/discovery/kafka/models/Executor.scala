@@ -9,9 +9,8 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-
 /**
-* Class that will execute a function f on all the objects in objects asynchronously, but only processing processSize
+  * Class that will execute a function f on all the objects in objects asynchronously, but only processing processSize
   * at the same time.
   * This is helpful when working against a resource that has a limited amount of processing power.
   * For example, when working against a gremlin-server, the processSize should be equal to its amount of workers
@@ -25,13 +24,13 @@ import scala.util.Try
 class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int)(implicit ec: ExecutionContext) extends LazyLogging {
 
   /**
-  * The original list of objects on which the f() function will be applied.
+    * The original list of objects on which the f() function will be applied.
     * For ease of coding, they've been transformed into a HashMap
     */
   private val toBeProcessedList: mutable.HashMap[Int, T] = scala.collection.mutable.HashMap.empty[Int, T]
 
   /**
-  * The executionList is a mutable HashMap whose size can vary between 0 and processSize.
+    * The executionList is a mutable HashMap whose size can vary between 0 and processSize.
     * This is where the work is happening.
     * Each object in the execution list is added with addToExecutionList. This mean that each object is
     * a Future of a function applied to an object taken from the toBeProcessedList list.
@@ -41,11 +40,14 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int)(implicit 
   private val executionList: mutable.HashMap[Int, Future[U]] = scala.collection.mutable.HashMap.empty[Int, Future[U]]
 
   /**
-  * Once the objects have been processed by f(), their result (or failure) is stored in the results object, alongside
+    * Once the objects have been processed by f(), their result (or failure) is stored in the results object, alongside
     * the initial object
     */
   private val results: ArrayBuffer[(T, Try[U])] = scala.collection.mutable.ArrayBuffer.empty[(T, Try[U])]
 
+  /**
+    * A countdown latch that will be decreased once all objects are processed
+    */
   val latch = new CountDownLatch(1)
 
   def startProcessing(): Unit = {
@@ -57,18 +59,18 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int)(implicit 
   def getResultsNoTry: List[(T, U)] = results.map { t => (t._1, t._2.get) }.toList
 
   /**
-  * Add item to the execution list until
+    * Add item to the execution list until
     * - The execution list size is equal to processSize OR
     * - There is no more object to be processed
     */
   private def fillUpExecutionList(): Unit = {
-    while(!isExecutionListFull & toBeProcessedList.nonEmpty) {
+    while (!isExecutionListFull & toBeProcessedList.nonEmpty) {
       addNewItemToExecutionList()
     }
   }
 
   /**
-  * Check is all objects have been treated
+    * Check is all objects have been treated
     */
   def isOver: Boolean = executionList.isEmpty
 

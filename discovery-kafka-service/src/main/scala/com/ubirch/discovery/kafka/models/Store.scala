@@ -48,7 +48,7 @@ object Store extends LazyLogging {
     * @return
     */
   def addRelation(relation: Relation): Try[String] = {
-
+    println("coucou")
     val requestTimer: Summary.Timer = relationTimeSummary.summary
       .labels("relation_process_time")
       .startTimer
@@ -60,10 +60,10 @@ object Store extends LazyLogging {
     relationTimeSummary.summary.observe(requestTimer.observeDuration())
 
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
+    println(res.result.getOrElse("ERROR"))
     res.result
 
   }
-
 
   def addRelationOneCached(relation: Relation, vCached: VertexDatabase): Try[String] = {
 
@@ -112,7 +112,6 @@ object Store extends LazyLogging {
 
   }
 
-
   def checkIfLabelIsAllowed(label: String): Boolean = {
     KafkaElements.labelsAllowed.exists(e => e.name.equals(label))
   }
@@ -135,9 +134,8 @@ object Store extends LazyLogging {
     checkAllProps(props)
   }
 
-
   /**
-  * This helper is here to speedup subsequent relations processing and avoid asynchronous collision error in JanusGraph
+    * This helper is here to speedup subsequent relations processing and avoid asynchronous collision error in JanusGraph
     * (ie: two executor tries to update the same vertex)
     */
   def addVerticesPresentMultipleTimes(relations: List[Relation]): Unit = {

@@ -17,7 +17,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
   val listSign = new scala.collection.mutable.ListBuffer[String]
   val listBx = new scala.collection.mutable.ListBuffer[String]
 
-  val listLabelsEdge = List(
+  override val listLabelsEdge = List(
     "transaction",
     "link",
     "associate",
@@ -25,7 +25,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     "generate"
   )
 
-  val listLabelsVertex = List(
+  override val listLabelsVertex = List(
     "blockchain_IOTA",
     "blockchain_ETH",
     "root_tree",
@@ -146,7 +146,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
   def generateRequest(tn1: String, p1: Map[String, String])(tn2: String, p2: Map[String, String]): String = {
     val v1 = generateVertex(tn1, p1, "v1")
     val v2 = generateVertex(tn2, p2, "v2")
-    val edge = generateEdge()
+    val edge = generateAnEdge()
     val req = s"""[{$v1,$v2,$edge}]"""
     //    logger.info("*req: " + req)
     req
@@ -173,7 +173,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
   }
 
   // format: {"edge":{"properties":{"timeStamp":"TIME_CREATION"}}}
-  def generateEdge(): String = {
+  def generateAnEdge(): String = {
     val properties = generatePropertiesEdge()
     val edge = s"""\"edge\":{$properties}"""
     //    logger.info("edge: " + edge)
