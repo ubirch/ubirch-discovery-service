@@ -1,7 +1,6 @@
 package com.ubirch.discovery.kafka.models
 
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
-import com.ubirch.discovery.core.structure.{Relation, VertexCore}
 import com.ubirch.discovery.kafka.TestBase
 import org.scalatest.Assertion
 
@@ -23,7 +22,7 @@ class StoreSpec extends TestBase {
     gc.g.V().count().l().head.toInt shouldBe numberShouldBe
   }
 
-  feature("addVerticesPresentMultipleTimes") {
+  /*feature("addVerticesPresentMultipleTimes") {
 
     scenario("no duplicate -> empty graph") {
 
@@ -94,5 +93,5 @@ class StoreSpec extends TestBase {
     }
 
   }
-
+*/
 }
