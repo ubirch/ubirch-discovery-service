@@ -48,7 +48,6 @@ object Store extends LazyLogging {
     * @return
     */
   def addRelation(relation: Relation): Try[String] = {
-    println("coucou")
     val requestTimer: Summary.Timer = relationTimeSummary.summary
       .labels("relation_process_time")
       .startTimer
@@ -60,7 +59,6 @@ object Store extends LazyLogging {
     relationTimeSummary.summary.observe(requestTimer.observeDuration())
 
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
-    println(res.result.getOrElse("ERROR"))
     res.result
 
   }
