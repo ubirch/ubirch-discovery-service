@@ -9,6 +9,7 @@ import java.util.concurrent.ThreadLocalRandom
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.TestUtil
 import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Util._
 import gremlin.scala._
 import io.prometheus.client.CollectorRegistry
@@ -26,6 +27,8 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
   val label = "aLabel"
   val Number: Key[Any] = Key[Any]("number")
   val Name: Key[Any] = Key[Any]("name")
+  val Hash: Key[Any] = Key[Any]("hash")
+  val Signature: Key[Any] = Key[Any]("signature")
   val TimeStamp: Key[Any] = Key[Any]("timestamp")
   val Test: Key[Any] = Key[Any]("truc")
   val IdAssigned: Key[Any] = Key[Any]("IdAssigned")
@@ -107,13 +110,76 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
 
     def generateProperties: List[ElementProperty] = {
       List(
-        ElementProperty(KeyValue[Any](Number, giveMeRandomLong), PropertyType.Long),
-        ElementProperty(KeyValue[Any](Name, giveMeRandomString), PropertyType.String),
+        ElementProperty(KeyValue[Any](Signature, giveMeRandomLong.toString), PropertyType.String),
+        ElementProperty(KeyValue[Any](Hash, giveMeRandomString), PropertyType.String),
         ElementProperty(KeyValue[Any](TimeStamp, Instant.ofEpochSecond(ThreadLocalRandom.current().nextInt()).getMillis), PropertyType.Long)
       )
     }
 
-    scenario("test speed") {
+    scenario("test speed query vertex") {
+
+      def isPropertyIterable(propertyName: String)(implicit propSet: Set[Property]): Boolean = {
+
+        def checkOnProps(set: Set[Property]): Boolean = {
+          set.toList match {
+            case Nil => false
+            case x => if (x.head.name == propertyName) {
+              if (x.head.isPropertyUnique) true else checkOnProps(x.tail.toSet)
+            } else {
+              checkOnProps(x.tail.toSet)
+            }
+          }
+        }
+        checkOnProps(propSet)
+
+      }
+
+      def testOld() = {
+        val props = generateProperties
+        implicit val propSet: Set[Elements.Property] = TestUtil.putPropsOnPropSet(props)
+        gc.g.addV("new").property(props(Random.nextInt(2)).toKeyValue).iterate()
+        def searchForVertexByProperties(properties: List[ElementProperty]): gremlin.scala.Vertex = {
+          properties match {
+            case Nil => null
+            case property :: restOfProperties =>
+              if (!isPropertyIterable(property.keyName)) searchForVertexByProperties(restOfProperties) else
+                gc.g.V().has(property.toKeyValue).headOption() match {
+                  case Some(v) => v
+                  case None => searchForVertexByProperties(restOfProperties)
+                }
+          }
+        }
+        val tStart = System.currentTimeMillis()
+        val r = searchForVertexByProperties(props)
+        val tEnd = System.currentTimeMillis()
+        tEnd - tStart
+      }
+
+      def testNew() = {
+        val props = generateProperties
+        gc.g.addV("new").property(props(Random.nextInt(2)).toKeyValue).iterate()
+        val tStart = System.currentTimeMillis()
+        val r = gc.g.V().or(_.has(props.head.toKeyValue), _.has(props(1).toKeyValue), _.has(props(2).toKeyValue)).l()
+        gc.g.V().or(_.has(props.head.toKeyValue), _.has(props(1).toKeyValue), _.has(props(2).toKeyValue)).explain()
+        val tEnd = System.currentTimeMillis()
+        tEnd - tStart
+      }
+      //deleteDatabase()
+      warmUpJg()
+      warmUpJg()
+      warmUpJg()
+      testOld()
+      testOld()
+
+      var tOld: Long = 0
+      var tNew: Long = 0
+      for (_ <- 0 to 1000) { tOld += testOld(); tNew += testNew() }
+      println("current method average time: " + tOld / 1000 + " ms")
+      println("new method average time: " + tNew / 1000 + " ms")
+
+    }
+
+    scenario("test speed create vertex with properties") {
       //deleteDatabase()
       //("speed test not interesting on CI")
       warmUpJg()
