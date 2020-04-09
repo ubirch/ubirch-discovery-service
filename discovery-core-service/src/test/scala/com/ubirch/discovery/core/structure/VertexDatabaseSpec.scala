@@ -20,7 +20,7 @@ import scala.util.Random
 
 class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
   private val dateTimeFormat = ISODateTimeFormat.dateTime()
   val label = "aLabel"
