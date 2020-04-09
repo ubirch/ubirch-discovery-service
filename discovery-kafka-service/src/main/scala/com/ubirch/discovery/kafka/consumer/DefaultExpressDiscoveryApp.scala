@@ -1,5 +1,6 @@
 package com.ubirch.discovery.kafka.consumer
 
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter}
@@ -52,6 +53,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   private val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
 
   private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
+
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
   override def process: Process = Process { crs =>
     crs.foreach { cr =>

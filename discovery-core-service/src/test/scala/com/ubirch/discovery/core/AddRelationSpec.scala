@@ -15,12 +15,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matche
 
 import scala.io.Source
 
-class AddRelationSpec
-  extends FeatureSpec
-  with Matchers
-  with BeforeAndAfterEach
-  with BeforeAndAfterAll
-  with LazyLogging {
+class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
@@ -36,7 +31,7 @@ class AddRelationSpec
       // commit
       relations foreach { relation =>
         implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
-        AddRelation().createRelation(relation)
+        AddRelation.createRelation(relation)
       }
       // verif
       relations foreach { relation =>
@@ -80,7 +75,7 @@ class AddRelationSpec
       relations foreach { relation =>
         implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
 
-        AddRelation().createRelation(relation)
+        AddRelation.createRelation(relation)
 
         // verif
         try {
@@ -122,7 +117,7 @@ class AddRelationSpec
         try {
           implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.vFrom.properties) ++ putPropsOnPropSet(relationTest.vTo.properties)
 
-          AddRelation().createRelation(relationTest)
+          AddRelation.createRelation(relationTest)
         } catch {
           case e: ImportToGremlinException =>
             logger.info(e.getMessage)
@@ -194,7 +189,7 @@ class AddRelationSpec
       val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
       // commit
       implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(p1)
-      AddRelation().createRelation(relation)
+      AddRelation.createRelation(relation)
 
       // create false data
       val pFalse: List[ElementProperty] = List(ElementProperty(KeyValue[Any](Number, 1.toLong), PropertyType.Long))
@@ -210,7 +205,7 @@ class AddRelationSpec
       val v1Reconstructed = internalVertexFrom.toVertexStructDb(gc)
       val v2Reconstructed = internalVertexTo.toVertexStructDb(gc)
       try {
-        AddRelation().verifVertex(v1Reconstructed, pFalse)
+        AddRelation.verifVertex(v1Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -218,7 +213,7 @@ class AddRelationSpec
       }
 
       try {
-        AddRelation().verifEdge(v1Reconstructed, v2Reconstructed, pFalse)
+        AddRelation.verifEdge(v1Reconstructed, v2Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -226,7 +221,7 @@ class AddRelationSpec
       }
 
       try {
-        AddRelation().verifEdge(v1Reconstructed, v1Reconstructed, pFalse)
+        AddRelation.verifEdge(v1Reconstructed, v1Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -240,9 +235,9 @@ class AddRelationSpec
   def verificationRelation(relation: Relation)(implicit propSet: Set[Elements.Property]): Unit = {
     val vFromDb = relation.vFrom.toVertexStructDb(gc)
     val vToDb = relation.vTo.toVertexStructDb(gc)
-    AddRelation().verifVertex(vFromDb, relation.vFrom.properties)
-    AddRelation().verifVertex(vToDb, relation.vTo.properties)
-    AddRelation().verifEdge(vFromDb, vToDb, relation.edge.properties)
+    AddRelation.verifVertex(vFromDb, relation.vFrom.properties)
+    AddRelation.verifVertex(vToDb, relation.vTo.properties)
+    AddRelation.verifEdge(vFromDb, vToDb, relation.edge.properties)
   }
 
   def getRelations[T](accu: (List[Relation], T), toParse: (List[String], T)): (List[Relation], T) = {

@@ -1,7 +1,7 @@
 package com.ubirch.discovery.kafka.models
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddRelation
 import com.ubirch.discovery.core.structure.{Relation, VertexCore, VertexDatabase}
 import com.ubirch.discovery.core.structure.Elements.Property
@@ -14,13 +14,13 @@ import io.prometheus.client.Summary
 import scala.language.postfixOps
 import scala.util.Try
 
+/**
+  * This object calls function from the core library
+  */
 object Store extends LazyLogging {
-
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
   implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-  val addVertices = AddRelation()
   val relationTimeSummary = new PrometheusRelationMetricsLoggerSummary
 
   /**
@@ -34,36 +34,36 @@ object Store extends LazyLogging {
   /**
     * Entry should be formatted as the following:
     * {"v1":{
-    * "properties": {
-    * "prop1Name": "prop1Value",
-    * ...
-    * "propNName": "propNValue"
-    * "label": "label"
-    * }
-    * "v2":{ same }
-    * "edge":{ same }
+    *   "properties": {
+    *     "prop1Name": prop1Value,
+    *     ...
+    *     "propNName": propNValue }
+    *   "label": "label" }
+    *   "v2":{ same }
+    *   "edge":{ same }
     * }}
     *
     * @param relation The parsed JSON
     * @return
     */
-  def addRelation(relation: Relation): Try[String] = {
+  def addRelation(relation: Relation)(implicit gc: GremlinConnector): Try[String] = {
     val requestTimer: Summary.Timer = relationTimeSummary.summary
       .labels("relation_process_time")
       .startTimer
 
     val res = Timer.time({
       stopIfRelationNotAllowed(relation)
-      addVertices.createRelation(relation)
+      AddRelation.createRelation(relation)
     })
-    relationTimeSummary.summary.observe(requestTimer.observeDuration())
+
+    Try(relationTimeSummary.summary.observe(requestTimer.observeDuration()))
 
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
     res.result
 
   }
 
-  def addRelationOneCached(relation: Relation, vCached: VertexDatabase): Try[String] = {
+  def addRelationOneCached(relation: Relation, vCached: VertexDatabase)(implicit gc: GremlinConnector): Try[String] = {
 
     val requestTimer: Summary.Timer = relationTimeSummary.summary
       .labels("relation_process_time")
@@ -77,7 +77,7 @@ object Store extends LazyLogging {
         logger.error(s"relation ${relation.toString} is not allowed")
         throw ParsingException(s"relation ${relation.toString} is not allowed")
       }
-      addVertices.createRelationOneCached(vCached)(vertexNotCached)(edge)
+      AddRelation.createRelationOneCached(vCached)(vertexNotCached)(edge)
     })
 
     relationTimeSummary.summary.observe(requestTimer.observeDuration())
@@ -87,20 +87,17 @@ object Store extends LazyLogging {
   }
 
   def stopIfRelationNotAllowed(relation: Relation): Unit = {
-    val isRelationAllowed = checkIfLabelIsAllowed(relation.vFrom.label) &&
-      checkIfLabelIsAllowed(relation.vTo.label)
-    if (!isRelationAllowed) {
-      throw ParsingException(s"relation ${relation.toString} is not allowed")
-    }
+    val isRelationAllowed = checkIfLabelIsAllowed(relation.vFrom.label) && checkIfLabelIsAllowed(relation.vTo.label)
+    if (!isRelationAllowed) throw ParsingException(s"relation ${relation.toString} is not allowed")
   }
 
-  def vertexToCache(vertexToConvert: VertexCore): VertexDatabase = {
+  def vertexToCache(vertexToConvert: VertexCore)(implicit gc: GremlinConnector): VertexDatabase = {
     val vertex = vertexToConvert.toVertexStructDb(gc)
     if (!vertex.existInJanusGraph) vertex.addVertexWithProperties() else vertex.update()
     vertex
   }
 
-  def addVertex(vertex: VertexCore): Unit = {
+  def addVertex(vertex: VertexCore)(implicit gc: GremlinConnector): Unit = {
     val vDb = vertex.toVertexStructDb(gc)
     if (!vDb.existInJanusGraph) {
       vDb.addVertexWithProperties()
@@ -136,7 +133,7 @@ object Store extends LazyLogging {
     * This helper is here to speedup subsequent relations processing and avoid asynchronous collision error in JanusGraph
     * (ie: two executor tries to update the same vertex)
     */
-  def addVerticesPresentMultipleTimes(relations: List[Relation]): Unit = {
+  def addVerticesPresentMultipleTimes(relations: List[Relation])(implicit gc: GremlinConnector): Unit = {
     val verticesPresentMultipleTimes = getVerticesPresentMultipleTime(relations)
     verticesPresentMultipleTimes.foreach { v => Store.addVertex(v) }
   }

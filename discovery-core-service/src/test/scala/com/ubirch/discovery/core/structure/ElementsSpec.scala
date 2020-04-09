@@ -2,16 +2,11 @@ package com.ubirch.discovery.core.structure
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.TestUtil
-import gremlin.scala.{ Key, KeyValue }
+import gremlin.scala.{Key, KeyValue}
 import io.prometheus.client.CollectorRegistry
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
 
-class ElementsSpec
-  extends FeatureSpec
-  with Matchers
-  with BeforeAndAfterEach
-  with BeforeAndAfterAll
-  with LazyLogging {
+class ElementsSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
 
   val label1 = "label1"
   val label2 = "label2"
