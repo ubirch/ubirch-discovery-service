@@ -8,7 +8,7 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
-import gremlin.scala.{TraversalSource, Vertex}
+import gremlin.scala.{ TraversalSource, Vertex }
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.json4s.JsonDSL._
 

@@ -1,7 +1,7 @@
 package com.ubirch.discovery.kafka.models
 
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
-import com.ubirch.discovery.core.structure.{Relation, VertexCore}
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.discovery.core.structure.{ Relation, VertexCore }
 import com.ubirch.discovery.kafka.TestBase
 import org.scalatest.Assertion
 
