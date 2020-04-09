@@ -53,13 +53,13 @@ class DefaultStringConsumerSpec extends TestBase {
 
     val allTests = getAllTests("/valid/")
 
-    allTests foreach { test =>
-      scenario(test.nameOfTest) {
-        runTest(test)
-      }
-    }
-    ignore("NeedForJanus") {
 
+    ignore("NeedForJanus") {
+      allTests foreach { test =>
+        scenario(test.nameOfTest) {
+          runTest(test)
+        }
+      }
     }
 
   }
