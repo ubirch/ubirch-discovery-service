@@ -20,7 +20,7 @@ import scala.util.Random
 
 class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
   private val dateTimeFormat = ISODateTimeFormat.dateTime()
   val label = "aLabel"
@@ -104,6 +104,14 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
   }
 
   ignore("speed test") {
+
+
+    def generateProperties: List[ElementProperty] = {
+      List(ElementProperty(KeyValue[Any](Number, giveMeRandomLong), PropertyType.Long),
+        ElementProperty(KeyValue[Any](Name, giveMeRandomString), PropertyType.String),
+        ElementProperty(KeyValue[Any](TimeStamp, Instant.ofEpochSecond(ThreadLocalRandom.current().nextInt()).getMillis), PropertyType.Long))
+    }
+
     scenario("test speed") {
       //deleteDatabase()
       //("speed test not interesting on CI")
@@ -113,13 +121,6 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
       testOld()
       testOld()
 
-      def generateProperties = {
-        List(
-          ElementProperty(KeyValue[Any](Number, giveMeRandomLong), PropertyType.Long),
-          ElementProperty(KeyValue[Any](Name, giveMeRandomString), PropertyType.String),
-          ElementProperty(KeyValue[Any](TimeStamp, Instant.ofEpochSecond(ThreadLocalRandom.current().nextInt()).getMillis), PropertyType.Long)
-        )
-      }
 
       def testOld(): Long = {
         val props = generateProperties
@@ -145,53 +146,90 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
         t2_end - t2_start
       }
 
-      val amount = 100
       var tOld: Long = 0
       var tNew: Long = 0
-      for (_ <- 0 to amount) {
-        tOld += testOld()
-        tNew += testNew()
-      }
-      println("current method average time: " + tOld / amount + " ms")
-      println("new method average time: " + tNew / amount + " ms")
-
-      tOld = 0
-      tNew = 0
-      for (_ <- 0 to amount) {
-        tOld += testOld()
-        tNew += testNew()
-      }
-      println("current method average time: " + tOld / amount + " ms")
-      println("new method average time: " + tNew / amount + " ms")
-
-      tOld = 0
-      tNew = 0
-      for (_ <- 0 to amount) {
-        tNew += testNew()
-        tOld += testOld()
-      }
-      println("current method average time: " + tOld / amount + " ms")
-      println("new method average time: " + tNew / amount + " ms")
-
-      tOld = 0
-      tNew = 0
-      for (_ <- 0 to amount) {
-        tOld += testOld()
-        tNew += testNew()
-      }
-      println("current method average time: " + tOld / amount + " ms")
-      println("new method average time: " + tNew / amount + " ms")
-
-      tOld = 0
-      tNew = 0
-      for (_ <- 0 to amount) {
-        tNew += testNew()
-        tOld += testOld()
-      }
-      println("current method average time: " + tOld / amount + " ms")
-      println("new method average time: " + tNew / amount + " ms")
+      for (_ <- 0 to 100) { tOld += testOld(); tNew += testNew() }
+      println("current method average time: " + tOld / 100 + " ms")
+      println("new method average time: " + tNew / 100 + " ms")
 
     }
+
+
+    scenario("test speed addNewPropertiesToVertex") {
+      warmUpJg()
+      warmUpJg()
+      warmUpJg()
+      testOld()
+      testOld()
+
+      def testNew(): Long = {
+        val vCore = VertexCore(Nil, "new")
+        val props = generateProperties
+        implicit val propSet: Set[Elements.Property] = TestUtil.putPropsOnPropSet(props)
+
+        val vDb = vCore.toVertexStructDb(gc)
+        vDb.addVertexWithProperties()
+        val tStart = System.currentTimeMillis()
+        var constructor = gc.g.V(vDb.vertex)
+        for (prop <- props) {
+            constructor = constructor.property(prop.toKeyValue)
+          }
+        constructor.iterate()
+        val tEnd = System.currentTimeMillis()
+        tEnd - tStart
+      }
+      def testOld(): Long = {
+        val props = generateProperties
+        implicit val propSet: Set[Elements.Property] = TestUtil.putPropsOnPropSet(props)
+        val vCore = VertexCore(props, "old")
+        val vDb = gc.g.addV("old").l().head
+        val tStart = System.currentTimeMillis()
+        for (property <- vCore.properties) {
+          if (!doesPropExist(property.toKeyValue)) {
+            addPropertyToVertex(property.toKeyValue, vDb)
+          }
+        }
+
+        def addPropertyToVertex[T](property: KeyValue[T], vertex: Vertex) = {
+          gc.g.V(vertex).property(property).iterate()
+        }
+
+        def doesPropExist[T](keyV: KeyValue[T]): Boolean = gc.g.V(vDb).properties(keyV.key.name).toList().nonEmpty
+        val tEnd = System.currentTimeMillis()
+        tEnd - tStart
+      }
+
+      var tOld: Long = 0
+      var tNew: Long = 0
+      for (_ <- 0 to 100) { tOld += testOld(); tNew += testNew() }
+      println("current method average time: " + tOld / 100 + " ms")
+      println("new method average time: " + tNew / 100 + " ms")
+
+      tOld = 0
+      tNew = 0
+      for (_ <- 0 to 100) { tOld += testOld(); tNew += testNew() }
+      println("current method average time: " + tOld / 100 + " ms")
+      println("new method average time: " + tNew / 100 + " ms")
+
+      tOld = 0
+      tNew = 0
+      for (_ <- 0 to 100) { tOld += testOld(); tNew += testNew() }
+      println("current method average time: " + tOld / 100 + " ms")
+      println("new method average time: " + tNew / 100 + " ms")
+
+      tOld = 0
+      tNew = 0
+      for (_ <- 0 to 100) { tOld += testOld(); tNew += testNew() }
+      println("current method average time: " + tOld / 100 + " ms")
+      println("new method average time: " + tNew / 100 + " ms")
+
+      tOld = 0
+      tNew = 0
+      for (_ <- 0 to 100) { tOld += testOld(); tNew += testNew() }
+      println("current method average time: " + tOld / 100 + " ms")
+      println("new method average time: " + tNew / 100 + " ms")
+    }
+
   }
 
   override protected def beforeEach(): Unit = {
