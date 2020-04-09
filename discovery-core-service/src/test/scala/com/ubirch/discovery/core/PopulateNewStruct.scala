@@ -115,7 +115,7 @@ object PopulateNewStruct extends LazyLogging {
     new VertexDatabase(VertexCore(newMTprops, "MASTER_TREE"), gc)
   }
 
-  def initBcx(MT: VertexDatabase): String = {
+  def initBcx(MT: VertexDatabase) = {
     val iotaProps = List(
       ElementProperty(KeyValue(KEY_HASH, Random.alphanumeric.take(32).mkString), PropertyType.String),
       ElementProperty(KeyValue(KEY_BC, "IOTA"), PropertyType.String),
