@@ -1,21 +1,21 @@
 package com.ubirch.discovery.core.structure
 
-import java.time.{format, ZonedDateTime}
-import java.time.format.{DateTimeFormatterBuilder, TextStyle}
+import java.time.{ format, ZonedDateTime }
+import java.time.format.{ DateTimeFormatterBuilder, TextStyle }
 import java.util
 import java.util.Locale
 import java.util.concurrent.ThreadLocalRandom
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.TestUtil
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Util._
 import gremlin.scala._
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.Instant
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
 import scala.util.Random
 

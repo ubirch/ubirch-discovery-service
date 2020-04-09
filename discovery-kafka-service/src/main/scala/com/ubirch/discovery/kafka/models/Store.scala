@@ -3,12 +3,12 @@ package com.ubirch.discovery.kafka.models
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddRelation
-import com.ubirch.discovery.core.structure.{Relation, VertexCore, VertexDatabase}
+import com.ubirch.discovery.core.structure.{ Relation, VertexCore, VertexDatabase }
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.PrometheusRelationMetricsLoggerSummary
 import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
-import gremlin.scala.{Key, KeyValue}
+import gremlin.scala.{ Key, KeyValue }
 import io.prometheus.client.Summary
 
 import scala.language.postfixOps

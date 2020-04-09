@@ -1,13 +1,13 @@
 package com.ubirch.discovery.kafka
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.structure.{EdgeCore, ElementProperty, Relation, VertexCore}
+import com.ubirch.discovery.core.structure.{ EdgeCore, ElementProperty, Relation, VertexCore }
 import com.ubirch.discovery.kafka.util.Util
 import net.manub.embeddedkafka.EmbeddedKafka
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 import org.scalatest.concurrent.ScalaFutures
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.Duration
 import scala.util.Random
 

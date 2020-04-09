@@ -1,15 +1,15 @@
 package com.ubirch.discovery.kafka.models
 
-import java.util.concurrent.{CountDownLatch, Executors, ThreadFactory}
+import java.util.concurrent.{ CountDownLatch, Executors, ThreadFactory }
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.kafka.TestBase
 
 import scala.collection.immutable
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 class ExecutorSpec extends TestBase {
 

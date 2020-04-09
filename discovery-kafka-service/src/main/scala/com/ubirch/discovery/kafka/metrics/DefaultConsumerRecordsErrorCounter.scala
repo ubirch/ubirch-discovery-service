@@ -1,7 +1,7 @@
 package com.ubirch.discovery.kafka.metrics
 
 import com.ubirch.kafka.express.ConfigBase
-import io.prometheus.client.{Counter => PrometheusCounter, Summary => PrometheusSummary}
+import io.prometheus.client.{ Counter => PrometheusCounter, Summary => PrometheusSummary }
 
 trait Counter extends ConfigBase {
   val namespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
