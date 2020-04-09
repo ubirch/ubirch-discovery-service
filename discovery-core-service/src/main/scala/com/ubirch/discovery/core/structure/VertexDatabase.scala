@@ -8,7 +8,7 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
-import gremlin.scala.{KeyValue, TraversalSource, Vertex}
+import gremlin.scala.{TraversalSource, Vertex}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.json4s.JsonDSL._
 
@@ -86,14 +86,10 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     constructor.l().head
   }
 
-  private def addPropertyToVertex[T](property: KeyValue[T], vertex: Vertex = vertex) = {
-    g.V(vertex).property(property).iterate()
-  }
-
   /**
     * Add new properties to vertex
     */
-  def update() = {
+  def update(): Unit = {
     addNewPropertiesToVertex(vertex)
   }
 
