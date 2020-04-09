@@ -4,12 +4,12 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.structure.PropertyType.PropertyType
-import com.ubirch.discovery.core.util.Exceptions.{KeyNotInList, NumberOfEdgesNotCorrect}
-import gremlin.scala.{Key, KeyValue}
+import com.ubirch.discovery.core.util.Exceptions.{ KeyNotInList, NumberOfEdgesNotCorrect }
+import gremlin.scala.{ Key, KeyValue }
 import org.apache.tinkerpop.gremlin.structure.Edge
-import org.json4s.{DefaultFormats, JsonAST}
+import org.json4s.{ DefaultFormats, JsonAST }
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods.{compact, render}
+import org.json4s.jackson.JsonMethods.{ compact, render }
 import org.json4s.jackson.Serialization
 
 import scala.collection.JavaConverters._

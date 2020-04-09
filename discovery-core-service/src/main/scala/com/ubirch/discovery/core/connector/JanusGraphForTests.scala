@@ -5,8 +5,8 @@ import java.util.Date
 import gremlin.scala._
 import org.apache.commons.configuration.PropertiesConfiguration
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
-import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex}
-import org.janusgraph.core.{JanusGraph, JanusGraphFactory}
+import org.apache.tinkerpop.gremlin.structure.{ Direction, Vertex }
+import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
 import org.janusgraph.core.Cardinality._
 import org.janusgraph.core.Multiplicity._
 import org.janusgraph.core.schema.SchemaAction

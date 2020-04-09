@@ -1,18 +1,19 @@
 package com.ubirch.discovery.kafka.consumer
 
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter}
-import com.ubirch.discovery.kafka.models.{Executor, RelationKafka, Store}
+import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
+import com.ubirch.discovery.kafka.models.{ Executor, RelationKafka, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
+import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
 import org.json4s.JsonDSL._
 
+import scala.collection.immutable
 import scala.language.postfixOps
 import scala.util.Try
 
@@ -57,31 +58,50 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
   override def process: Process = Process { crs =>
-    crs.foreach { cr =>
 
-      logger.debug("Received value: " + cr.value())
-      storeCounter.counter.labels("ReceivedMessage").inc()
+    val allRelations: immutable.Seq[Relation] = crs.flatMap {
+      cr =>
+        logger.debug("Received value: " + cr.value())
+        storeCounter.counter.labels("ReceivedMessage").inc()
 
-      Try(parseRelations(cr.value()))
-        .recover {
-          case exception: ParsingException =>
-            errorCounter.counter.labels("ParsingException").inc()
-            send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-            logger.error(ErrorsHandler.generateException(exception, cr.value()))
-            Nil
-        }
-        .filter(_.nonEmpty)
-        .map { relations =>
-          if (checkIfAllVertexAreTheSame(relations)) {
-            logger.debug("Storing with cache")
-            storeCache(relations) foreach recoverStoreRelationIfNeeded
-          } else {
-            logger.debug("Storing without cache")
-            store(relations) foreach recoverStoreRelationIfNeeded
+        Try(parseRelations(cr.value()))
+          .recover {
+            case exception: ParsingException =>
+              errorCounter.counter.labels("ParsingException").inc()
+              send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+              logger.error(ErrorsHandler.generateException(exception, cr.value()))
+              Nil
           }
-        }
-
+          .filter(_.nonEmpty)
+          .get
     }
+    store(allRelations) foreach recoverStoreRelationIfNeeded
+
+    //    crs.foreach { cr =>
+    //
+    //      logger.debug("Received value: " + cr.value())
+    //      storeCounter.counter.labels("ReceivedMessage").inc()
+    //
+    //      Try(parseRelations(cr.value()))
+    //        .recover {
+    //          case exception: ParsingException =>
+    //            errorCounter.counter.labels("ParsingException").inc()
+    //            send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+    //            logger.error(ErrorsHandler.generateException(exception, cr.value()))
+    //            Nil
+    //        }
+    //        .filter(_.nonEmpty)
+    //        .map { relations =>
+    //          if (checkIfAllVertexAreTheSame(relations)) {
+    //            logger.debug("Storing with cache")
+    //            storeCache(relations) foreach recoverStoreRelationIfNeeded
+    //          } else {
+    //            logger.debug("Storing without cache")
+    //            store(relations) foreach recoverStoreRelationIfNeeded
+    //          }
+    //        }
+    //
+    //    }
 
   }
 
