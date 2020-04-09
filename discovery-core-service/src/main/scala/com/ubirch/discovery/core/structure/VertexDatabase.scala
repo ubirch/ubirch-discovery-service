@@ -98,16 +98,15 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   }
 
   private def addNewPropertiesToVertex(vertex: Vertex): Unit = {
-    Timer.time({
-      for (property <- coreVertex.properties) {
-        if (!doesPropExist(property.toKeyValue)) {
-          addPropertyToVertex(property.toKeyValue, vertex: Vertex)
-          logger.debug(s"Adding property: ${property.keyName}")
-        }
+    val r = Timer.time({
+      var constructor = gc.g.V(vertex)
+      for (prop <- coreVertex.properties) {
+        constructor = constructor.property(prop.toKeyValue)
       }
-    }).logTimeTaken(s"add properties to vertex with id: ${vertex.id().toString}")
-
-    def doesPropExist[T](keyV: KeyValue[T]): Boolean = g.V(vertex).properties(keyV.key.name).toList().nonEmpty
+      constructor.l().head
+    })
+    r.logTimeTaken(s"add properties to vertex with id: ${vertex.id().toString}")
+    if(r.result.isFailure) throw new Exception(s"error adding properties on vertex ${vertex.toString}", r.result.failed.get)
   }
 
   /**
