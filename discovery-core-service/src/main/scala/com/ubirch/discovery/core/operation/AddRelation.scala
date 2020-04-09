@@ -9,7 +9,7 @@ import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyN
 import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
 
 import scala.language.postfixOps
-import scala.util.Success
+import scala.util.{Success, Try}
 
 /**
   * Allows the storage of two nodes (vertices) in the janusgraph server. Link them together
@@ -19,13 +19,14 @@ object AddRelation extends LazyLogging {
   private val label = "aLabel"
 
   /* main part of the program */
-  def createRelation(relation: Relation)(implicit propSet: Set[Property], gc: GremlinConnector): String = {
-    Timer.time({
+  def createRelation(relation: Relation)(implicit propSet: Set[Property], gc: GremlinConnector) = {
+    val r = Timer.time({
       stopIfVerticesAreEquals(relation.vFrom, relation.vTo)
       val relationServer = relation.toRelationServer
       executeRelationCreationStrategy(relationServer)
-    }, "add two vertices").logTimeTaken()
-    "OK BB" //TODO: change this return line
+    }, "create relation")
+    r.logTimeTaken()
+    r.result
   }
 
   def executeRelationCreationStrategy(relationServer: RelationServer)(implicit gc: GremlinConnector): Unit = {
@@ -84,8 +85,8 @@ object AddRelation extends LazyLogging {
   }
 
   def createRelationOneCached(vCached: VertexDatabase)(internalVertexTo: VertexCore)(edge: EdgeCore)
-    (implicit propSet: Set[Property], gc: GremlinConnector): String = {
-    Timer.time({
+    (implicit propSet: Set[Property], gc: GremlinConnector): Try[Unit] = {
+    val r = Timer.time({
       stopIfVerticesAreEquals(vCached.coreVertex, internalVertexTo)
       val vTo: VertexDatabase = internalVertexTo.toVertexStructDb(gc)
       val relation = RelationServer(vCached, vTo, edge)
@@ -94,8 +95,9 @@ object AddRelation extends LazyLogging {
       } else {
         twoExist(relation)
       }
-    }, "add two vertex with one CACHED").logTimeTaken()
-    "Alles gut"
+    }, "add two vertex with one CACHED")
+    r.logTimeTaken()
+    r.result
   }
 
   /**

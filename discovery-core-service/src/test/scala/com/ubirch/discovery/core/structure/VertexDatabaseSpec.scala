@@ -105,11 +105,12 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
 
   ignore("speed test") {
 
-
     def generateProperties: List[ElementProperty] = {
-      List(ElementProperty(KeyValue[Any](Number, giveMeRandomLong), PropertyType.Long),
+      List(
+        ElementProperty(KeyValue[Any](Number, giveMeRandomLong), PropertyType.Long),
         ElementProperty(KeyValue[Any](Name, giveMeRandomString), PropertyType.String),
-        ElementProperty(KeyValue[Any](TimeStamp, Instant.ofEpochSecond(ThreadLocalRandom.current().nextInt()).getMillis), PropertyType.Long))
+        ElementProperty(KeyValue[Any](TimeStamp, Instant.ofEpochSecond(ThreadLocalRandom.current().nextInt()).getMillis), PropertyType.Long)
+      )
     }
 
     scenario("test speed") {
@@ -120,7 +121,6 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
       warmUpJg()
       testOld()
       testOld()
-
 
       def testOld(): Long = {
         val props = generateProperties
@@ -154,7 +154,6 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
 
     }
 
-
     scenario("test speed addNewPropertiesToVertex") {
       warmUpJg()
       warmUpJg()
@@ -172,8 +171,8 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
         val tStart = System.currentTimeMillis()
         var constructor = gc.g.V(vDb.vertex)
         for (prop <- props) {
-            constructor = constructor.property(prop.toKeyValue)
-          }
+          constructor = constructor.property(prop.toKeyValue)
+        }
         constructor.iterate()
         val tEnd = System.currentTimeMillis()
         tEnd - tStart

@@ -85,7 +85,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   }
 
-  def recoverStoreRelationIfNeeded(relationAndResult: (Relation, Try[String])): Try[Object] = {
+  def recoverStoreRelationIfNeeded(relationAndResult: (Relation, Try[Unit])): Try[Unit] = {
     relationAndResult._2 recover {
       case e: StoreException =>
         errorCounter.counter.labels("StoreException").inc()
@@ -125,11 +125,11 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def store(relations: Seq[Relation]): List[(Relation, Try[String])] = {
+  def store(relations: Seq[Relation]): List[(Relation, Try[Unit])] = {
 
     val res = Timer.time({
       Store.addVerticesPresentMultipleTimes(relations.toList)
-      val executor = new Executor[Relation, Try[String]](relations, Store.addRelation, 16)
+      val executor = new Executor[Relation, Try[Unit]](relations, Store.addRelation, 16)
       executor.startProcessing()
       executor.latch.await()
       executor.getResultsNoTry
@@ -141,7 +141,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   }
 
-  def storeCache(data: Seq[Relation]): List[(Relation, Try[String])] = {
+  def storeCache(data: Seq[Relation]): List[(Relation, Try[Unit])] = {
 
     logger.info(s"number of relations: ${data.size}")
 
@@ -149,7 +149,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       val vertexCached = Store.vertexToCache(data.head.vFrom)
       Store.addVerticesPresentMultipleTimes(data.toList)
 
-      val executor = new Executor[Relation, Try[String]](data, Store.addRelationOneCached(_, vertexCached), 16)
+      val executor = new Executor[Relation, Try[Unit]](data, Store.addRelationOneCached(_, vertexCached), 16)
       executor.startProcessing()
 
       executor.latch.await()

@@ -102,7 +102,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       constructor.l().head
     })
     r.logTimeTaken(s"add properties to vertex with id: ${vertex.id().toString}")
-    if(r.result.isFailure) throw new Exception(s"error adding properties on vertex ${vertex.toString}", r.result.failed.get)
+    if (r.result.isFailure) throw new Exception(s"error adding properties on vertex ${vertex.toString}", r.result.failed.get)
   }
 
   /**

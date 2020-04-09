@@ -46,7 +46,7 @@ object Store extends LazyLogging {
     * @param relation The parsed JSON
     * @return
     */
-  def addRelation(relation: Relation)(implicit gc: GremlinConnector): Try[String] = {
+  def addRelation(relation: Relation)(implicit gc: GremlinConnector): Try[Unit] = {
     val requestTimer: Summary.Timer = relationTimeSummary.summary
       .labels("relation_process_time")
       .startTimer
@@ -59,11 +59,11 @@ object Store extends LazyLogging {
     Try(relationTimeSummary.summary.observe(requestTimer.observeDuration()))
 
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
-    res.result
+    res.result.get
 
   }
 
-  def addRelationOneCached(relation: Relation, vCached: VertexDatabase)(implicit gc: GremlinConnector): Try[String] = {
+  def addRelationOneCached(relation: Relation, vCached: VertexDatabase)(implicit gc: GremlinConnector): Try[Unit] = {
 
     val requestTimer: Summary.Timer = relationTimeSummary.summary
       .labels("relation_process_time")
@@ -82,7 +82,7 @@ object Store extends LazyLogging {
 
     relationTimeSummary.summary.observe(requestTimer.observeDuration())
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
-    res.result
+    res.result.get
 
   }
 
