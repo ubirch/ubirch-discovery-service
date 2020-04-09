@@ -1,8 +1,8 @@
 package com.ubirch.discovery.kafka.util
 
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods.{ compact, render }
+import org.json4s.jackson.JsonMethods.{compact, render}
 
 trait ErrorsStruct {
   val errorName: String
@@ -30,7 +30,7 @@ object ErrorsHandler {
   }
 
   def toJson(error: ErrorsStruct): String = {
-    val json = ("Error type" -> error.errorName) ~ ("Message" -> error.messageError)
+    val json = ("error_type" -> error.errorName) ~ ("message" -> error.messageError)
     compact(render(json))
   }
 }

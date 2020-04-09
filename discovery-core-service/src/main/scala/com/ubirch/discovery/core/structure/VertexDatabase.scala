@@ -8,12 +8,15 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
-import gremlin.scala.{ KeyValue, TraversalSource, Vertex }
+import gremlin.scala.{TraversalSource, Vertex}
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
+import org.json4s.JsonDSL._
 
 import scala.collection.JavaConverters._
 
 class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(implicit propSet: Set[Property]) extends LazyLogging {
+
+  override def toString: String = coreVertex.toString
 
   val g: TraversalSource = gc.g
   val b: Bindings = gc.b
@@ -30,21 +33,23 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
             }
       }
     }
-    val timer = new Timer()
-    val possibleVertex = searchForVertexByProperties(coreVertex.properties)
-    if (possibleVertex != null) {
-      addNewPropertiesToVertex(possibleVertex)
-    }
-    timer.finish(s"check if vertex with properties ${coreVertex.properties.mkString(", ")} was already in the DB")
-    possibleVertex
+    val timedPossibleVertex = Timer.time({
+      val possibleVertex = searchForVertexByProperties(coreVertex.properties)
+      if (possibleVertex != null) {
+        addNewPropertiesToVertex(possibleVertex)
+      }
+      possibleVertex
+    })
+    timedPossibleVertex.logTimeTakenJson("check_vertex_in_db" -> List(("result" -> Option(timedPossibleVertex.result.getOrElse("false")).getOrElse("false").toString) ~ ("vertex" -> coreVertex.toJson)))
+    timedPossibleVertex.result.getOrElse(null)
   }
 
-  def isPropertyIterable(prop: String): Boolean = {
+  def isPropertyIterable(propertyName: String): Boolean = {
 
     def checkOnProps(set: Set[Property]): Boolean = {
       set.toList match {
         case Nil => false
-        case x => if (x.head.name == prop) {
+        case x => if (x.head.name == propertyName) {
           if (x.head.isPropertyUnique) true else checkOnProps(x.tail.toSet)
         } else {
           checkOnProps(x.tail.toSet)
@@ -63,37 +68,41 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   def addVertexWithProperties(): Unit = {
     if (existInJanusGraph) throw new ImportToGremlinException("Vertex already exist in the database")
     try {
-      logger.debug(s"adding vertex: label: ${coreVertex.label}; properties: ${coreVertex.properties.mkString(", ")}")
+      logger.debug(s"adding vertex ${coreVertex.toString}")
       vertex = initialiseVertex
-      for (property <- coreVertex.properties.tail) {
-        logger.debug(s"adding property ${property.keyName} , ${property.value}")
-        logger.debug("vertexId: " + vertexId)
-        addPropertyToVertex(property.toKeyValue)
-      }
     } catch {
-      case e: CompletionException => throw new ImportToGremlinException(e.getMessage) //TODO: do something
+      case e: CompletionException =>
+        logger.error(s"Error on adding properties to vertex ${coreVertex.toString}: " + e.getMessage)
+        throw new ImportToGremlinException(s"Error on adding properties to vertex ${coreVertex.toString}: " + e.getMessage) //TODO: do something
+      case e: Exception => throw e
     }
   }
 
   private def initialiseVertex: Vertex = {
-    g.addV(b.of("label", coreVertex.label)).property(coreVertex.properties.head.toKeyValue).l().head
+    var constructor = gc.g.addV(coreVertex.label)
+    for (prop <- coreVertex.properties) {
+      constructor = constructor.property(prop.toKeyValue)
+    }
+    constructor.l().head
   }
 
-  private def addPropertyToVertex[T](property: KeyValue[T], vertex: Vertex = vertex) = {
-    g.V(vertex).property(property).iterate()
+  /**
+    * Add new properties to vertex
+    */
+  def update(): Unit = {
+    addNewPropertiesToVertex(vertex)
   }
 
   private def addNewPropertiesToVertex(vertex: Vertex): Unit = {
-    val timer = new Timer()
-    for (property <- coreVertex.properties) {
-      if (!doesPropExist(property.toKeyValue)) {
-        addPropertyToVertex(property.toKeyValue, vertex: Vertex)
-        logger.debug(s"Adding property: ${property.keyName}")
+    val r = Timer.time({
+      var constructor = gc.g.V(vertex)
+      for (prop <- coreVertex.properties) {
+        constructor = constructor.property(prop.toKeyValue)
       }
-    }
-    timer.finish(s"add properties to vertex with id: ${vertex.id().toString}")
-
-    def doesPropExist[T](keyV: KeyValue[T]): Boolean = g.V(vertex).properties(keyV.key.name).toList().nonEmpty
+      constructor.l().head
+    })
+    r.logTimeTaken(s"add properties to vertex with id: ${vertex.id().toString}")
+    if (r.result.isFailure) throw new Exception(s"error adding properties on vertex ${vertex.toString}", r.result.failed.get)
   }
 
   /**

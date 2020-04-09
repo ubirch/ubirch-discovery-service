@@ -82,7 +82,7 @@
         <json4s.version>3.5.2</json4s.version>
 
         <gremlinScala.version>3.4.1.4</gremlinScala.version>
-        <janusGraph.version>0.3.1</janusGraph.version>
+        <janusGraph.version>0.3.2</janusGraph.version>
         <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
 
@@ -95,7 +95,7 @@
         <scalariform.version>0.2.2</scalariform.version>
         <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
         <!-- /plugins -->
-        <ubirchKafka.version>1.2.8-SNAPSHOT</ubirchKafka.version>
+        <ubirch-kafka-express.version>1.2.10-SNAPSHOT</ubirch-kafka-express.version>
 
         <!-- /versions -->
 
@@ -245,6 +245,19 @@
             <version>${janusGraph.version}</version>
         </dependency>
 
+        <!-- Janusgraph libraries for testing -->
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-berkeleyje</artifactId>
+            <version>${janusGraph.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-lucene</artifactId>
+            <version>${janusGraph.version}</version>
+        </dependency>
+
         <!-- /Gremlin -->
 
         <!-- Joda -->
@@ -266,9 +279,15 @@
         <!-- Ubirch -->
         <dependency>
             <groupId>com.ubirch</groupId>
-            <artifactId>event-log-kafka</artifactId>
-            <version>${ubirchKafka.version}</version>
+            <artifactId>ubirch-kafka-express</artifactId>
+            <version>${ubirch-kafka-express.version}</version>
         </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>com.ubirch</groupId>-->
+<!--            <artifactId>ubirch-janusgraph-express</artifactId>-->
+<!--            <version>1.0-SNAPSHOT</version>-->
+<!--        </dependency>-->
         <!-- /Ubirch -->
 
     </dependencies>
@@ -347,8 +366,6 @@
     <modules>
         <module>discovery-core-service</module>
         <module>discovery-kafka-service</module>
-        <module>discovery-rest-service</module>
-        <module>discovery-docker-jg-service</module>
     </modules>
 
 </project>

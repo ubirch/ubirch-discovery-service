@@ -1,12 +1,15 @@
 package com.ubirch.discovery.kafka.consumer
 
+import java.util.concurrent.Executors
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.kafka.TestBase
-import com.ubirch.util.PortGiver
+import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 object ReproduceEnvProd extends TestBase with LazyLogging {
@@ -14,7 +17,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
   val listSign = new scala.collection.mutable.ListBuffer[String]
   val listBx = new scala.collection.mutable.ListBuffer[String]
 
-  val listLabelsEdge = List(
+  override val listLabelsEdge = List(
     "transaction",
     "link",
     "associate",
@@ -22,7 +25,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
     "generate"
   )
 
-  val listLabelsVertex = List(
+  override val listLabelsVertex = List(
     "blockchain_IOTA",
     "blockchain_ETH",
     "root_tree",
@@ -43,7 +46,11 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
       logger.info(config.kafkaPort.toString)
       val topic = "test"
       logger.info("starting consumer")
-      val consumer = new DefaultExpressDiscoveryApp {}
+      val consumer = new DefaultExpressDiscoveryApp {
+        override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+        override def prefix: String = "Ubirch"
+        override def maxTimeAggregationSeconds: Long = 180
+      }
       consumer.consumption.start()
       logger.info("consumer started")
 
@@ -59,16 +66,16 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
           publishStringMessageToKafka(topic, m)
         }
 
-        val sigOrigUpp = generateNewKey
+        val sigOrigUpp = generateRandomString
         val reqOrigUppDID = generateRequest("upp", Map("signature" -> sigOrigUpp, "type" -> "upp"))("device_id", Map("device-id" -> whichDeviceId(Random.nextFloat(), idDevice1, idDevice2, idDevice3), "type" -> "device-id"))
         publishStringMessageToKafka(topic, reqOrigUppDID)
 
         var counterFT = 0
         for (i <- 1 to 3) {
-          val keyFoundationTree = generateNewKey
+          val keyFoundationTree = generateRandomString
           val foundationToRoot = generateRequest("root_tree", Map("hash" -> keyRootTree, "type" -> "root_tree"))("foundation_tree", Map("hash" -> keyFoundationTree, "type" -> "foundation_tree"))
           publishStringMessageToKafka(topic, foundationToRoot)
-          var signature = if (i == 1) sigOrigUpp else generateNewKey
+          var signature = if (i == 1) sigOrigUpp else generateRandomString
 
           if (i == 1) {
             val uppToFt = generateRequest("upp", Map("signature" -> signature, "type" -> "upp"))("foundation_tree", Map("hash" -> keyFoundationTree, "type" -> "foundation_tree"))
@@ -82,7 +89,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
             val dvId = whichDeviceId(Random.nextFloat(), idDevice1, idDevice2, idDevice3)
 
             val chain = signature
-            signature = generateNewKey
+            signature = generateRandomString
 
             val uppToFt = generateRequest("upp", Map("signature" -> signature, "type" -> "upp"))("foundation_tree", Map("hash" -> keyFoundationTree, "type" -> "foundation_tree"))
             publishStringMessageToKafka(topic, uppToFt)
@@ -139,13 +146,13 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
   def generateRequest(tn1: String, p1: Map[String, String])(tn2: String, p2: Map[String, String]): String = {
     val v1 = generateVertex(tn1, p1, "v1")
     val v2 = generateVertex(tn2, p2, "v2")
-    val edge = generateEdge()
+    val edge = generateAnEdge()
     val req = s"""[{$v1,$v2,$edge}]"""
     //    logger.info("*req: " + req)
     req
   }
 
-  def generateNewKey: String = Random.alphanumeric.take(32).mkString
+  def generateRandomString: String = Random.alphanumeric.take(32).mkString
 
   /*
     * Generate a vertex that has the following structure:
@@ -166,7 +173,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
   }
 
   // format: {"edge":{"properties":{"timeStamp":"TIME_CREATION"}}}
-  def generateEdge(): String = {
+  def generateAnEdge(): String = {
     val properties = generatePropertiesEdge()
     val edge = s"""\"edge\":{$properties}"""
     //    logger.info("edge: " + edge)

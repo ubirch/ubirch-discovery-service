@@ -1,0 +1,1 @@
+{"Error type":"Storage Error","Message":"Error storing graph: org.apache.tinkerpop.gremlin.driver.exception.ResponseException: Name cannot be in protected namespace: label"}

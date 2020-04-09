@@ -1,7 +1,7 @@
 package com.ubirch.discovery.kafka.metrics
 
 import com.ubirch.kafka.express.ConfigBase
-import io.prometheus.client.{ Counter => PrometheusCounter, Summary => PrometheusSummary }
+import io.prometheus.client.{Counter => PrometheusCounter, Summary => PrometheusSummary}
 
 trait Counter extends ConfigBase {
   val namespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
@@ -35,18 +35,20 @@ class DefaultConsumerRecordsSuccessCounter extends Counter {
 
 }
 
-class MessageMetricsLoggerSummary extends Summary {
+class PrometheusMessageMetricsLoggerSummary extends Summary {
 
   final val summary: PrometheusSummary = PrometheusSummary
     .build(s"processing_time", s"Message processing time in seconds")
+    .labelNames("message_process_time")
     .register()
 
 }
 
-class RelationMetricsLoggerSummary extends Summary {
+class PrometheusRelationMetricsLoggerSummary extends Summary {
 
   final val summary: PrometheusSummary = PrometheusSummary
     .build(s"relation_process_time", s"Message processing time in seconds")
+    .labelNames("relation_process_time")
     .register()
 
 }

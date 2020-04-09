@@ -2,34 +2,34 @@ package com.ubirch.discovery.core.operation
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.structure._
-import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, KeyNotInList, PropertiesNotCorrect }
-import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.core.util.Util.{ getEdge, getEdgeProperties, recompose }
+import com.ubirch.discovery.core.structure.Elements.Property
+import com.ubirch.discovery.core.util.{Timer, Util}
+import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList, PropertiesNotCorrect}
+import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
 
 import scala.language.postfixOps
+import scala.util.{Success, Try}
 
 /**
   * Allows the storage of two nodes (vertices) in the janusgraph server. Link them together
-  *
-  * @param gc A GremlinConnector connected to a janusgraph server
   */
-case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
+object AddRelation extends LazyLogging {
 
   private val label = "aLabel"
 
   /* main part of the program */
-  def createRelation(relation: Relation)(implicit propSet: Set[Property]): String = {
-    val timer = new Timer()
-    stopIfVerticesAreEquals(relation.vFrom, relation.vTo)
-    val relationServer = relation.toRelationServer
-    executeRelationCreationStrategy(relationServer)
-    timer.finish("add two vertices")
-    "OK BB" //TODO: change this return line
+  def createRelation(relation: Relation)(implicit propSet: Set[Property], gc: GremlinConnector) = {
+    val r = Timer.time({
+      stopIfVerticesAreEquals(relation.vFrom, relation.vTo)
+      val relationServer = relation.toRelationServer
+      executeRelationCreationStrategy(relationServer)
+    }, "create relation")
+    r.logTimeTaken()
+    r.result
   }
 
-  def executeRelationCreationStrategy(relationServer: RelationServer): Unit = {
+  def executeRelationCreationStrategy(relationServer: RelationServer)(implicit gc: GremlinConnector): Unit = {
     howManyVerticesAlreadyInDb(List(relationServer.vFromDb, relationServer.vToDb)) match {
       case 0 => noneExist(relationServer)
       case 1 => oneExist(relationServer)
@@ -44,11 +44,12 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
   1/ create them.
   2/ link them.
    */
-  private def noneExist(relation: RelationServer): Unit = {
+  private def noneExist(relation: RelationServer)(implicit gc: GremlinConnector): Unit = {
+    logger.debug(Util.relationStrategyJson(relation, "non exist"))
     try {
       relation.vFromDb.addVertexWithProperties()
       relation.vToDb.addVertexWithProperties()
-      createRelationEdge(relation)
+      relation.createEdge
     } catch {
       case e: ImportToGremlinException =>
         deleteVertices(List(relation.vFromDb, relation.vToDb))
@@ -62,12 +63,11 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
   2/ add it to the DB.
   3/ link them.
  */
-  private def oneExist(relation: RelationServer): Unit = {
-
+  private def oneExist(relation: RelationServer)(implicit gc: GremlinConnector): Unit = {
     def addOneVertexAndCreateEdge(vertexNotInDb: VertexDatabase): Unit = {
       try {
         vertexNotInDb.addVertexWithProperties()
-        createRelationEdge(relation)
+        relation.createEdge
       } catch {
         case e: ImportToGremlinException =>
           deleteVertices(List(vertexNotInDb))
@@ -76,36 +76,38 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     }
 
     if (relation.vFromDb.existInJanusGraph) {
+      logger.debug(Util.relationStrategyJson(relation, "one exit: vFrom"))
       addOneVertexAndCreateEdge(relation.vToDb)
     } else {
+      logger.debug(Util.relationStrategyJson(relation, "one exit: vTo"))
       addOneVertexAndCreateEdge(relation.vFromDb)
     }
   }
 
-  def addTwoVerticesCached(vCached: VertexDatabase)(internalVertexTo: VertexCore)(edge: EdgeCore)
-    (implicit propSet: Set[Property]): String = {
-    logger.debug(s"Operating on two vertices: one cached: ${vCached.vertex.id()} and one not: ${internalVertexTo.label}")
-    val timer = new Timer()
-    stopIfVerticesAreEquals(vCached.coreVertex, internalVertexTo)
-    val vTo: VertexDatabase = internalVertexTo.toVertexStructDb(gc)
-    val relation = RelationServer(vCached, vTo, edge)
-    if (!vTo.existInJanusGraph) {
-      oneExistCache(relation)
-    } else {
-      twoExist(relation)
-    }
-    timer.finish("add two vertex with one CACHED")
-    "Alles gut"
+  def createRelationOneCached(vCached: VertexDatabase)(internalVertexTo: VertexCore)(edge: EdgeCore)
+    (implicit propSet: Set[Property], gc: GremlinConnector): Try[Unit] = {
+    val r = Timer.time({
+      stopIfVerticesAreEquals(vCached.coreVertex, internalVertexTo)
+      val vTo: VertexDatabase = internalVertexTo.toVertexStructDb(gc)
+      val relation = RelationServer(vCached, vTo, edge)
+      if (!vTo.existInJanusGraph) {
+        oneExistCache(relation)
+      } else {
+        twoExist(relation)
+      }
+    }, "add two vertex with one CACHED")
+    r.logTimeTaken()
+    r.result
   }
 
   /**
     * vFrom is the cached vertex
     */
-  private def oneExistCache(relation: RelationServer): Unit = {
-    logger.debug(s"A vertex was already in the database: ${relation.vFromDb.coreVertex.properties.mkString(", ")}")
+  private def oneExistCache(relation: RelationServer)(implicit gc: GremlinConnector): Unit = {
+    logger.debug(Util.relationStrategyJson(relation, "one exit cached: vFrom"))
     try {
       relation.vToDb.addVertexWithProperties()
-      createRelationEdge(relation)
+      relation.createEdge
     } catch {
       case e: ImportToGremlinException =>
         deleteVertices(List(relation.vToDb))
@@ -117,10 +119,11 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
   If both vertices that are being processed is already present in the database.
   1/ link them if they're not already linked.
    */
-  private def twoExist(relation: RelationServer): Unit = {
+  private def twoExist(relation: RelationServer)(implicit gc: GremlinConnector): Unit = {
+    logger.debug(Util.relationStrategyJson(relation, "two exist"))
+
     if (!areVertexLinked(relation.vFromDb, relation.vToDb)) {
-      logger.debug("Both vertices were already in the database")
-      createRelationEdge(relation)
+      relation.createEdge
     }
   }
 
@@ -131,27 +134,13 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     * @param vTo   second vertex.
     * @return boolean. True = linked, False = not linked.
     */
-  def areVertexLinked(vFrom: VertexDatabase, vTo: VertexDatabase): Boolean = {
-    val timer = new Timer()
-    val res = gc.g.V(vFrom.vertex).bothE().bothV().is(vTo.vertex).l()
-    timer.finish(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${res.nonEmpty}")
-    res.nonEmpty
-  }
-
-  /**
-    * Create an edge between two vertices.
-    */
-  def createRelationEdge(relation: RelationServer): Unit = {
-    val timer = new Timer
-    if (relation.edge.properties.isEmpty) {
-      gc.g.V(relation.vFromDb.vertex).as("a").V(relation.vToDb.vertex).addE(relation.edge.label).from(relation.vFromDb.vertex).toSet().head
-    } else {
-      val edge = gc.g.V(relation.vFromDb.vertex).as("a").V(relation.vToDb.vertex).addE(relation.edge.label).property(relation.edge.properties.head.toKeyValue).from(relation.vFromDb.vertex).toSet().head
-      for (keyV <- relation.edge.properties.tail) {
-        gc.g.E(edge).property(keyV.toKeyValue).iterate()
-      }
+  def areVertexLinked(vFrom: VertexDatabase, vTo: VertexDatabase)(implicit gc: GremlinConnector): Boolean = {
+    val timedResult = Timer.time(gc.g.V(vFrom.vertex).bothE().bothV().is(vTo.vertex).l())
+    timedResult.result match {
+      case Success(value) =>
+        timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}")
+        value.nonEmpty
     }
-    timer.finish(s"link vertices of vertices ${relation.vFromDb.vertex.id} and ${relation.vToDb.vertex.id}, len(properties) = ${relation.edge.properties.size} .")
   }
 
   /**
@@ -186,7 +175,7 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
     * @param vTo        Id of the vertex to where the edge goes.
     * @param properties properties of the edge.
     */
-  def verifEdge(vFrom: VertexDatabase, vTo: VertexDatabase, properties: List[ElementProperty]): Unit = {
+  def verifEdge(vFrom: VertexDatabase, vTo: VertexDatabase, properties: List[ElementProperty])(implicit gc: GremlinConnector): Unit = {
     val edge = getEdge(gc, vFrom, vTo).head
 
     if (edge == null) throw new ImportToGremlinException(s"Edge between $vFrom and $vTo wasn't created")
@@ -204,6 +193,7 @@ case class AddRelation()(implicit gc: GremlinConnector) extends LazyLogging {
   }
 
   private def deleteVertices(verticesToDelete: List[VertexDatabase]): Unit = {
+    logger.warn(s"Deleting vertices: ${verticesToDelete.map(v => "label: " + v.vertex.label() + " id: " + v.vertexId).mkString(", ")}")
     verticesToDelete foreach { v => v.deleteVertex() }
   }
 

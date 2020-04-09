@@ -8,7 +8,7 @@ import scala.collection.JavaConverters._
 
 object GremlinConnectorFactory {
 
-  private lazy val instanceTest = new GremlinConnectorForTests
+  private lazy val instanceTest = new JanusGraphForTests
   private lazy val instanceJanusGraph = new JanusGraphConnector
 
   def getInstance(connectorType: ConnectorType): GremlinConnector = {

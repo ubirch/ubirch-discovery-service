@@ -1,9 +1,9 @@
 package com.ubirch.discovery.core
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
 import com.ubirch.discovery.core.structure.VertexStruct
-import gremlin.scala.{ Key, Vertex }
+import gremlin.scala.{Key, Vertex}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
