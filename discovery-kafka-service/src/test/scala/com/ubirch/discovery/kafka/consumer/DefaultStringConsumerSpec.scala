@@ -16,9 +16,12 @@ import scala.io.Source
 //TODO: We need to rethink the tests here are they are causing issues on the ci pipelines
 class DefaultStringConsumerSpec extends TestBase {
 
+  def getGremlinConnector: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
+
   val topic = "test"
-  val errorTopic = "com.ubirch.eventlog.discovery-error"
+  val errorTopic = "test.error"
   implicit val Deserializer: StringDeserializer = new StringDeserializer
+  implicit val gc = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
   feature("Verifying valid requests") {
 
@@ -32,20 +35,26 @@ class DefaultStringConsumerSpec extends TestBase {
           override def prefix: String = "Ubirch"
           override def maxTimeAggregationSeconds: Long = 180
         }
-        consumer.consumption.setForceExit(false)
+        /*        consumer.consumption.setForceExit(false)
         consumer.consumption.start()
+        consumer.consumption.startPolling()*/
         cleanDb()
+        gc.g.addV("test").iterate()
+        gc.g.addV("test").l().head
+        println("testing " + test.request)
         publishStringMessageToKafka(topic, test.request)
-        Thread.sleep(4000)
+        val r = consumeFirstStringMessageFrom(topic)
+        println(s"r: $r")
+        Thread.sleep(5000)
         howManyElementsInJG shouldBe howManyElementsShouldBeInJg(test.expectedResult)
-        consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
+        //consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
       }
     }
 
     val allTests = getAllTests("/valid/")
 
-    ignore("NeedForJanus") {
 
+    ignore("NeedForJanus") {
       allTests foreach { test =>
         scenario(test.nameOfTest) {
           runTest(test)
@@ -186,12 +195,7 @@ class DefaultStringConsumerSpec extends TestBase {
     lines
   }
 
-  def getGremlinConnector: GremlinConnector = {
-    GremlinConnectorFactory.getInstance(ConnectorType.Test)
-  }
-
   def cleanDb(): Unit = {
-    val gc = getGremlinConnector
     gc.g.V().drop().iterate()
   }
 
@@ -200,9 +204,8 @@ class DefaultStringConsumerSpec extends TestBase {
     * @return tuple(numberOfVertex: Int, numberOfEdges: Int).
     */
   def howManyElementsInJG(): (Int, Int) = {
-    val gc = getGremlinConnector
-    val numberOfVertices = gc.g.V().count().toList().head.toInt
-    val numberOfEdges = gc.g.E().count().toList().head.toInt
+    val numberOfVertices = gc.g.V().count().l().head.toInt
+    val numberOfEdges = gc.g.E().count().l().head.toInt
     (numberOfVertices, numberOfEdges)
   }
 

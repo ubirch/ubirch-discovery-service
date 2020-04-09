@@ -82,7 +82,7 @@
         <json4s.version>3.5.2</json4s.version>
 
         <gremlinScala.version>3.4.1.4</gremlinScala.version>
-        <janusGraph.version>0.3.1</janusGraph.version>
+        <janusGraph.version>0.3.2</janusGraph.version>
         <tinkerPopDriver.version>3.3.3</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
 
@@ -242,6 +242,19 @@
         <dependency>
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-core</artifactId>
+            <version>${janusGraph.version}</version>
+        </dependency>
+
+        <!-- Janusgraph libraries for testing -->
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-berkeleyje</artifactId>
+            <version>${janusGraph.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-lucene</artifactId>
             <version>${janusGraph.version}</version>
         </dependency>
 

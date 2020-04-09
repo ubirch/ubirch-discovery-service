@@ -70,10 +70,6 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     try {
       logger.debug(s"adding vertex ${coreVertex.toString}")
       vertex = initialiseVertex
-      for (property <- coreVertex.properties.tail) {
-        logger.debug(s"on vertex with id: $vertexId adding property [${property.keyName} : ${property.value}]")
-        addPropertyToVertex(property.toKeyValue)
-      }
     } catch {
       case e: CompletionException =>
         logger.error(s"Error on adding properties to vertex ${coreVertex.toString}: " + e.getMessage)
@@ -83,7 +79,11 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   }
 
   private def initialiseVertex: Vertex = {
-    g.addV(b.of("label", coreVertex.label)).property(coreVertex.properties.head.toKeyValue).l().head
+    var constructor = gc.g.addV(coreVertex.label)
+    for (prop <- coreVertex.properties) {
+      constructor = constructor.property(prop.toKeyValue)
+    }
+    constructor.l().head
   }
 
   private def addPropertyToVertex[T](property: KeyValue[T], vertex: Vertex = vertex) = {

@@ -116,9 +116,6 @@ class ExecutorSpec extends TestBase {
       executeAllTime(500)
     }
 
-    scenario("1000") {
-      executeAllTime(1000)
-    }
   }
 
   def executeAllJanus(number: Int): Unit = {
