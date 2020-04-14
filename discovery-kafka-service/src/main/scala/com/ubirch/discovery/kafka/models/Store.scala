@@ -47,16 +47,13 @@ object Store extends LazyLogging {
     * @return
     */
   def addRelation(relation: Relation)(implicit gc: GremlinConnector): Try[Unit] = {
-    val requestTimer: Summary.Timer = relationTimeSummary.summary
-      .labels("relation_process_time")
-      .startTimer
 
     val res = Timer.time({
       stopIfRelationNotAllowed(relation)
       AddRelation.createRelation(relation)
     })
 
-    Try(relationTimeSummary.summary.observe(requestTimer.observeDuration()))
+    Try(relationTimeSummary.summary.observe(res.elapsed))
 
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
     res.result.get
