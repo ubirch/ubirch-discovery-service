@@ -15,7 +15,7 @@ import org.json4s.JsonDSL._
 
 import scala.collection.immutable
 import scala.language.postfixOps
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
@@ -57,14 +57,16 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
+  var counter = 0
+
   override def process: Process = Process { crs =>
 
-    val allRelations: immutable.Seq[Relation] = crs.flatMap {
+    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
       cr =>
         logger.debug("Received value: " + cr.value())
         storeCounter.counter.labels("ReceivedMessage").inc()
 
-        Try(parseRelations(cr.value()))
+        val relations = Try(parseRelations(cr.value()))
           .recover {
             case exception: ParsingException =>
               errorCounter.counter.labels("ParsingException").inc()
@@ -74,49 +76,19 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
           }
           .filter(_.nonEmpty)
           .get
+        counter += relations.size
+        if (checkIfAllVertexAreTheSame(relations)) {
+          val vertexCached = Store.vertexToCache(relations.head.vFrom)
+          relations map { r => (r, Store.addRelationOneCached(_, vertexCached)) }
+        } else {
+          relations map { r => (r, Store.addRelation(_)) }
+        }
     }
+    logger.debug(s"Should process $counter relations")
+
     store(allRelations) foreach recoverStoreRelationIfNeeded
 
-    //    crs.foreach { cr =>
-    //
-    //      logger.debug("Received value: " + cr.value())
-    //      storeCounter.counter.labels("ReceivedMessage").inc()
-    //
-    //      Try(parseRelations(cr.value()))
-    //        .recover {
-    //          case exception: ParsingException =>
-    //            errorCounter.counter.labels("ParsingException").inc()
-    //            send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-    //            logger.error(ErrorsHandler.generateException(exception, cr.value()))
-    //            Nil
-    //        }
-    //        .filter(_.nonEmpty)
-    //        .map { relations =>
-    //          if (checkIfAllVertexAreTheSame(relations)) {
-    //            logger.debug("Storing with cache")
-    //            storeCache(relations) foreach recoverStoreRelationIfNeeded
-    //          } else {
-    //            logger.debug("Storing without cache")
-    //            store(relations) foreach recoverStoreRelationIfNeeded
-    //          }
-    //        }
-    //
-    //    }
-
-  }
-
-  def recoverStoreRelationIfNeeded(relationAndResult: (Relation, Try[Unit])): Try[Unit] = {
-    relationAndResult._2 recover {
-      case e: StoreException =>
-        errorCounter.counter.labels("StoreException").inc()
-        logger.error(ErrorsHandler.generateException(e, relationAndResult._1.toString))
-        send(producerErrorTopic, ErrorsHandler.generateException(e, relationAndResult._1.toString))
-      case e: Exception =>
-        errorCounter.counter.labels("Exception").inc()
-        logger.error(ErrorsHandler.generateException(e, relationAndResult._1.toString))
-        send(producerErrorTopic, ErrorsHandler.generateException(e, relationAndResult._1.toString))
-    }
-
+    counter = 0
   }
 
   def checkIfAllVertexAreTheSame(relations: Seq[Relation]): Boolean = {
@@ -145,43 +117,43 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def store(relations: Seq[Relation]): List[(Relation, Try[Unit])] = {
+  def store(relations: Seq[(Relation, Relation => Try[Unit])]): List[(Relation, Try[Unit])] = {
 
     val res = Timer.time({
-      Store.addVerticesPresentMultipleTimes(relations.toList)
-      val executor = new Executor[Relation, Try[Unit]](relations, Store.addRelation, 16)
+      val pureR: Seq[Relation] = relations.map { _._1 }
+      Store.addVerticesPresentMultipleTimes(pureR.toList)
+      val executor = new Executor[Relation, Try[Unit]](objects = relations, processSize = 16, customResultFunction = Some(DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount))
       executor.startProcessing()
       executor.latch.await()
       executor.getResultsNoTry
     })
-    res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)))
+    res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r._1.toJson }.toList)))
 
-    storeCounter.counter.labels("MessageStoredSuccessfully").inc()
-    res.result.get
+    res.result match {
+      case Success(success) => success
+      case Failure(exception) =>
+        logger.error("Error storing relations, out of executor", exception)
+        throw StoreException("Error storing relations, out of executor", exception)
+    }
 
   }
 
-  def storeCache(data: Seq[Relation]): List[(Relation, Try[Unit])] = {
+  def recoverStoreRelationIfNeeded(relationAndResult: (Relation, Try[Unit])): Try[Unit] = {
+    relationAndResult._2 recover {
+      case e: StoreException =>
+        errorCounter.counter.labels("StoreException").inc()
+        logger.error(ErrorsHandler.generateException(e, relationAndResult._1.toString))
+        send(producerErrorTopic, ErrorsHandler.generateException(e, relationAndResult._1.toString))
+      case e: Exception =>
+        errorCounter.counter.labels("Exception").inc()
+        logger.error(ErrorsHandler.generateException(e, relationAndResult._1.toString))
+        send(producerErrorTopic, ErrorsHandler.generateException(e, relationAndResult._1.toString))
+    }
 
-    logger.info(s"number of relations: ${data.size}")
+  }
 
-    val res = Timer.time({
-      val vertexCached = Store.vertexToCache(data.head.vFrom)
-      Store.addVerticesPresentMultipleTimes(data.toList)
-
-      val executor = new Executor[Relation, Try[Unit]](data, Store.addRelationOneCached(_, vertexCached), 16)
-      executor.startProcessing()
-
-      executor.latch.await()
-
-      executor.getResultsNoTry
-
-    })
-    res.logTimeTaken(s"processed CACHED message MSG of size ${data.size} : ${data.map(d => d.toString).mkString(", ")} ")
-
-    storeCounter.counter.labels("MessageStoredSuccessfully").inc(data.length)
-    res.result.get
-
+  def increasePrometheusRelationCount(): Unit = {
+    storeCounter.counter.labels("RelationStoredSuccessfully").inc()
   }
 
 }
