@@ -62,10 +62,6 @@ object Store extends LazyLogging {
 
   def addRelationOneCached(relation: Relation, vCached: VertexDatabase)(implicit gc: GremlinConnector): Try[Unit] = {
 
-    val requestTimer: Summary.Timer = relationTimeSummary.summary
-      .labels("relation_process_time")
-      .startTimer
-
     val res = Timer.time({
       val vertexNotCached = relation.vTo
       val edge = relation.edge
@@ -73,7 +69,7 @@ object Store extends LazyLogging {
       AddRelation.createRelationOneCached(vCached)(vertexNotCached)(edge)
     })
 
-    Try(relationTimeSummary.summary.observe(requestTimer.observeDuration()))
+    Try(relationTimeSummary.summary.observe(res.elapsed))
 
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
     res.result.get
