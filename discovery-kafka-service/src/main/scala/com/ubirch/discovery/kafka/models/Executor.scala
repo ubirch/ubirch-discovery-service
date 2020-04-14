@@ -14,20 +14,20 @@ import scala.util.Try
   * at the same time.
   * This is helpful when working against a resource that has a limited amount of processing power.
   * For example, when working against a gremlin-server, the processSize should be equal to its amount of workers
-  * @param objects The objects to process
-  * @param f The function that will transform the items in objects to a T item
-  * @param processSize How many time f() will be executed at the same time
+  *
+  * @param objects The objects to process, accompanied with the function f() that will process them
+  * @param processSize How many time f() will be executed at the same time in parallel
   * @param ec The execution context
   * @tparam T Original type of the item in object
   * @tparam U What type of objects f() will transform the objects
   */
-class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int)(implicit ec: ExecutionContext) extends LazyLogging {
+class Executor[T, U](objects: Seq[(T, T => U)], val processSize: Int, customResultFunction: Option[() => Unit] = None)(implicit ec: ExecutionContext) extends LazyLogging {
 
   /**
     * The original list of objects on which the f() function will be applied.
     * For ease of coding, they've been transformed into a HashMap
     */
-  private val toBeProcessedList: mutable.HashMap[Int, T] = scala.collection.mutable.HashMap.empty[Int, T]
+  private val toBeProcessedList: mutable.HashMap[Int, (T, T => U)] = scala.collection.mutable.HashMap.empty[Int, (T, T => U)]
 
   /**
     * The executionList is a mutable HashMap whose size can vary between 0 and processSize.
@@ -80,16 +80,35 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int)(implicit 
     }
   }
 
-  private def addToExecutionList(thingToAdd: (Int, T)) = {
+  /**
+    * Add a new item to the execution list.
+    * This item will be a Future of f(item).
+    * Once the computation of f(item) is over, it'll try to add a new item to the execution list
+    * @param thingToAdd
+    * @return
+    */
+  private def addToExecutionList(thingToAdd: (Int, (T, T => U))) = {
 
-    val ourFuture: Future[U] = Future(f(thingToAdd._2)) andThen {
-      case resOfFunction =>
+    val ourFuture: Future[U] = Future(thingToAdd._2._2(thingToAdd._2._1)) andThen {
+      case resOfFunction: Try[U] =>
+        callCustomCallBackFunctionIfExist()
         removeFromExecutionList(thingToAdd._1)
-        addToResults(thingToAdd._2, resOfFunction)
+        addToResults(thingToAdd._2._1, resOfFunction)
         addNewItemToExecutionList()
         checkIfOver()
     }
     executionList ++= Map(thingToAdd._1 -> ourFuture)
+  }
+
+  /*
+  Execute the custom result function passed as argument (if any)
+  Can be used to increase prometheus counter, for example
+   */
+  private def callCustomCallBackFunctionIfExist(): Unit = {
+    customResultFunction match {
+      case Some(function) => function()
+      case None =>
+    }
   }
 
   private def checkIfOver(): Unit = {

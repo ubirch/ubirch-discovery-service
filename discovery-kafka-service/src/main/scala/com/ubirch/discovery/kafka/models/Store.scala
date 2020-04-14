@@ -135,6 +135,7 @@ object Store extends LazyLogging {
     */
   def addVerticesPresentMultipleTimes(relations: List[Relation])(implicit gc: GremlinConnector): Unit = {
     val verticesPresentMultipleTimes = getVerticesPresentMultipleTime(relations)
+    logger.debug(s"Found ${verticesPresentMultipleTimes.size} vertices present multiple times in the relation")
     verticesPresentMultipleTimes.foreach { v => Store.addVertex(v) }
   }
 
