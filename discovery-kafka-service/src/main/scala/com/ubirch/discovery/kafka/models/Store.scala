@@ -72,15 +72,12 @@ object Store extends LazyLogging {
     val res = Timer.time({
       val vertexNotCached = relation.vTo
       val edge = relation.edge
-      val isAllowed = checkIfLabelIsAllowed(vertexNotCached.label) // && checkIfPropertiesAreAllowed(vertexNotCached.properties)
-      if (!isAllowed) {
-        logger.error(s"relation ${relation.toString} is not allowed")
-        throw ParsingException(s"relation ${relation.toString} is not allowed")
-      }
+      stopIfRelationNotAllowed(relation)
       AddRelation.createRelationOneCached(vCached)(vertexNotCached)(edge)
     })
 
-    relationTimeSummary.summary.observe(requestTimer.observeDuration())
+    Try(relationTimeSummary.summary.observe(requestTimer.observeDuration()))
+
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
     res.result.get
 
