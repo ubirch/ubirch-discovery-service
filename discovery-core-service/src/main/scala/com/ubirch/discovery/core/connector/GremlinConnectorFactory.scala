@@ -36,8 +36,8 @@ object GremlinConnectorFactory {
     // cf https://stackoverflow.com/questions/45673861/how-can-i-remotely-connect-to-a-janusgraph-server first answer, second comment ¯\_ツ_/¯
     conf.addProperty("serializer.config.ioRegistries", config.getAnyRef("core.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
     conf.addProperty("serializer.config.ioRegistries", config.getStringList("core.connector.serializer.config.ioRegistries"))
-    //conf.addProperty("nioPoolSize", "3")
-    //conf.addProperty("workerPoolSize", "6")
+    //conf.addProperty("nioPoolSize", 3)
+    //conf.addProperty("workerPoolSize", 6)
     conf
   }
 }

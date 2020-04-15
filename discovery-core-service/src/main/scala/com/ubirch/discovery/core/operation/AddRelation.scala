@@ -127,6 +127,14 @@ object AddRelation extends LazyLogging {
     }
   }
 
+
+  def twoExistCache(relation: RelationServer)(implicit propSet: Set[Property], gc: GremlinConnector): Unit = {
+    //logger.debug(Util.relationStrategyJson(relation, "two exist"))
+    if (!areVertexLinked(relation.vFromDb, relation.vToDb)) {
+      relation.createEdge
+    }
+  }
+
   /**
     * Determine if two vertices are linked (independently of the direction of the edge).
     *

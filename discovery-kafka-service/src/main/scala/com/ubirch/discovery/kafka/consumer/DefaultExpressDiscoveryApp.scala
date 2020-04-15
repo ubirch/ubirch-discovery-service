@@ -1,21 +1,23 @@
 package com.ubirch.discovery.kafka.consumer
 
-import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import com.ubirch.discovery.core.structure.Relation
+import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.operation.AddRelation
+import com.ubirch.discovery.core.structure.{Relation, RelationServer, VertexCore, VertexDatabase}
 import com.ubirch.discovery.core.util.Timer
-import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
-import com.ubirch.discovery.kafka.models.{ Executor, RelationKafka, Store }
+import com.ubirch.discovery.kafka.metrics.{Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter}
+import com.ubirch.discovery.kafka.models.{Executor, RelationKafka, Store}
 import com.ubirch.discovery.kafka.util.ErrorsHandler
-import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
+import com.ubirch.discovery.kafka.util.Exceptions.{ParsingException, StoreException}
 import com.ubirch.kafka.express.ExpressKafkaApp
 import org.apache.kafka.common.serialization
-import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
+import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer, StringSerializer}
 import org.json4s._
 import org.json4s.JsonDSL._
 
 import scala.collection.immutable
+import scala.collection.immutable.HashMap
 import scala.language.postfixOps
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
@@ -57,11 +59,30 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
-  var counter = 0
 
   override def process: Process = Process { crs =>
 
-    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
+    val allRelations: immutable.Seq[Relation] = crs.flatMap {
+      cr =>
+        logger.debug("Received value: " + cr.value())
+        storeCounter.counter.labels("ReceivedMessage").inc()
+
+        Try(parseRelations(cr.value()))
+          .recover {
+            case exception: ParsingException =>
+              errorCounter.counter.labels("ParsingException").inc()
+              send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+              logger.error(ErrorsHandler.generateException(exception, cr.value()))
+              Nil
+          }
+          .filter(_.nonEmpty)
+          .get
+    }
+
+    storeV2(allRelations)// foreach recoverStoreRelationIfNeeded
+
+
+/*    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
       cr =>
         logger.debug("Received value: " + cr.value())
         storeCounter.counter.labels("ReceivedMessage").inc()
@@ -88,7 +109,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     store(allRelations) foreach recoverStoreRelationIfNeeded
 
-    counter = 0
+    counter = 0*/
   }
 
   def checkIfAllVertexAreTheSame(relations: Seq[Relation]): Boolean = {
@@ -117,9 +138,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   }
 
   def store(relations: Seq[(Relation, Relation => Try[Unit])]): List[(Relation, Try[Unit])] = {
-
     val res = Timer.time({
       val pureR: Seq[Relation] = relations.map { _._1 }
+      preprocess(pureR)
       Store.addVerticesPresentMultipleTimes(pureR.toList)
       val executor = new Executor[Relation, Try[Unit]](objects = relations, processSize = 16, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
       executor.startProcessing()
@@ -135,6 +156,54 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
         throw StoreException("Error storing relations, out of executor", exception)
     }
 
+  }
+
+  def storeV2(relations: Seq[Relation]) = {
+
+
+    val res = Timer.time({
+
+
+      val hashMapVertices = preprocess(relations)
+
+
+      def getVertexFromHMap(vertexCore: VertexCore) = {
+        hashMapVertices.get(vertexCore) match {
+          case Some(vDb) => vDb
+          case None => Store.addVertex(vertexCore)
+        }
+      }
+
+      val relationsAsRelationServer: Seq[(RelationServer, RelationServer => Try[Unit])] = relations.map(r => (RelationServer(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge), Store.addRelationTwoCached(_)))
+      logger.info("after preprocess: relation size = " + relationsAsRelationServer.size)
+
+
+      val executor = new Executor[RelationServer, Try[Unit]](objects = relationsAsRelationServer, processSize = 16, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+      executor.startProcessing()
+      executor.latch.await()
+      executor.getResultsNoTry
+
+    })
+    res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)), 10000, warnOnly = false)
+
+    res.result match {
+      case Success(success) => success
+      case Failure(exception) =>
+        logger.error("Error storing relations, out of executor", exception)
+        throw StoreException("Error storing relations, out of executor", exception)
+    }
+  }
+
+  def preprocess(relations: Seq[Relation]) = {
+    // 1: flatten relations to get the vertices
+    val vertices = Store.getAllVerticeFromRelations(relations)
+
+    // 2: create the hashMap [vertexCore, vertexDb]
+    val executor = new Executor[VertexCore, VertexDatabase](objects = vertices.map { v => (v, Store.addVertex(_)) }, processSize = 16)
+    executor.startProcessing()
+    executor.latch.await()
+    val executorRes: List[(VertexCore, VertexDatabase)] = executor.getResultsNoTry
+    HashMap(executorRes.map(vCoreAndVDb => vCoreAndVDb._1 -> vCoreAndVDb._2): _*)
   }
 
   def recoverStoreRelationIfNeeded(relationAndResult: (Relation, Try[Unit])): Try[Unit] = {

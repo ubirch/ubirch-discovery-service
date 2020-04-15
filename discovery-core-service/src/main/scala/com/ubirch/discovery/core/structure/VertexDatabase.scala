@@ -80,9 +80,11 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       vertex = initialiseVertex
     } catch {
       case e: CompletionException =>
-        logger.error(s"Error on adding properties to vertex ${coreVertex.toString}: " + e.getMessage)
+        logger.error(s"Error on adding vertex and its properties ${coreVertex.toString}: ", e)
         throw new ImportToGremlinException(s"Error on adding properties to vertex ${coreVertex.toString}: " + e.getMessage) //TODO: do something
-      case e: Exception => throw e
+      case e: Exception =>
+        logger.error(s"Error on adding vertex and its properties ${coreVertex.toString}: ", e)
+        throw e
     }
   }
 
