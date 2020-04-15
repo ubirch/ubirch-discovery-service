@@ -3,7 +3,7 @@ package com.ubirch.discovery.kafka.models
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddRelation
-import com.ubirch.discovery.core.structure.{Relation, VertexCore, VertexDatabase}
+import com.ubirch.discovery.core.structure.{Relation, RelationServer, VertexCore, VertexDatabase}
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.PrometheusRelationMetricsLoggerSummary
@@ -11,6 +11,7 @@ import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
 import gremlin.scala.{Key, KeyValue}
 
 import scala.annotation.tailrec
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 import scala.util.Try
@@ -61,6 +62,19 @@ object Store extends LazyLogging {
 
   }
 
+  def addRelationTwoCached(relation: RelationServer)(implicit gc: GremlinConnector): Try[Unit] = {
+
+    val res: Timer.Timed[Unit] = Timer.time({
+      AddRelation.twoExistCache(relation)
+    })
+
+    Try(relationTimeSummary.summary.observe(res.elapsed))
+
+    res.logTimeTakenJson("inscribe relation" -> List(relation.toJson), 300)
+    res.result
+
+  }
+
   def addRelationOneCached(relation: Relation, vCached: VertexDatabase)(implicit gc: GremlinConnector): Try[Unit] = {
 
     val res = Timer.time({
@@ -88,12 +102,14 @@ object Store extends LazyLogging {
     vertex
   }
 
-  def addVertex(vertex: VertexCore)(implicit gc: GremlinConnector): Unit = {
+  def addVertex(vertex: VertexCore)(implicit gc: GremlinConnector) = {
     val vDb = vertex.toVertexStructDb(gc)
     if (!vDb.existInJanusGraph) {
       vDb.addVertexWithProperties()
+      vDb
     } else {
       vDb.update()
+      vDb
     }
 
   }
@@ -131,11 +147,11 @@ object Store extends LazyLogging {
     val verticesPresentMultipleTimes: Set[VertexCore] = getVerticesPresentMultipleTime(relations)
     Timer.time({
       if (verticesPresentMultipleTimes.size > 2) {
-        val executor = new Executor[VertexCore, Unit](objects = verticesPresentMultipleTimes.map { v => (v, Store.addVertex(_)) }.toSeq, processSize = 16)
+        val executor = new Executor[VertexCore, VertexDatabase](objects = verticesPresentMultipleTimes.map { v => (v, Store.addVertex(_)) }.toSeq, processSize = 16)
         executor.startProcessing()
         executor.latch.await()
       } else verticesPresentMultipleTimes.foreach { v => Store.addVertex(v) }
-    }).logTimeTaken(s"add_${verticesPresentMultipleTimes.size}_vertice_present_multiple_times", verticesPresentMultipleTimes.size * 100, warnOnly = false)
+    }).logTimeTaken(s"add_${verticesPresentMultipleTimes.size}_vertices_present_multiple_times", verticesPresentMultipleTimes.size * 100, warnOnly = false)
   }
 
   def getVerticesPresentMultipleTime(relations: List[Relation]): Set[VertexCore] = {
@@ -152,6 +168,10 @@ object Store extends LazyLogging {
 
     val resTotal = resCheck1 ++ resCheck2
     resTotal
+  }
+
+  def getAllVerticeFromRelations(relations: Seq[Relation]) = {
+    relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
   }
 
 }
