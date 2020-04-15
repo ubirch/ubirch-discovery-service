@@ -3,6 +3,7 @@ package com.ubirch.discovery.kafka.models
 import java.util.concurrent.{ CountDownLatch, Executors, ThreadFactory }
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.ubirch.discovery.core.ExecutionContextHelper
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.structure.Relation
 import com.ubirch.discovery.kafka.TestBase
@@ -15,7 +16,7 @@ class ExecutorSpec extends TestBase {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
-  implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10, CustomThreadFactory))
+  implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   /**
     * Simple dummy operations to "warm-up" the connection between the spec and JanusGraph

@@ -1,8 +1,7 @@
 package com.ubirch.discovery.kafka.consumer
 
-import java.util.concurrent.Executors
-
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.discovery.core.ExecutionContextHelper
 import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
@@ -47,7 +46,7 @@ object ReproduceEnvProd extends TestBase with LazyLogging {
       val topic = "test"
       logger.info("starting consumer")
       val consumer = new DefaultExpressDiscoveryApp {
-        override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+        override implicit val ec: ExecutionContext = ExecutionContextHelper.ec
         override def prefix: String = "Ubirch"
         override def maxTimeAggregationSeconds: Long = 180
       }

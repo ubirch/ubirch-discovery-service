@@ -6,6 +6,6 @@ import scala.concurrent.ExecutionContext
 
 object ExecutionContextHelper {
 
-  val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+  val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(5))
 
 }

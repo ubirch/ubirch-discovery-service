@@ -1,8 +1,9 @@
 package com.ubirch.discovery.kafka.consumer
 
 import java.io.File
-import java.util.concurrent.{ Executors, TimeUnit }
+import java.util.concurrent.TimeUnit
 
+import com.ubirch.discovery.core.ExecutionContextHelper
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.kafka.util.PortGiver
@@ -31,7 +32,7 @@ class DefaultStringConsumerSpec extends TestBase {
       withRunningKafka {
 
         val consumer = new DefaultExpressDiscoveryApp {
-          override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+          override implicit def ec: ExecutionContext = ExecutionContextHelper.ec
           override def prefix: String = "Ubirch"
           override def maxTimeAggregationSeconds: Long = 180
         }
@@ -70,7 +71,7 @@ class DefaultStringConsumerSpec extends TestBase {
       withRunningKafka {
 
         val consumer = new DefaultExpressDiscoveryApp {
-          override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+          override implicit def ec: ExecutionContext = ExecutionContextHelper.ec
           override def prefix: String = "Ubirch"
           override def maxTimeAggregationSeconds: Long = 180
         }
@@ -106,7 +107,7 @@ class DefaultStringConsumerSpec extends TestBase {
       withRunningKafka {
 
         val consumer = new DefaultExpressDiscoveryApp {
-          override implicit def ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+          override implicit def ec: ExecutionContext = ExecutionContextHelper.ec
           override def prefix: String = "Ubirch"
           override def maxTimeAggregationSeconds: Long = 180
         }

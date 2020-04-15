@@ -14,7 +14,7 @@ object Timer extends LazyLogging {
     def logTimeTaken(arg: String = description, criticalTimeMs: Int = 1000, warnOnly: Boolean = true): Unit = {
       if (elapsed > criticalTimeMs) {
         logger.warn(compact(render(logMessage(arg, elapsed, "warn"))))
-      } else if(!warnOnly) {
+      } else if (!warnOnly) {
         logger.debug(compact(render(logMessage(arg, elapsed))))
       }
     }
@@ -22,7 +22,7 @@ object Timer extends LazyLogging {
     def logTimeTakenJson(arg: (String, List[JObject]), criticalTimeMs: Int = 1000, warnOnly: Boolean = true): Unit = {
       if (elapsed > criticalTimeMs) {
         logger.warn(compact(render(logMessageJson(arg, elapsed, "warn"))))
-      } else if(!warnOnly) {
+      } else if (!warnOnly) {
         logger.debug(compact(render(logMessageJson(arg, elapsed))))
       }
     }
