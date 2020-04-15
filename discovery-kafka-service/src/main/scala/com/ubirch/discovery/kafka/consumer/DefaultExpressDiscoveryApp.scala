@@ -122,7 +122,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val res = Timer.time({
       val pureR: Seq[Relation] = relations.map { _._1 }
       Store.addVerticesPresentMultipleTimes(pureR.toList)
-      val executor = new Executor[Relation, Try[Unit]](objects = relations, processSize = 16, customResultFunction = Some(DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount))
+      val executor = new Executor[Relation, Try[Unit]](objects = relations, processSize = 16, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
       executor.startProcessing()
       executor.latch.await()
       executor.getResultsNoTry

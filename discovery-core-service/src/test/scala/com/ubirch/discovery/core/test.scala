@@ -6,12 +6,13 @@ import com.ubirch.discovery.core.structure.VertexStruct
 import gremlin.scala.{ Key, Vertex }
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 object test extends LazyLogging {
 
   val queryLabel = "FOUNDATION_TREE"
+
+  implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   def main(args: Array[String]): Unit = {
     val res = find("hash", "27cuYVCzDh8WdFa58ruyHnGA6qCoU4Ap", queryLabel)

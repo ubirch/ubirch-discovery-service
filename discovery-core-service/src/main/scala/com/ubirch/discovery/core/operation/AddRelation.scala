@@ -9,7 +9,7 @@ import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, Key
 import com.ubirch.discovery.core.util.Util.{ getEdge, getEdgeProperties, recompose }
 
 import scala.language.postfixOps
-import scala.util.{ Success, Try }
+import scala.util.{ Failure, Success, Try }
 
 /**
   * Allows the storage of two nodes (vertices) in the janusgraph server. Link them together
@@ -140,6 +140,9 @@ object AddRelation extends LazyLogging {
       case Success(value) =>
         timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}")
         value.nonEmpty
+      case Failure(exception) =>
+        logger.error("Couldn't check if vertex is linked, defaulting to false := ", exception)
+        false
     }
   }
 

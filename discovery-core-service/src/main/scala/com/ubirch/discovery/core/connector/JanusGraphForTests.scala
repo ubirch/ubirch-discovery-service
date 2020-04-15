@@ -12,6 +12,7 @@ import org.janusgraph.core.Multiplicity._
 import org.janusgraph.core.schema.SchemaAction
 import org.janusgraph.graphdb.database.management.ManagementSystem
 
+import scala.language.postfixOps
 import scala.util.Try
 
 protected class JanusGraphForTests extends GremlinConnector {
