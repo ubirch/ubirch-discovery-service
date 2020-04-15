@@ -12,6 +12,7 @@ import gremlin.scala.{ TraversalSource, Vertex }
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.json4s.JsonDSL._
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 
 class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(implicit propSet: Set[Property]) extends LazyLogging {
@@ -22,6 +23,8 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   val b: Bindings = gc.b
 
   var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
+
+    @tailrec
     def searchForVertexByProperties(properties: List[ElementProperty]): gremlin.scala.Vertex = {
       properties match {
         case Nil => null
@@ -46,6 +49,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
 
   def isPropertyIterable(propertyName: String): Boolean = {
 
+    @tailrec
     def checkOnProps(set: Set[Property]): Boolean = {
       set.toList match {
         case Nil => false
