@@ -129,7 +129,6 @@ object Store extends LazyLogging {
     */
   def addVerticesPresentMultipleTimes(relations: List[Relation])(implicit gc: GremlinConnector, ec: ExecutionContext): Unit = {
     val verticesPresentMultipleTimes: Set[VertexCore] = getVerticesPresentMultipleTime(relations)
-    logger.debug(s"Found ${verticesPresentMultipleTimes.size} vertices present multiple times in the relations")
     Timer.time({
       if (verticesPresentMultipleTimes.size > 2) {
         val executor = new Executor[VertexCore, Unit](objects = verticesPresentMultipleTimes.map { v => (v, Store.addVertex(_)) }.toSeq, processSize = 16)
@@ -152,7 +151,6 @@ object Store extends LazyLogging {
     val resCheck2 = vertices.groupBy(identity).collect { case (v, List(_, _, _*)) => v }.toSet
 
     val resTotal = resCheck1 ++ resCheck2
-    logger.debug(s"vertices duplicates: ${resTotal.map { v => v.toString }}")
     resTotal
   }
 

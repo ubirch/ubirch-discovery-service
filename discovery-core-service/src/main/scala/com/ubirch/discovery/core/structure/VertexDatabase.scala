@@ -9,11 +9,13 @@ import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
 import gremlin.scala.{ TraversalSource, Vertex }
+import org.apache.tinkerpop.gremlin.driver.exception.ResponseException
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.json4s.JsonDSL._
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
+import scala.util.{ Failure, Success, Try }
 
 class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(implicit propSet: Set[Property]) extends LazyLogging {
 
@@ -24,18 +26,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
 
   var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
 
-    @tailrec
-    def searchForVertexByProperties(properties: List[ElementProperty]): gremlin.scala.Vertex = {
-      properties match {
-        case Nil => null
-        case property :: restOfProperties =>
-          if (!isPropertyIterable(property.keyName)) searchForVertexByProperties(restOfProperties) else
-            g.V().has(property.toKeyValue).headOption() match {
-              case Some(v) => v
-              case None => searchForVertexByProperties(restOfProperties)
-            }
-      }
-    }
+
     val timedPossibleVertex = Timer.time({
       val possibleVertex = searchForVertexByProperties(coreVertex.properties)
       if (possibleVertex != null) {
@@ -45,6 +36,19 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     })
     timedPossibleVertex.logTimeTakenJson("check_vertex_in_db" -> List(("result" -> Option(timedPossibleVertex.result.getOrElse("false")).getOrElse("false").toString) ~ ("vertex" -> coreVertex.toJson)), 100)
     timedPossibleVertex.result.getOrElse(null)
+  }
+
+  @tailrec
+  private def searchForVertexByProperties(properties: List[ElementProperty]): gremlin.scala.Vertex = {
+    properties match {
+      case Nil => null
+      case property :: restOfProperties =>
+        if (!isPropertyIterable(property.keyName)) searchForVertexByProperties(restOfProperties) else
+          g.V().has(property.toKeyValue).headOption() match {
+            case Some(v) => v
+            case None => searchForVertexByProperties(restOfProperties)
+          }
+    }
   }
 
   def isPropertyIterable(propertyName: String): Boolean = {
@@ -83,11 +87,33 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   }
 
   private def initialiseVertex: Vertex = {
-    var constructor = gc.g.addV(coreVertex.label)
-    for (prop <- coreVertex.properties) {
-      constructor = constructor.property(prop.toKeyValue)
-    }
-    constructor.l().head
+    Try({
+      var constructor = gc.g.addV(coreVertex.label)
+      for (prop <- coreVertex.properties) {
+        constructor = constructor.property(prop.toKeyValue)
+      }
+      constructor.l().head
+    }) match {
+        case Success(value) => value
+        case Failure(exception) =>
+          exception match {
+            case e: ResponseException =>
+              logger.warn("uniqueness constraint, recovering", e)
+              val v: Option[Vertex] = Option(searchForVertexByProperties(coreVertex.properties))
+              v match {
+                case Some(actualV) => actualV
+                case None =>
+                  var constructor = gc.g.addV(coreVertex.label)
+                  for (prop <- coreVertex.properties) {
+                    constructor = constructor.property(prop.toKeyValue)
+                  }
+                  constructor.l().head
+              }
+            case e: Exception =>
+              logger.error("error initialising vertex", e)
+              throw e
+          }
+      }
   }
 
   /**
