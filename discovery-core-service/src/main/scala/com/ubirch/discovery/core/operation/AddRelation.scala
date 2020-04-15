@@ -19,13 +19,13 @@ object AddRelation extends LazyLogging {
   private val label = "aLabel"
 
   /* main part of the program */
-  def createRelation(relation: Relation)(implicit propSet: Set[Property], gc: GremlinConnector) = {
+  def createRelation(relation: Relation)(implicit propSet: Set[Property], gc: GremlinConnector): Try[Unit] = {
     val r = Timer.time({
       stopIfVerticesAreEquals(relation.vFrom, relation.vTo)
       val relationServer = relation.toRelationServer
       executeRelationCreationStrategy(relationServer)
     }, "create relation")
-    r.logTimeTaken()
+    r.logTimeTaken(criticalTimeMs = 300)
     r.result
   }
 
@@ -96,7 +96,7 @@ object AddRelation extends LazyLogging {
         twoExist(relation)
       }
     }, "add two vertex with one CACHED")
-    r.logTimeTaken()
+    r.logTimeTaken(criticalTimeMs = 300)
     r.result
   }
 
@@ -135,10 +135,10 @@ object AddRelation extends LazyLogging {
     * @return boolean. True = linked, False = not linked.
     */
   def areVertexLinked(vFrom: VertexDatabase, vTo: VertexDatabase)(implicit gc: GremlinConnector): Boolean = {
-    val timedResult = Timer.time(gc.g.V(vFrom.vertex).bothE().bothV().is(vTo.vertex).l())
+    val timedResult = Timer.time(gc.g.V(vFrom.vertex).both().is(vTo.vertex).l())
     timedResult.result match {
       case Success(value) =>
-        timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}")
+        timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}", criticalTimeMs = 100)
         value.nonEmpty
       case Failure(exception) =>
         logger.error("Couldn't check if vertex is linked, defaulting to false := ", exception)
