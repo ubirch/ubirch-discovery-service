@@ -5,6 +5,7 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.VertexStruct
 import gremlin.scala._
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 
 /**
@@ -39,12 +40,14 @@ case class GetVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
 
     def getAllNeighborsDistance(idDb: Int, depth: Int): Map[Int, Int] = {
 
+      @tailrec
       def lookForNeighbors(counter: Int, depthMax: Int, accu: Map[Int, Int]): Map[Int, Int] = {
         if (counter > depthMax) accu
         else {
           // get all neighbors
           val allNeighbors = accu map { x => neighborsOfAVertex(x._1, accu, counter) }
 
+          @tailrec
           def concatenante(accu: Map[Int, Int], toConc: Iterable[Map[Int, Int]]): Map[Int, Int] = {
             toConc match {
               case Nil => accu
@@ -60,6 +63,7 @@ case class GetVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
         val vertices: List[Vertex] = gc.g.V(idDb).both.toList()
         val listIdVertices: List[Int] = vertices map { x => x.id().toString.toInt }
 
+        @tailrec
         def addIfNotIn(mapExistingVertices: Map[Int, Int], listIdVertices: List[Int]): Map[Int, Int] = {
           listIdVertices match {
             case Nil => mapExistingVertices
