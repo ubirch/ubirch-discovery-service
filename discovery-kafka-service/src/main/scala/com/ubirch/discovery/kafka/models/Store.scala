@@ -10,6 +10,7 @@ import com.ubirch.discovery.kafka.metrics.PrometheusRelationMetricsLoggerSummary
 import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
 import gremlin.scala.{Key, KeyValue}
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 import scala.util.Try
@@ -102,6 +103,8 @@ object Store extends LazyLogging {
   }
 
   def checkIfPropertiesAreAllowed(props: List[KeyValue[String]]): Boolean = {
+
+    @tailrec
     def iterate(it: List[Property], prop: String): Boolean = {
       it match {
         case Nil => false
@@ -109,6 +112,7 @@ object Store extends LazyLogging {
       }
     }
 
+    @tailrec
     def checkAllProps(it: List[KeyValue[String]]): Boolean = {
       it match {
         case Nil => true
