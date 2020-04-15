@@ -3,14 +3,14 @@ package com.ubirch.discovery.kafka.models
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.operation.AddRelation
-import com.ubirch.discovery.core.structure.{ Relation, VertexCore, VertexDatabase }
+import com.ubirch.discovery.core.structure.{Relation, VertexCore, VertexDatabase}
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.PrometheusRelationMetricsLoggerSummary
 import com.ubirch.discovery.kafka.util.Exceptions.ParsingException
-import gremlin.scala.{ Key, KeyValue }
-import io.prometheus.client.Summary
+import gremlin.scala.{Key, KeyValue}
 
+import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 import scala.util.Try
 
@@ -123,10 +123,16 @@ object Store extends LazyLogging {
     * This helper is here to speedup subsequent relations processing and avoid asynchronous collision error in JanusGraph
     * (ie: two executor tries to update the same vertex)
     */
-  def addVerticesPresentMultipleTimes(relations: List[Relation])(implicit gc: GremlinConnector): Unit = {
-    val verticesPresentMultipleTimes = getVerticesPresentMultipleTime(relations)
-    logger.debug(s"Found ${verticesPresentMultipleTimes.size} vertices present multiple times in the relation")
-    verticesPresentMultipleTimes.foreach { v => Store.addVertex(v) }
+  def addVerticesPresentMultipleTimes(relations: List[Relation])(implicit gc: GremlinConnector, ec: ExecutionContext): Unit = {
+    val verticesPresentMultipleTimes: Set[VertexCore] = getVerticesPresentMultipleTime(relations)
+    logger.debug(s"Found ${verticesPresentMultipleTimes.size} vertices present multiple times in the relations")
+    Timer.time({
+      if (verticesPresentMultipleTimes.size > 2) {
+        val executor = new Executor[VertexCore, Unit](objects = verticesPresentMultipleTimes.map { v => (v, Store.addVertex(_)) }.toSeq, processSize = 16)
+        executor.startProcessing()
+        executor.latch.await()
+      } else verticesPresentMultipleTimes.foreach { v => Store.addVertex(v) }
+    }).logTimeTaken(s"add_${verticesPresentMultipleTimes.size}_vertice_present_multiple_times", verticesPresentMultipleTimes.size * 100, warnOnly = false)
   }
 
   def getVerticesPresentMultipleTime(relations: List[Relation]): Set[VertexCore] = {

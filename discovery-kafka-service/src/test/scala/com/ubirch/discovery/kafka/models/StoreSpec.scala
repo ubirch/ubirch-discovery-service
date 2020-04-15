@@ -2,12 +2,17 @@ package com.ubirch.discovery.kafka.models
 
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.structure.{ Relation, VertexCore }
+import com.ubirch.discovery.core.ExecutionContextHelper
 import com.ubirch.discovery.kafka.TestBase
 import org.scalatest.Assertion
+
+import scala.concurrent.ExecutionContext
 
 class StoreSpec extends TestBase {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
+
+  implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
