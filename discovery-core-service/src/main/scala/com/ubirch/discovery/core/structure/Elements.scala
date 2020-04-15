@@ -128,8 +128,6 @@ case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: 
         gc.g.V(vFromDb.vertex).as("a").V(vToDb.vertex).addE(edge.label).from(vFromDb.vertex).toSet().head
       } else {
         val edgeOnDb: Edge = gc.g
-          .V(vFromDb.vertex)
-          .as("a")
           .V(vToDb.vertex)
           .addE(edge.label)
           .property(edge.properties.head.toKeyValue)

@@ -45,7 +45,7 @@ object AddRelation extends LazyLogging {
   2/ link them.
    */
   private def noneExist(relation: RelationServer)(implicit gc: GremlinConnector): Unit = {
-    logger.debug(Util.relationStrategyJson(relation, "non exist"))
+    //logger.debug(Util.relationStrategyJson(relation, "non exist"))
     try {
       relation.vFromDb.addVertexWithProperties()
       relation.vToDb.addVertexWithProperties()
@@ -76,10 +76,10 @@ object AddRelation extends LazyLogging {
     }
 
     if (relation.vFromDb.existInJanusGraph) {
-      logger.debug(Util.relationStrategyJson(relation, "one exit: vFrom"))
+      //logger.debug(Util.relationStrategyJson(relation, "one exit: vFrom"))
       addOneVertexAndCreateEdge(relation.vToDb)
     } else {
-      logger.debug(Util.relationStrategyJson(relation, "one exit: vTo"))
+      //logger.debug(Util.relationStrategyJson(relation, "one exit: vTo"))
       addOneVertexAndCreateEdge(relation.vFromDb)
     }
   }
@@ -104,7 +104,7 @@ object AddRelation extends LazyLogging {
     * vFrom is the cached vertex
     */
   private def oneExistCache(relation: RelationServer)(implicit gc: GremlinConnector): Unit = {
-    logger.debug(Util.relationStrategyJson(relation, "one exit cached: vFrom"))
+    //logger.debug(Util.relationStrategyJson(relation, "one exit cached: vFrom"))
     try {
       relation.vToDb.addVertexWithProperties()
       relation.createEdge
@@ -120,7 +120,7 @@ object AddRelation extends LazyLogging {
   1/ link them if they're not already linked.
    */
   private def twoExist(relation: RelationServer)(implicit gc: GremlinConnector): Unit = {
-    logger.debug(Util.relationStrategyJson(relation, "two exist"))
+    //logger.debug(Util.relationStrategyJson(relation, "two exist"))
 
     if (!areVertexLinked(relation.vFromDb, relation.vToDb)) {
       relation.createEdge
