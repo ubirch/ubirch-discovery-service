@@ -99,7 +99,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   def parseRelations(data: String): Seq[Relation] = {
 
     implicit val formats: DefaultFormats = DefaultFormats
-    // val messageType = (jackson.parseJson(data) \ "type").extract[String]
     stopIfEmptyMessage(data)
     try {
       val relationAsInternalStruct = jackson.parseJson(data).extract[Seq[RelationKafka]]
@@ -127,7 +126,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       executor.latch.await()
       executor.getResultsNoTry
     })
-    res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r._1.toJson }.toList)))
+    res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r._1.toJson }.toList)), 10000, warnOnly = false)
 
     res.result match {
       case Success(success) => success

@@ -11,18 +11,18 @@ object Timer extends LazyLogging {
 
   case class Timed[R](result: Try[R], timeTaken: Interval, description: String) {
     lazy val elapsed: Long = timeTaken.time
-    def logTimeTaken(arg: String = description): Unit = {
-      if (elapsed > 1000) {
+    def logTimeTaken(arg: String = description, criticalTimeMs: Int = 1000, warnOnly: Boolean = true): Unit = {
+      if (elapsed > criticalTimeMs) {
         logger.warn(compact(render(logMessage(arg, elapsed, "warn"))))
-      } else {
+      } else if(!warnOnly) {
         logger.debug(compact(render(logMessage(arg, elapsed))))
       }
     }
 
-    def logTimeTakenJson(arg: (String, List[JObject])): Unit = {
-      if (elapsed > 1000) {
+    def logTimeTakenJson(arg: (String, List[JObject]), criticalTimeMs: Int = 1000, warnOnly: Boolean = true): Unit = {
+      if (elapsed > criticalTimeMs) {
         logger.warn(compact(render(logMessageJson(arg, elapsed, "warn"))))
-      } else {
+      } else if(!warnOnly) {
         logger.debug(compact(render(logMessageJson(arg, elapsed))))
       }
     }
