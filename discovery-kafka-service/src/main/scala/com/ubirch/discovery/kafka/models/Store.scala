@@ -47,16 +47,13 @@ object Store extends LazyLogging {
     * @return
     */
   def addRelation(relation: Relation)(implicit gc: GremlinConnector): Try[Unit] = {
-    val requestTimer: Summary.Timer = relationTimeSummary.summary
-      .labels("relation_process_time")
-      .startTimer
 
     val res = Timer.time({
       stopIfRelationNotAllowed(relation)
       AddRelation.createRelation(relation)
     })
 
-    Try(relationTimeSummary.summary.observe(requestTimer.observeDuration()))
+    Try(relationTimeSummary.summary.observe(res.elapsed))
 
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
     res.result.get
@@ -65,22 +62,15 @@ object Store extends LazyLogging {
 
   def addRelationOneCached(relation: Relation, vCached: VertexDatabase)(implicit gc: GremlinConnector): Try[Unit] = {
 
-    val requestTimer: Summary.Timer = relationTimeSummary.summary
-      .labels("relation_process_time")
-      .startTimer
-
     val res = Timer.time({
       val vertexNotCached = relation.vTo
       val edge = relation.edge
-      val isAllowed = checkIfLabelIsAllowed(vertexNotCached.label) // && checkIfPropertiesAreAllowed(vertexNotCached.properties)
-      if (!isAllowed) {
-        logger.error(s"relation ${relation.toString} is not allowed")
-        throw ParsingException(s"relation ${relation.toString} is not allowed")
-      }
+      stopIfRelationNotAllowed(relation)
       AddRelation.createRelationOneCached(vCached)(vertexNotCached)(edge)
     })
 
-    relationTimeSummary.summary.observe(requestTimer.observeDuration())
+    Try(relationTimeSummary.summary.observe(res.elapsed))
+
     res.logTimeTakenJson("inscribe relation" -> List(relation.toJson))
     res.result.get
 
@@ -135,6 +125,7 @@ object Store extends LazyLogging {
     */
   def addVerticesPresentMultipleTimes(relations: List[Relation])(implicit gc: GremlinConnector): Unit = {
     val verticesPresentMultipleTimes = getVerticesPresentMultipleTime(relations)
+    logger.debug(s"Found ${verticesPresentMultipleTimes.size} vertices present multiple times in the relation")
     verticesPresentMultipleTimes.foreach { v => Store.addVertex(v) }
   }
 

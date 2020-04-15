@@ -20,13 +20,13 @@ class ExecutorSpec extends TestBase {
   /**
     * Simple dummy operations to "warm-up" the connection between the spec and JanusGraph
     */
-  def warmUpJg = {
+  def warmUpJg(): Unit = {
     gc.g.V().limit(1)
     executeAllJanus(1)
     executeAllJanus(1)
     executeAllJanus(1)
   }
-  def cleanUpJanus = {
+  def cleanUpJanus(): Unit = {
     while (gc.g.V().count().l().head != 0) {
       gc.g.V().limit(1000).drop().iterate()
     }
@@ -35,7 +35,7 @@ class ExecutorSpec extends TestBase {
   override def beforeAll(): Unit = {
     super.beforeAll()
     //cleanUpJanus
-    warmUpJg
+    warmUpJg()
     Thread.sleep(4000)
   }
 
@@ -160,7 +160,7 @@ class ExecutorSpec extends TestBase {
   }
 
   def execute[T, U](objects: Seq[T], f: T => U): Unit = {
-    val executor = new Executor[T, U](objects, f, 8)
+    val executor = new Executor[T, U](objects.map { o => (o, f) }, 8)
     executor.startProcessing()
     executor.latch.await()
   }
