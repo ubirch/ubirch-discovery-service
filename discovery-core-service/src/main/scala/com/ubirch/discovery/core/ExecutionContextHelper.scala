@@ -2,10 +2,14 @@ package com.ubirch.discovery.core
 
 import java.util.concurrent.Executors
 
+import com.ubirch.kafka.express.ConfigBase
+
 import scala.concurrent.ExecutionContext
 
-object ExecutionContextHelper {
+object ExecutionContextHelper extends ConfigBase {
 
-  final val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(20))
+  final val threads = conf.getInt("core.threads")
+
+  final val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(threads))
 
 }
