@@ -25,7 +25,7 @@ object AddRelation extends LazyLogging {
       val relationServer = relation.toRelationServer
       executeRelationCreationStrategy(relationServer)
     }, "create relation")
-    r.logTimeTaken(criticalTimeMs = 300)
+    //r.logTimeTaken(criticalTimeMs = 300)
     r.result
   }
 
@@ -96,7 +96,7 @@ object AddRelation extends LazyLogging {
         twoExist(relation)
       }
     }, "add two vertex with one CACHED")
-    r.logTimeTaken(criticalTimeMs = 300)
+    //r.logTimeTaken(criticalTimeMs = 300)
     r.result
   }
 
@@ -145,7 +145,7 @@ object AddRelation extends LazyLogging {
     val timedResult = Timer.time(gc.g.V(vFrom.vertex).both().is(vTo.vertex).l())
     timedResult.result match {
       case Success(value) =>
-        timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}", criticalTimeMs = 100)
+        //timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}", criticalTimeMs = 100)
         value.nonEmpty
       case Failure(exception) =>
         logger.error("Couldn't check if vertex is linked, defaulting to false := ", exception)

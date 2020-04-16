@@ -137,7 +137,7 @@ case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: 
           gc.g.E(edgeOnDb).property(keyV.toKeyValue).iterate()
         }
       }
-    }).logTimeTaken(s"link vertices of vertices ${vFromDb.vertex.id} and ${vToDb.vertex.id}, len(properties) = ${edge.properties.size} .", criticalTimeMs = 100)
+    })//.logTimeTaken(s"link vertices of vertices ${vFromDb.vertex.id} and ${vToDb.vertex.id}, len(properties) = ${edge.properties.size} .", criticalTimeMs = 100)
 
   }
 }

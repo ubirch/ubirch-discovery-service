@@ -32,7 +32,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       }
       possibleVertex
     })
-    timedPossibleVertex.logTimeTakenJson("check_vertex_in_db" -> List(("result" -> Option(timedPossibleVertex.result.getOrElse("false")).getOrElse("false").toString) ~ ("vertex" -> coreVertex.toJson)), 100)
+    //timedPossibleVertex.logTimeTakenJson("check_vertex_in_db" -> List(("result" -> Option(timedPossibleVertex.result.getOrElse("false")).getOrElse("false").toString) ~ ("vertex" -> coreVertex.toJson)), 100)
     timedPossibleVertex.result.getOrElse(null)
   }
 
@@ -151,7 +151,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       }
       constructor.l().head
     })
-    r.logTimeTaken(s"add properties to vertex with id: ${vertex.id().toString}", criticalTimeMs = 100)
+    //r.logTimeTaken(s"add properties to vertex with id: ${vertex.id().toString}", criticalTimeMs = 100)
     if (r.result.isFailure) throw new Exception(s"error adding properties on vertex ${vertex.toString}", r.result.failed.get)
   }
 

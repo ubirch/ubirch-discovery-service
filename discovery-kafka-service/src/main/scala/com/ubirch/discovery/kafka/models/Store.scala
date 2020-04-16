@@ -33,7 +33,7 @@ object Store extends LazyLogging {
 
     Try(relationTimeSummary.summary.observe(res.elapsed))
 
-    res.logTimeTakenJson("inscribe relation" -> List(relation.toJson), 300)
+    //res.logTimeTakenJson("inscribe relation" -> List(relation.toJson), 300)
     res.result
 
   }
