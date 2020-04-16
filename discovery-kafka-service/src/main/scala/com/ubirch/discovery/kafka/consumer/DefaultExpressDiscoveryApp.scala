@@ -62,24 +62,32 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   override def process: Process = Process { crs =>
 
-    val allRelations: immutable.Seq[Relation] = crs.flatMap {
-      cr =>
-        //logger.debug("Received value: " + cr.value())
-        storeCounter.counter.labels("ReceivedMessage").inc()
+    try {
 
-        Try(parseRelations(cr.value()))
-          .recover {
-            case exception: ParsingException =>
-              errorCounter.counter.labels("ParsingException").inc()
-              send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-              logger.error(ErrorsHandler.generateException(exception, cr.value()))
-              Nil
-          }
-          .filter(_.nonEmpty)
-          .get
+      val allRelations: immutable.Seq[Relation] = crs.flatMap {
+        cr =>
+          //logger.debug("Received value: " + cr.value())
+          storeCounter.counter.labels("ReceivedMessage").inc()
+
+          Try(parseRelations(cr.value()))
+            .recover {
+              case exception: ParsingException =>
+                errorCounter.counter.labels("ParsingException").inc()
+                send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+                logger.error(ErrorsHandler.generateException(exception, cr.value()))
+                Nil
+            }
+            .filter(_.nonEmpty)
+            .get
+      }
+      logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
+      store(allRelations) foreach recoverStoreRelationIfNeeded
+
+    } catch {
+      case e: Exception =>
+        //TODO WHAT IS OK TO LET GO
+        logger.error("Error processing: ", e)
     }
-    logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
-    store(allRelations) foreach recoverStoreRelationIfNeeded
 
     /*    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
       cr =>
