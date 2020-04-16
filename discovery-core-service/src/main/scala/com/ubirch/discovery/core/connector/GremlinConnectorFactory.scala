@@ -36,19 +36,19 @@ object GremlinConnectorFactory {
     conf.addProperty("serializer.config.ioRegistries", config.getStringList("core.connector.serializer.config.ioRegistries"))
 
     val maxWaitForConnection = config.getInt("core.connector.connectionPool.maxWaitForConnection")
-    if(maxWaitForConnection > 0) conf.addProperty("connectionPool.maxWaitForConnection", maxWaitForConnection)
+    if (maxWaitForConnection > 0) conf.addProperty("connectionPool.maxWaitForConnection", maxWaitForConnection)
 
     val reconnectInterval = config.getInt("core.connector.connectionPool.reconnectInterval")
-    if(reconnectInterval > 0) conf.addProperty("connectionPool.reconnectInterval", reconnectInterval)
+    if (reconnectInterval > 0) conf.addProperty("connectionPool.reconnectInterval", reconnectInterval)
 
     val connectionMaxSize = config.getInt("core.connector.connectionPool.maxSize")
-    if(connectionMaxSize > 0) conf.addProperty("connectionPool.maxWaitForConnection", connectionMaxSize)
+    if (connectionMaxSize > 0) conf.addProperty("connectionPool.maxWaitForConnection", connectionMaxSize)
 
     val nioPoolSize = config.getInt("core.connector.nioPoolSize")
-    if(nioPoolSize > 0) conf.addProperty("nioPoolSize", nioPoolSize)
+    if (nioPoolSize > 0) conf.addProperty("nioPoolSize", nioPoolSize)
 
     val workerPoolSize = config.getInt("core.connector.workerPoolSize")
-    if(workerPoolSize > 0) conf.addProperty("workerPoolSize", workerPoolSize)
+    if (workerPoolSize > 0) conf.addProperty("workerPoolSize", workerPoolSize)
 
     conf
   }
