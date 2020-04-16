@@ -139,7 +139,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     val res = Timer.time({
 
-      val hashMapVertices = preprocess(relations)
+      val hashMapVertices: HashMap[VertexCore, VertexDatabase] = preprocess(relations)
 
       def getVertexFromHMap(vertexCore: VertexCore) = {
         hashMapVertices.get(vertexCore) match {
@@ -148,8 +148,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
         }
       }
 
+      logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
       val relationsAsRelationServer: Seq[(RelationServer, RelationServer => Try[Unit])] = relations.map(r => (RelationServer(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge), Store.addRelationTwoCached(_)))
-      logger.info("after preprocess: relation size = " + relationsAsRelationServer.size)
 
       val executor = new Executor[RelationServer, Try[Unit]](objects = relationsAsRelationServer, processSize = 16, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
       executor.startProcessing()
