@@ -22,7 +22,7 @@ case class GetVertices()(implicit val gc: GremlinConnector) extends LazyLogging 
     */
   def getAllVertices(limit: Int = 1000): List[VertexStruct] = {
     val listVertexes: List[Vertex] = gc.g.V().limit(limit).l() // return scala list of vertex
-    logger.info(listVertexes.mkString)
+    logger.debug(listVertexes.mkString)
 
     listVertexes map { toVertexStruct }
   }

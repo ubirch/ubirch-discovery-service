@@ -82,13 +82,13 @@ class ExecutorSpec extends TestBase {
     val t0_0 = System.currentTimeMillis()
     execute[Int, Unit](objects, f)
     val t0_1 = System.currentTimeMillis()
-    println(s"NEW STYLE - Took ${t0_1 - t0_0} ms to process $number f() => ${(t0_1 - t0_0) / number} ms/process")
+    //println(s"NEW STYLE - Took ${t0_1 - t0_0} ms to process $number f() => ${(t0_1 - t0_0) / number} ms/process")
     Thread.sleep(1000)
 
     val t1_0 = System.currentTimeMillis()
     executeOldStyle(objects, f)
     val t1_1 = System.currentTimeMillis()
-    println(s"OLD STYLE - Took ${t1_1 - t1_0} ms to process $number f() => ${(t1_1 - t1_0) / number} ms/process")
+    //println(s"OLD STYLE - Took ${t1_1 - t1_0} ms to process $number f() => ${(t1_1 - t1_0) / number} ms/process")
     Thread.sleep(1000)
 
   }

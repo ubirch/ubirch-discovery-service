@@ -44,7 +44,7 @@ object Util extends LazyLogging {
       i = i + 1
     }
 
-    arrayVertexReformated.foreach(v => logger.info(v.toString))
+    arrayVertexReformated.foreach(v => logger.debug(v.toString))
     arrayVertexReformated
   }
 
