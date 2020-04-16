@@ -63,7 +63,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     val allRelations: immutable.Seq[Relation] = crs.flatMap {
       cr =>
-        logger.debug("Received value: " + cr.value())
+        //logger.debug("Received value: " + cr.value())
         storeCounter.counter.labels("ReceivedMessage").inc()
 
         Try(parseRelations(cr.value()))
@@ -77,7 +77,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
           .filter(_.nonEmpty)
           .get
     }
-
+    logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
     storeV2(allRelations) foreach recoverStoreRelationIfNeeded
 
     /*    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
