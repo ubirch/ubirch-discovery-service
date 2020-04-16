@@ -30,14 +30,26 @@ object GremlinConnectorFactory {
     conf.addProperty("hosts", hosts.asJava)
     conf.addProperty("port", config.getString("core.connector.port"))
     conf.addProperty("serializer.className", config.getString("core.connector.serializer.className"))
-    conf.addProperty("connectionPool.maxWaitForConnection", config.getString("core.connector.connectionPool.maxWaitForConnection"))
-    conf.addProperty("connectionPool.reconnectInterval", config.getString("core.connector.connectionPool.reconnectInterval"))
     // no idea why the following line needs to be duplicated. Doesn't work without
     // cf https://stackoverflow.com/questions/45673861/how-can-i-remotely-connect-to-a-janusgraph-server first answer, second comment ¯\_ツ_/¯
     conf.addProperty("serializer.config.ioRegistries", config.getAnyRef("core.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
     conf.addProperty("serializer.config.ioRegistries", config.getStringList("core.connector.serializer.config.ioRegistries"))
-    conf.addProperty("nioPoolSize", 3)
-    conf.addProperty("workerPoolSize", 6)
+
+    val maxWaitForConnection = config.getInt("core.connector.connectionPool.maxWaitForConnection")
+    if(maxWaitForConnection > 0) conf.addProperty("connectionPool.maxWaitForConnection", maxWaitForConnection)
+
+    val reconnectInterval = config.getInt("core.connector.connectionPool.reconnectInterval")
+    if(reconnectInterval > 0) conf.addProperty("connectionPool.reconnectInterval", reconnectInterval)
+
+    val connectionMaxSize = config.getInt("core.connector.connectionPool.maxSize")
+    if(connectionMaxSize > 0) conf.addProperty("connectionPool.maxWaitForConnection", connectionMaxSize)
+
+    val nioPoolSize = config.getInt("core.connector.nioPoolSize")
+    if(nioPoolSize > 0) conf.addProperty("nioPoolSize", nioPoolSize)
+
+    val workerPoolSize = config.getInt("core.connector.workerPoolSize")
+    if(workerPoolSize > 0) conf.addProperty("workerPoolSize", workerPoolSize)
+
     conf
   }
 }
