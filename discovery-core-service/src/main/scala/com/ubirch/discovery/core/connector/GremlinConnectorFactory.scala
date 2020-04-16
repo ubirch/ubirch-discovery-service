@@ -41,8 +41,11 @@ object GremlinConnectorFactory {
     val reconnectInterval = config.getInt("core.connector.connectionPool.reconnectInterval")
     if(reconnectInterval > 0) conf.addProperty("connectionPool.reconnectInterval", reconnectInterval)
 
+    val connectionMinSize = config.getInt("core.connector.connectionPool.minSize")
+    if(connectionMinSize > 0) conf.addProperty("connectionPool.minSize", connectionMinSize)
+
     val connectionMaxSize = config.getInt("core.connector.connectionPool.maxSize")
-    if(connectionMaxSize > 0) conf.addProperty("connectionPool.maxWaitForConnection", connectionMaxSize)
+    if(connectionMaxSize > 0) conf.addProperty("connectionPool.maxSize", connectionMaxSize)
 
     val nioPoolSize = config.getInt("core.connector.nioPoolSize")
     if(nioPoolSize > 0) conf.addProperty("nioPoolSize", nioPoolSize)
