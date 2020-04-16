@@ -124,7 +124,25 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     * Add new properties to vertex
     */
   def update(): Unit = {
-    addNewPropertiesToVertex(vertex)
+    val vMap: Map[String, String] = getPropertiesMap map { kv => kv._1.toString -> kv._2.head.toString }
+
+    val shouldBeProps: Map[String, String] = coreVertex.properties.map { ep => ep.keyName -> ep.value.toString }.toMap
+    if (vMap.contains("timestamp")) {
+      areTheSame(vMap, shouldBeProps)
+      println("the same 1")
+    } else {
+      if (shouldBeProps.contains("timestamp")) {
+        areTheSame(vMap, shouldBeProps)
+        println("the same 2")
+      }
+    }
+  }
+
+  // check if the properties of the vertex already in janus and the "new" ones are the same
+  // not checking the timestamp as it's always a pain in the ass to cast
+  private def areTheSame(currentVertexMap: Map[String, String], shouldBeProps: Map[String, String]): Unit = {
+    val shouldBeMap: Map[String, String] = coreVertex.properties.map { ep => ep.keyName -> ep.value.toString }.toMap
+    if (!(currentVertexMap - "timestamp" == shouldBeMap - "timestamp")) addNewPropertiesToVertex(vertex)
   }
 
   private def addNewPropertiesToVertex(vertex: Vertex): Unit = {

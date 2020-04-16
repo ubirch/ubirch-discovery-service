@@ -1,7 +1,6 @@
 package com.ubirch.discovery.kafka.consumer
 
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import com.ubirch.discovery.core.operation.AddRelation
 import com.ubirch.discovery.core.structure.{ Relation, RelationServer, VertexCore, VertexDatabase }
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
@@ -80,7 +79,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
           .get
     }
     logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
-    storeV2(allRelations) foreach recoverStoreRelationIfNeeded
+    store(allRelations) foreach recoverStoreRelationIfNeeded
 
     /*    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
       cr =>
@@ -137,7 +136,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def storeV2(relations: Seq[Relation]): List[(RelationServer, Try[Unit])] = {
+  def store(relations: Seq[Relation]): List[(RelationServer, Try[Unit])] = {
 
     val res = Timer.time({
 
@@ -198,27 +197,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   def increasePrometheusRelationCount(): Unit = {
     storeCounter.counter.labels("RelationStoredSuccessfully").inc()
   }
-
-  /*def store(relations: Seq[(Relation, Relation => Try[Unit])]): List[(Relation, Try[Unit])] = {
-    val res = Timer.time({
-      val pureR: Seq[Relation] = relations.map { _._1 }
-      preprocess(pureR)
-      Store.addVerticesPresentMultipleTimes(pureR.toList)
-      val executor = new Executor[Relation, Try[Unit]](objects = relations, processSize = 16, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
-      executor.startProcessing()
-      executor.latch.await()
-      executor.getResultsNoTry
-    })
-    res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r._1.toJson }.toList)), 10000, warnOnly = false)
-
-    res.result match {
-      case Success(success) => success
-      case Failure(exception) =>
-        logger.error("Error storing relations, out of executor", exception)
-        throw StoreException("Error storing relations, out of executor", exception)
-    }
-
-  }*/
 
 }
 
