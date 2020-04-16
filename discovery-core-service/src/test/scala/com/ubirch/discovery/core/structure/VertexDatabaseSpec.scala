@@ -123,7 +123,10 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
 
       val r1 = vDb1 invokePrivate initializeVertexPrivate()
       val r2 = vDb1 invokePrivate initializeVertexPrivate()
-      r1.vertex.id() shouldBe r2.vertex.id()
+      val r3 = vDb1 invokePrivate initializeVertexPrivate()
+      val r4 = vDb1 invokePrivate initializeVertexPrivate()
+      val r5 = vDb1 invokePrivate initializeVertexPrivate()
+      r1.vertex.id() shouldBe r2.vertex.id() shouldBe r3.vertex.id() shouldBe r4.vertex.id() shouldBe r5.vertex.id()
     }
   }
 
