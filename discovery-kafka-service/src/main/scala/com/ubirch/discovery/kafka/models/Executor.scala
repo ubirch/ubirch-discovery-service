@@ -57,6 +57,7 @@ class Executor[T, U](objects: Seq[(T, T => U)], val processSize: Int, customResu
 
   def getResults: List[(T, Try[U])] = results.toList
   def getResultsNoTry: List[(T, U)] = results.map { t => (t._1, t._2.get) }.toList
+  def getResultsOnlySuccess: List[(T, U)] = results.filter { t => t._2.isSuccess }.map { t => (t._1, t._2.get) }.toList
 
   /**
     * Add item to the execution list until

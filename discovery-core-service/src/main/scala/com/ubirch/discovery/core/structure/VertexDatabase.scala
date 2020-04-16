@@ -11,7 +11,6 @@ import com.ubirch.discovery.core.util.Timer
 import gremlin.scala.{ TraversalSource, Vertex }
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.janusgraph.core.SchemaViolationException
-import org.json4s.JsonDSL._
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
@@ -97,8 +96,8 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       case Success(value) => value
       case Failure(exception) =>
         exception match {
-          case e: CompletionException => recover(e)
-          case e: SchemaViolationException => recover(e)
+          case e: CompletionException => recoverVertexAlreadyExist(e)
+          case e: SchemaViolationException => recoverVertexAlreadyExist(e)
           case e: Exception =>
             logger.error("error initialising vertex", e)
             throw e
@@ -106,7 +105,11 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     }
   }
 
-  private def recover(error: Throwable) = {
+  /**
+    * When adding vertices asynchronously, a vertex or a vertex property can have already been added by another thread or instance
+    * Then it's not an actual error that we're catching
+    */
+  private def recoverVertexAlreadyExist(error: Throwable) = {
     logger.warn("uniqueness constraint, recovering" + error.getMessage)
     val v: Option[Vertex] = Option(searchForVertexByProperties(coreVertex.properties))
     v match {
@@ -125,8 +128,8 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     */
   def update(): Unit = {
     val vMap: Map[String, String] = getPropertiesMap map { kv => kv._1.toString -> kv._2.head.toString }
-
     val shouldBeProps: Map[String, String] = coreVertex.properties.map { ep => ep.keyName -> ep.value.toString }.toMap
+
     if (vMap.contains("timestamp")) {
       areTheSame(vMap, shouldBeProps)
     } else {

@@ -176,7 +176,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val executor = new Executor[VertexCore, VertexDatabase](objects = vertices.map { v => (v, Store.addVertex(_)) }, processSize = maxParallelConnection)
     executor.startProcessing()
     executor.latch.await()
-    val executorRes: List[(VertexCore, VertexDatabase)] = executor.getResultsNoTry
+    val executorRes: List[(VertexCore, VertexDatabase)] = executor.getResultsOnlySuccess
     HashMap(executorRes.map(vCoreAndVDb => vCoreAndVDb._1 -> vCoreAndVDb._2): _*)
   }
 

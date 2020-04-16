@@ -11,6 +11,8 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization
 
+import scala.util.Try
+
 object Elements {
 
   abstract class Types(val name: String) {
@@ -121,7 +123,7 @@ case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: 
       ("edge" -> edge.toJson)
   }
 
-  def createEdge(implicit gc: GremlinConnector): Unit = {
+  def createEdge(implicit gc: GremlinConnector): Try[Edge] = {
 
     Timer.time({
       if (edge.properties.isEmpty) {
@@ -136,8 +138,9 @@ case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: 
         for (keyV <- edge.properties.tail) {
           gc.g.E(edgeOnDb).property(keyV.toKeyValue).iterate()
         }
+        edgeOnDb
       }
-    })//.logTimeTaken(s"link vertices of vertices ${vFromDb.vertex.id} and ${vToDb.vertex.id}, len(properties) = ${edge.properties.size} .", criticalTimeMs = 100)
+    }).result //.logTimeTaken(s"link vertices of vertices ${vFromDb.vertex.id} and ${vToDb.vertex.id}, len(properties) = ${edge.properties.size} .", criticalTimeMs = 100)
 
   }
 }
