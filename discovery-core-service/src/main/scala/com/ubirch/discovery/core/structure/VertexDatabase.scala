@@ -129,11 +129,9 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     val shouldBeProps: Map[String, String] = coreVertex.properties.map { ep => ep.keyName -> ep.value.toString }.toMap
     if (vMap.contains("timestamp")) {
       areTheSame(vMap, shouldBeProps)
-      println("the same 1")
     } else {
       if (shouldBeProps.contains("timestamp")) {
         areTheSame(vMap, shouldBeProps)
-        println("the same 2")
       }
     }
   }
