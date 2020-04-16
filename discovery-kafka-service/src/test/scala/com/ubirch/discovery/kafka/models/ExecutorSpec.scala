@@ -23,9 +23,6 @@ class ExecutorSpec extends TestBase {
     */
   def warmUpJg(): Unit = {
     gc.g.V().limit(1)
-    executeAllJanus(1)
-    executeAllJanus(1)
-    executeAllJanus(1)
   }
   def cleanUpJanus(): Unit = {
     while (gc.g.V().count().l().head != 0) {
@@ -40,51 +37,7 @@ class ExecutorSpec extends TestBase {
     Thread.sleep(4000)
   }
 
-  feature("benchmarks on adding a relation") {
-
-    scenario("1 relations") {
-      executeAllJanus(1)
-    }
-
-    scenario("4 relations") {
-      executeAllJanus(4)
-    }
-
-    scenario("5 relations") {
-      executeAllJanus(5)
-    }
-
-    scenario("6 relations") {
-      executeAllJanus(6)
-    }
-
-    scenario("7 relations") {
-      executeAllJanus(7)
-    }
-
-    scenario("10 relations") {
-      executeAllJanus(10)
-    }
-
-    scenario("50 relations") {
-      executeAllJanus(50)
-    }
-
-    scenario("100 relations") {
-      executeAllJanus(100)
-    }
-
-    scenario("200 relations") {
-      executeAllJanus(200)
-    }
-
-    scenario("500 relations") {
-      executeAllJanus(500)
-    }
-
-  }
-
-  feature("benchmark on other things") {
+  ignore("benchmark the executor on random time") {
     scenario("1") {
       executeAllTime(1)
     }
@@ -117,26 +70,6 @@ class ExecutorSpec extends TestBase {
       executeAllTime(500)
     }
 
-  }
-
-  def executeAllJanus(number: Int): Unit = {
-    // generate objects
-    val objects1: immutable.Seq[Relation] = for (_ <- 0 until number) yield generateRelation
-    val objects2: immutable.Seq[Relation] = for (_ <- 0 until number) yield generateRelation
-
-    // new style
-    val t0_0 = System.currentTimeMillis()
-    execute[Relation, Unit](objects1, Store.addRelation)
-    val t0_1 = System.currentTimeMillis()
-    logger.info(s"NEW STYLE - Took ${t0_1 - t0_0} ms to process $number relations => ${(t0_1 - t0_0) / number} ms/relation")
-    Thread.sleep(1000)
-
-    // old style
-    val t1_0 = System.currentTimeMillis()
-    executeOldStyle(objects2, Store.addRelation)
-    val t1_1 = System.currentTimeMillis()
-    logger.info(s"OLD STYLE - Took ${t1_1 - t1_0} ms to process $number relations => ${(t1_1 - t1_0) / number} ms/relation")
-    Thread.sleep(1000)
   }
 
   def executeAllTime(number: Int): Unit = {

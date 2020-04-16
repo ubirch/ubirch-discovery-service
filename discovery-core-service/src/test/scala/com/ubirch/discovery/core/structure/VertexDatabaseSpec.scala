@@ -15,11 +15,11 @@ import gremlin.scala._
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.Instant
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest._
 
 import scala.util.Random
 
-class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
+class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging with PrivateMethodTester {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
 
@@ -106,15 +106,28 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
 
   }
 
-  ignore("speed test") {
+  feature("adding vertex already existing") {
+    scenario("catch error") {
 
-    def generateProperties: List[ElementProperty] = {
-      List(
-        ElementProperty(KeyValue[Any](Signature, giveMeRandomLong.toString), PropertyType.String),
-        ElementProperty(KeyValue[Any](Hash, giveMeRandomString), PropertyType.String),
-        ElementProperty(KeyValue[Any](TimeStamp, Instant.ofEpochSecond(ThreadLocalRandom.current().nextInt()).getMillis), PropertyType.Long)
-      )
+      deleteDatabase()
+
+      val props = generateProperties
+      val vCore = VertexCore(props, "old")
+      implicit val propSet: Set[Elements.Property] = TestUtil.putPropsOnPropSet(props)
+
+      val vDb1 = vCore.toVertexStructDb(gc)
+
+      logger.info("vertex: " + vCore.toString)
+
+      val initializeVertexPrivate = PrivateMethod[Vertex]('initialiseVertex)
+
+      val r1 = vDb1 invokePrivate initializeVertexPrivate()
+      val r2 = vDb1 invokePrivate initializeVertexPrivate()
+      r1.vertex.id() shouldBe r2.vertex.id()
     }
+  }
+
+  ignore("speed test") {
 
     scenario("test speed query vertex") {
 
@@ -303,5 +316,13 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
 
   def giveMeRandomString: String = Random.alphanumeric.take(32).mkString
   def giveMeRandomLong: Long = Random.nextInt().toLong
+
+  def generateProperties: List[ElementProperty] = {
+    List(
+      ElementProperty(KeyValue[Any](Signature, giveMeRandomLong.toString), PropertyType.String),
+      ElementProperty(KeyValue[Any](Hash, giveMeRandomString), PropertyType.String),
+      ElementProperty(KeyValue[Any](TimeStamp, Instant.ofEpochSecond(ThreadLocalRandom.current().nextInt()).getMillis), PropertyType.Long)
+    )
+  }
 }
 

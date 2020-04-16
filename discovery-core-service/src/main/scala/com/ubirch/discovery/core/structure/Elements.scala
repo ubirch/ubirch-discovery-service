@@ -116,8 +116,8 @@ case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: 
   }
 
   def toJson = {
-    ("vFrom" -> vFromDb.coreVertex.toJson) ~
-      ("vTo" -> vToDb.coreVertex.toJson) ~
+    ("v_from" -> vFromDb.coreVertex.toJson) ~
+      ("v_to" -> vToDb.coreVertex.toJson) ~
       ("edge" -> edge.toJson)
   }
 

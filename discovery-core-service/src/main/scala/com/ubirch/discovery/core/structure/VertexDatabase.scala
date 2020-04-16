@@ -9,8 +9,8 @@ import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
 import gremlin.scala.{ TraversalSource, Vertex }
-import org.apache.tinkerpop.gremlin.driver.exception.ResponseException
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
+import org.janusgraph.core.SchemaViolationException
 import org.json4s.JsonDSL._
 
 import scala.annotation.tailrec
@@ -25,8 +25,6 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   val b: Bindings = gc.b
 
   var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
-
-
     val timedPossibleVertex = Timer.time({
       val possibleVertex = searchForVertexByProperties(coreVertex.properties)
       if (possibleVertex != null) {
@@ -96,26 +94,30 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       }
       constructor.l().head
     }) match {
-        case Success(value) => value
-        case Failure(exception) =>
-          exception match {
-            case e: ResponseException =>
-              logger.warn("uniqueness constraint, recovering", e)
-              val v: Option[Vertex] = Option(searchForVertexByProperties(coreVertex.properties))
-              v match {
-                case Some(actualV) => actualV
-                case None =>
-                  var constructor = gc.g.addV(coreVertex.label)
-                  for (prop <- coreVertex.properties) {
-                    constructor = constructor.property(prop.toKeyValue)
-                  }
-                  constructor.l().head
-              }
-            case e: Exception =>
-              logger.error("error initialising vertex", e)
-              throw e
-          }
-      }
+      case Success(value) => value
+      case Failure(exception) =>
+        exception match {
+          case e: CompletionException => recover(e)
+          case e: SchemaViolationException => recover(e)
+          case e: Exception =>
+            logger.error("error initialising vertex", e)
+            throw e
+        }
+    }
+  }
+
+  private def recover(error: Throwable) = {
+    logger.warn("uniqueness constraint, recovering" + error.getMessage)
+    val v: Option[Vertex] = Option(searchForVertexByProperties(coreVertex.properties))
+    v match {
+      case Some(actualV) => actualV
+      case None =>
+        var constructor = gc.g.addV(coreVertex.label)
+        for (prop <- coreVertex.properties) {
+          constructor = constructor.property(prop.toKeyValue)
+        }
+        constructor.l().head
+    }
   }
 
   /**
