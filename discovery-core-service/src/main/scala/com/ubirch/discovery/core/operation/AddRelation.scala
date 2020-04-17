@@ -1,5 +1,7 @@
 package com.ubirch.discovery.core.operation
 
+import java.util.concurrent.CompletionException
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure._
@@ -7,6 +9,7 @@ import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, KeyNotInList, PropertiesNotCorrect }
 import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.core.util.Util.{ getEdge, getEdgeProperties, recompose }
+import org.janusgraph.core.SchemaViolationException
 
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
@@ -127,11 +130,29 @@ object AddRelation extends LazyLogging {
     }
   }
 
-  def twoExistCache(relation: RelationServer)(implicit propSet: Set[Property], gc: GremlinConnector): Unit = {
+  def twoExistCache(relation: RelationServer)(implicit propSet: Set[Property], gc: GremlinConnector) = {
     //logger.debug(Util.relationStrategyJson(relation, "two exist"))
-    if (!areVertexLinked(relation.vFromDb, relation.vToDb)) {
-      relation.createEdge
+
+    relation.createEdge match {
+      case Success(edge) => edge
+      case Failure(fail: Exception) => fail match {
+        case e: CompletionException => recoverEdge(e)
+        case e: SchemaViolationException => recoverEdge(e)
+        case e: Exception =>
+          logger.error("error initialising vertex", e)
+          throw e
+      }
     }
+
+    def recoverEdge(error: Throwable) {
+      logger.debug("exception thrown while adding edge: " + error.getMessage)
+      if (!areVertexLinked(relation.vFromDb, relation.vToDb)) {
+        logger.debug("vertices where not linked, creating edge")
+        relation.createEdge.get
+      }
+
+    }
+
   }
 
   /**
