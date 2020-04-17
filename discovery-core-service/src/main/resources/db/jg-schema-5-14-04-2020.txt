@@ -28,6 +28,7 @@ mgmt.makePropertyKey('hash').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('device_id').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('blockchain_type').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('transaction_id').dataType(String.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('public_chain').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('timestamp').dataType(Date.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('producer_id').dataType(String.class).cardinality(SINGLE).make()
 
