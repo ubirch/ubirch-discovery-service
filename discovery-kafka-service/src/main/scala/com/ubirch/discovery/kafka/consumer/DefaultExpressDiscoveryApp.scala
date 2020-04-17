@@ -60,7 +60,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection")
 
-  override def process: Process = Process { crs =>
+  override val process: Process = Process { crs =>
 
     try {
 
