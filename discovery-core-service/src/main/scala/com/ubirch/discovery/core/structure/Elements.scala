@@ -134,6 +134,7 @@ case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: 
           .addE(edge.label)
           .property(edge.properties.head.toKeyValue)
           .from(vFromDb.vertex)
+//          .promise()
           .toSet().head
         for (keyV <- edge.properties.tail) {
           gc.g.E(edgeOnDb).property(keyV.toKeyValue).iterate()
