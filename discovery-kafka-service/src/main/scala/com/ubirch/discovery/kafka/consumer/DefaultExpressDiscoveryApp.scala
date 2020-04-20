@@ -158,9 +158,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       }
 
       logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
-      val relationsAsRelationServer: Seq[(RelationServer, RelationServer => Try[Unit])] = relations.map(r => (RelationServer(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge), Store.addRelationTwoCached(_)))
+      val relationsAsRelationServer: Seq[RelationServer] = relations.map(r => RelationServer(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
 
-      val executor = new Executor[RelationServer, Try[Unit]](objects = relationsAsRelationServer, processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+      val executor = new Executor[RelationServer, Try[Unit]](objects = relationsAsRelationServer, f = Store.addRelationTwoCached(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
       executor.startProcessing()
       executor.latch.await()
       executor.getResultsNoTry
@@ -181,7 +181,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val vertices = Store.getAllVerticeFromRelations(relations)
 
     // 2: create the hashMap [vertexCore, vertexDb]
-    val executor = new Executor[VertexCore, VertexDatabase](objects = vertices.map { v => (v, Store.addVertex(_)) }, processSize = maxParallelConnection)
+    val executor = new Executor[VertexCore, VertexDatabase](objects = vertices, f = Store.addVertex(_), processSize = maxParallelConnection)
     executor.startProcessing()
     executor.latch.await()
     val executorRes: List[(VertexCore, VertexDatabase)] = executor.getResultsOnlySuccess

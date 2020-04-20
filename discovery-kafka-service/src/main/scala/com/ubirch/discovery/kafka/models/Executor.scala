@@ -21,13 +21,13 @@ import scala.util.Try
   * @tparam T Original type of the item in object
   * @tparam U What type of objects f() will transform the objects
   */
-class Executor[T, U](objects: Seq[(T, T => U)], val processSize: Int, customResultFunction: Option[() => Unit] = None)(implicit ec: ExecutionContext) extends LazyLogging {
+class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customResultFunction: Option[() => Unit] = None)(implicit ec: ExecutionContext) extends LazyLogging {
 
   /**
     * The original list of objects on which the f() function will be applied.
     * For ease of coding, they've been transformed into a HashMap
     */
-  private val toBeProcessedList: mutable.HashMap[Int, (T, T => U)] = scala.collection.mutable.HashMap.empty[Int, (T, T => U)]
+  private val toBeProcessedList: mutable.HashMap[Int, T] = scala.collection.mutable.HashMap.empty[Int, T]
 
   /**
     * The executionList is a mutable HashMap whose size can vary between 0 and processSize.
@@ -88,13 +88,13 @@ class Executor[T, U](objects: Seq[(T, T => U)], val processSize: Int, customResu
     * @param thingToAdd
     * @return
     */
-  private def addToExecutionList(thingToAdd: (Int, (T, T => U))) = {
+  private def addToExecutionList(thingToAdd: (Int, T)) = {
 
-    val ourFuture: Future[U] = Future(thingToAdd._2._2(thingToAdd._2._1)) andThen {
+    val ourFuture: Future[U] = Future(f(thingToAdd._2)) andThen {
       case resOfFunction: Try[U] =>
         callCustomCallBackFunctionIfExist()
         removeFromExecutionList(thingToAdd._1)
-        addToResults(thingToAdd._2._1, resOfFunction)
+        addToResults(thingToAdd._2, resOfFunction)
         addNewItemToExecutionList()
         checkIfOver()
     }

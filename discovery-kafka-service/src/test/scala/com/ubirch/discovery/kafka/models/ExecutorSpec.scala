@@ -94,7 +94,7 @@ class ExecutorSpec extends TestBase {
   }
 
   def execute[T, U](objects: Seq[T], f: T => U): Unit = {
-    val executor = new Executor[T, U](objects.map { o => (o, f) }, 8)
+    val executor = new Executor[T, U](objects, f, 8)
     executor.startProcessing()
     executor.latch.await()
   }
