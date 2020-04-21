@@ -19,7 +19,6 @@ import org.scalatest._
 import org.scalatest.time.Seconds
 
 import scala.concurrent.{ Await, ExecutionContext }
-import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
 
 class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging with PrivateMethodTester {

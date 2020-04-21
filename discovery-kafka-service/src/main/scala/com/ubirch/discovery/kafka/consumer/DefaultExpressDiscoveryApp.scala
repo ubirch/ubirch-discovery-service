@@ -79,9 +79,14 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
                 send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
                 logger.error(ErrorsHandler.generateException(exception, cr.value()))
                 Nil
-            }
-            .filter(_.nonEmpty)
-            .get
+              case exception: Exception =>
+                errorCounter.counter.labels("Unknown").inc()
+                send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+                logger.error(ErrorsHandler.generateException(exception, cr.value()))
+                Nil
+
+            }.getOrElse(Nil)
+
       }
       logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
       store(allRelations) foreach recoverStoreRelationIfNeeded

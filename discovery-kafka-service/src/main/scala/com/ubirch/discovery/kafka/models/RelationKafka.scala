@@ -8,12 +8,12 @@ import scala.concurrent.ExecutionContext
 /**
   * Only used for parsing kafka messages into core Relations
   */
-case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edge: EdgeKafkaStruct)(implicit ec: ExecutionContext) {
+case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edge: EdgeKafkaStruct) {
   override def toString: String = {
     s"vFrom: ${v_from.toString} \nvTo: ${v_to.toString} \nedge: ${edge.toString}"
   }
 
-  def toCoreRelation: Relation = {
+  def toCoreRelation(implicit ec: ExecutionContext): Relation = {
     val vFromAsCoreClass = v_from.toVertexToAdd
     val vToAsCoreClass = v_to.toVertexToAdd
     val edgeAsCoreClass = edge.toEdgeToAdd
@@ -21,12 +21,12 @@ case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edg
   }
 }
 
-case class VertexKafkaStruct(properties: Map[String, Any], label: String = "aLabel")(implicit ec: ExecutionContext) {
+case class VertexKafkaStruct(properties: Map[String, Any], label: String = "aLabel") {
   override def toString: String = {
     s"label: $label; properties: ${properties.mkString(", ")}"
   }
 
-  def toVertexToAdd: VertexCore = {
+  def toVertexToAdd(implicit ec: ExecutionContext): VertexCore = {
 
     val propertiesToAdd = properties map { kv => convertProp(kv._1, kv._2) }
     VertexCore(propertiesToAdd.toList, label)
