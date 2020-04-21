@@ -207,7 +207,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
       val v1Reconstructed = internalVertexFrom.toVertexStructDb(gc)
       val v2Reconstructed = internalVertexTo.toVertexStructDb(gc)
       try {
-        AddRelation.verifVertex(v1Reconstructed, pFalse)
+        TestUtil.verifVertex(v1Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -215,7 +215,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
       }
 
       try {
-        AddRelation.verifEdge(v1Reconstructed, v2Reconstructed, pFalse)
+        TestUtil.verifEdge(v1Reconstructed, v2Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -223,7 +223,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
       }
 
       try {
-        AddRelation.verifEdge(v1Reconstructed, v1Reconstructed, pFalse)
+        TestUtil.verifEdge(v1Reconstructed, v1Reconstructed, pFalse)
         fail
       } catch {
         case _: ImportToGremlinException =>
@@ -237,9 +237,9 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
   def verificationRelation(relation: Relation)(implicit propSet: Set[Elements.Property]): Unit = {
     val vFromDb = relation.vFrom.toVertexStructDb(gc)
     val vToDb = relation.vTo.toVertexStructDb(gc)
-    AddRelation.verifVertex(vFromDb, relation.vFrom.properties)
-    AddRelation.verifVertex(vToDb, relation.vTo.properties)
-    AddRelation.verifEdge(vFromDb, vToDb, relation.edge.properties)
+    TestUtil.verifVertex(vFromDb, relation.vFrom.properties)
+    TestUtil.verifVertex(vToDb, relation.vTo.properties)
+    TestUtil.verifEdge(vFromDb, vToDb, relation.edge.properties)
   }
 
   def getRelations[T](accu: (List[Relation], T), toParse: (List[String], T)): (List[Relation], T) = {

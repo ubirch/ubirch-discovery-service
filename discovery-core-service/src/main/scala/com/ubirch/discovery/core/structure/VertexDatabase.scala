@@ -57,16 +57,22 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     * Add new properties to vertex
     */
   def update(vertex: Vertex): Future[Option[Vertex]] = {
-    val vMap: Map[String, String] = getPropertiesMap map { kv => kv._1.toString -> kv._2.head.toString }
     val shouldBeProps: Map[String, String] = coreVertex.properties.map { ep => ep.keyName -> ep.value.toString }.toMap
+    val r = for {
+      map: Map[String, String] <- getPropertiesMap.map(_.map { kv => kv._1.toString -> kv._2.head.toString })
+    } yield {
+      if (map.contains("timestamp")) {
+        areTheSame(vertex, map, shouldBeProps)
 
-    if (vMap.contains("timestamp")) {
-      areTheSame(vertex, vMap, shouldBeProps)
-    } else if (shouldBeProps.contains("timestamp")) {
-      addNewPropertiesToVertex(vertex)
-    } else {
-      Future.successful(Option(vertex))
+      } else if (shouldBeProps.contains("timestamp")) {
+        addNewPropertiesToVertex(vertex)
+
+      } else {
+        Future(Option(vertex))
+      }
     }
+    r.flatMap(identity)
+
   }
 
   // check if the properties of the vertex already in janus and the "new" ones are the same
@@ -113,9 +119,31 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     *
     * @return A map containing the properties name and respective values of the vertex contained in this structure.
     */
-  def getPropertiesMap: Map[Any, List[Any]] = {
-    val propertyMapAsJava = g.V(vertex).valueMap.toList().head.asScala.toMap.asInstanceOf[Map[Any, util.ArrayList[Any]]]
-    propertyMapAsJava map { x => x._1 -> x._2.asScala.toList }
+  def getPropertiesMap: Future[Map[Any, List[Any]]] = {
+
+    val futureVertex: Future[Vertex] = for {
+      maybeVertex: Option[Vertex] <- vertex
+    } yield {
+      maybeVertex match {
+        case Some(v) => v
+        case None => throw new Exception(s"cannot find vertex ${coreVertex.toString} on getPropertiesMap")
+      }
+    }
+
+    for {
+      vertex <- futureVertex
+      res <- g.V(vertex).valueMap.promise()
+    } yield {
+
+      val propertyMapAsJava = res.headOption match {
+        case Some(v) => v.asScala.asInstanceOf[Map[Any, util.ArrayList[Any]]]
+        case None => throw new Exception(s"cannot find valueMap of vertex ${coreVertex.toString} even though vertex exist")
+      }
+
+      propertyMapAsJava map { x => x._1 -> x._2.asScala.toList }
+
+    }
+
   }
 
   /**

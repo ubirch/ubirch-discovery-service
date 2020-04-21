@@ -1,7 +1,7 @@
 package com.ubirch.discovery.core.structure
 
 import java.time.format.{ DateTimeFormatterBuilder, TextStyle }
-import java.time.{ ZonedDateTime, format }
+import java.time.{ format, ZonedDateTime }
 import java.util
 import java.util.Locale
 import java.util.concurrent.ThreadLocalRandom
@@ -16,8 +16,10 @@ import io.prometheus.client.CollectorRegistry
 import org.joda.time.Instant
 import org.joda.time.format.ISODateTimeFormat
 import org.scalatest._
+import org.scalatest.time.Seconds
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
 
 class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging with PrivateMethodTester {
@@ -61,9 +63,10 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
       val vertexInternal = VertexCore(properties, label)
       val vSDb = vertexInternal.toVertexStructDb(gc)
 
-      vSDb.addVertexWithProperties()
+      // vSDb.addVertexWithProperties()
+      import scala.concurrent.duration._
 
-      val response: Map[Any, List[Any]] = vSDb.getPropertiesMap
+      val response: Map[Any, List[Any]] = Await.result(vSDb.getPropertiesMap, 1.second)
       logger.debug(response.mkString)
       logger.debug(label)
 
@@ -120,7 +123,6 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
       val vDb1 = vCore.toVertexStructDb(gc)
 
       logger.info("vertex: " + vCore.toString)
-
 
       val r1 = vCore.toVertexStructDb(gc)
       val r2 = vCore.toVertexStructDb(gc)
