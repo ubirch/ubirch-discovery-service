@@ -1,8 +1,8 @@
 package com.ubirch.discovery.core.util
 
 import com.typesafe.scalalogging.LazyLogging
-import org.json4s._
 import org.json4s.JsonDSL._
+import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
 import scala.util.Try

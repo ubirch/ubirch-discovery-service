@@ -3,10 +3,12 @@ package com.ubirch.discovery.kafka.models
 import com.ubirch.discovery.core.structure.{ EdgeCore, Relation, VertexCore }
 import com.ubirch.discovery.kafka.util.Util._
 
+import scala.concurrent.ExecutionContext
+
 /**
   * Only used for parsing kafka messages into core Relations
   */
-case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edge: EdgeKafkaStruct) {
+case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edge: EdgeKafkaStruct)(implicit ec: ExecutionContext) {
   override def toString: String = {
     s"vFrom: ${v_from.toString} \nvTo: ${v_to.toString} \nedge: ${edge.toString}"
   }
@@ -19,7 +21,7 @@ case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edg
   }
 }
 
-case class VertexKafkaStruct(properties: Map[String, Any], label: String = "aLabel") {
+case class VertexKafkaStruct(properties: Map[String, Any], label: String = "aLabel")(implicit ec: ExecutionContext) {
   override def toString: String = {
     s"label: $label; properties: ${properties.mkString(", ")}"
   }

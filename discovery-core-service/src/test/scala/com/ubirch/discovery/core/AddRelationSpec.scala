@@ -13,11 +13,13 @@ import io.prometheus.client.CollectorRegistry
 import org.joda.time.format.ISODateTimeFormat
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
+import scala.concurrent.ExecutionContext
 import scala.io.Source
 
 class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+  implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   def deleteDatabase(): Unit = {
     gc.g.V().drop().iterate()
@@ -29,9 +31,9 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
       // clean
       deleteDatabase()
       // commit
-      relations foreach { relation =>
+      relations foreach { relation: Relation =>
         implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
-        AddRelation.createRelation(relation)
+        relation.toRelationServer.createEdge
       }
       // verif
       relations foreach { relation =>
@@ -75,7 +77,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
       relations foreach { relation =>
         implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
 
-        AddRelation.createRelation(relation)
+        relation.toRelationServer.createEdge
 
         // verif
         try {
@@ -117,7 +119,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
         try {
           implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relationTest.vFrom.properties) ++ putPropsOnPropSet(relationTest.vTo.properties)
 
-          AddRelation.createRelation(relationTest)
+          relationTest.toRelationServer.createEdge
         } catch {
           case e: ImportToGremlinException =>
             logger.info(e.getMessage)
@@ -189,7 +191,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
       val relation = Relation(internalVertexFrom, internalVertexTo, internalEdge)
       // commit
       implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(p1)
-      AddRelation.createRelation(relation)
+      relation.toRelationServer.createEdge
 
       // create false data
       val pFalse: List[ElementProperty] = List(ElementProperty(KeyValue[Any](Number, 1.toLong), PropertyType.Long))

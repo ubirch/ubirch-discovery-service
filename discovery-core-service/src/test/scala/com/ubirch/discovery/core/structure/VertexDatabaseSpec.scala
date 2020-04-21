@@ -1,27 +1,29 @@
 package com.ubirch.discovery.core.structure
 
-import java.time.{ format, ZonedDateTime }
 import java.time.format.{ DateTimeFormatterBuilder, TextStyle }
+import java.time.{ ZonedDateTime, format }
 import java.util
 import java.util.Locale
 import java.util.concurrent.ThreadLocalRandom
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.TestUtil
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Util._
+import com.ubirch.discovery.core.{ ExecutionContextHelper, TestUtil }
 import gremlin.scala._
 import io.prometheus.client.CollectorRegistry
-import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.Instant
+import org.joda.time.format.ISODateTimeFormat
 import org.scalatest._
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging with PrivateMethodTester {
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+  implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   private val dateTimeFormat = ISODateTimeFormat.dateTime()
   val label = "aLabel"
@@ -119,13 +121,12 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
 
       logger.info("vertex: " + vCore.toString)
 
-      val initializeVertexPrivate = PrivateMethod[Vertex]('initialiseVertex)
 
-      val r1 = vDb1 invokePrivate initializeVertexPrivate()
-      val r2 = vDb1 invokePrivate initializeVertexPrivate()
-      val r3 = vDb1 invokePrivate initializeVertexPrivate()
-      val r4 = vDb1 invokePrivate initializeVertexPrivate()
-      val r5 = vDb1 invokePrivate initializeVertexPrivate()
+      val r1 = vCore.toVertexStructDb(gc)
+      val r2 = vCore.toVertexStructDb(gc)
+      val r3 = vCore.toVertexStructDb(gc)
+      val r4 = vCore.toVertexStructDb(gc)
+      val r5 = vCore.toVertexStructDb(gc)
     }
   }
 
