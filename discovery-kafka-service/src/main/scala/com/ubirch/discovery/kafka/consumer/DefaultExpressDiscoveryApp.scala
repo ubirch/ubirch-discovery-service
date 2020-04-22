@@ -63,38 +63,47 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection")
 
+  lazy val flush: Boolean = conf.getBoolean("flush")
+
   override val process: Process = Process.async { crs =>
-    try {
 
-      val allRelations: immutable.Seq[Relation] = crs.flatMap {
-        cr =>
-          //logger.debug("Received value: " + cr.value())
-          storeCounter.counter.labels("ReceivedMessage").inc()
+    if (!flush) {
 
-          Try(parseRelations(cr.value()))
-            .recover {
-              case exception: ParsingException =>
-                errorCounter.counter.labels("ParsingException").inc()
-                send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-                logger.error(ErrorsHandler.generateException(exception, cr.value()))
-                Nil
-              case exception: Exception =>
-                errorCounter.counter.labels("Unknown").inc()
-                send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-                logger.error(ErrorsHandler.generateException(exception, cr.value()))
-                Nil
+      try {
 
-            }.getOrElse(Nil)
+        val allRelations: immutable.Seq[Relation] = crs.flatMap {
+          cr =>
+            //logger.debug("Received value: " + cr.value())
+            storeCounter.counter.labels("ReceivedMessage").inc()
 
+            Try(parseRelations(cr.value()))
+              .recover {
+                case exception: ParsingException =>
+                  errorCounter.counter.labels("ParsingException").inc()
+                  send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+                  logger.error(ErrorsHandler.generateException(exception, cr.value()))
+                  Nil
+                case exception: Exception =>
+                  errorCounter.counter.labels("Unknown").inc()
+                  send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+                  logger.error(ErrorsHandler.generateException(exception, cr.value()))
+                  Nil
+
+              }.getOrElse(Nil)
+
+        }
+        logger.info(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
+        store(allRelations).map(_ => ())
+
+      } catch {
+        case e: Exception =>
+          //TODO WHAT IS OK TO LET GO
+          logger.error("Error processing: ", e)
+          Future.unit
       }
-      logger.info(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
-      store(allRelations).map(_ => ())
 
-    } catch {
-      case e: Exception =>
-        //TODO WHAT IS OK TO LET GO
-        logger.error("Error processing: ", e)
-        Future.unit
+    } else {
+      Future.unit
     }
 
   }
