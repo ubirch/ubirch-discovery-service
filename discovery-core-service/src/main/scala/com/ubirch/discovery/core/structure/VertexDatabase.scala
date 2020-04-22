@@ -206,7 +206,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     * Then it's not an actual error that we're catching
     */
   private def recoverVertexAlreadyExist(error: Throwable): Future[Option[Vertex]] = {
-    logger.warn("uniqueness constraint, recovering" + error.getMessage)
+    logger.warn("uniqueness constraint, recovrecoverVertexAlreadyExistering" + error.getMessage)
 
     searchForVertexByProperties(coreVertex.properties)
       .flatMap {

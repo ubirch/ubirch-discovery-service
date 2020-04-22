@@ -2,13 +2,13 @@ package com.ubirch.discovery.kafka.consumer
 
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.structure.Elements.Property
-import com.ubirch.discovery.core.structure.{ Relation, RelationServer, VertexCore, VertexDatabase }
+import com.ubirch.discovery.core.structure.{ Helpers, Relation, RelationServer, VertexCore, VertexDatabase }
 import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
 import com.ubirch.discovery.kafka.models.{ KafkaElements, RelationKafka, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
-import gremlin.scala.Edge
+import gremlin.scala.{ Edge, Vertex }
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
@@ -125,53 +125,41 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def store(relations: Seq[Relation]): Future[Seq[(RelationServer, Option[Edge])]] = {
+  def store(relations: Seq[Relation]): Future[Seq[(Relation, Option[Edge])]] = {
 
-    val hashMapVertices: Map[VertexCore, () => VertexDatabase] = preprocess(relations)
+    val hashMapVertices: HashMap[VertexCore, Option[Vertex]] = preprocess(relations)
 
-    def getVertexFromHMap(vertexCore: VertexCore) = {
+    def getVertexFromHMap(vertexCore: VertexCore): Vertex = {
       hashMapVertices.get(vertexCore) match {
-        case Some(vDb) =>
-          val _vDb: VertexDatabase = vDb()
-          _vDb.init
-        case None =>
-          val vDb = vertexCore.toVertexStructDb(gc)
-          vDb.init
-      }
-    }
-
-    logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
-
-    val relationsAsRelationServer = Future.sequence {
-      relations.map { r =>
-
-        for {
-          vFrom <- getVertexFromHMap(r.vFrom)
-          vTo <- getVertexFromHMap(r.vTo)
-        } yield {
-          RelationServer(vFrom, vTo, r.edge)
-        }
-
-      }
-    }
-
-    relationsAsRelationServer.flatMap { relations =>
-
-      Future.sequence {
-        relations.map { relation =>
-          Store.addRelationTwoCached(relation).map(x => (relation, x))
-            .recoverWith {
-              case e: StoreException =>
-                errorCounter.counter.labels("StoreException").inc()
-                logger.error(ErrorsHandler.generateException(e, relation.toString))
-                send(producerErrorTopic, ErrorsHandler.generateException(e, relation.toString))
-                Future.successful(relation, None)
-              case e: Throwable =>
-                errorCounter.counter.labels("Exception").inc()
-                logger.error(ErrorsHandler.generateException(e, relation.toString))
-                send(producerErrorTopic, ErrorsHandler.generateException(e, relation.toString))
-                Future.successful(relation, None)
+        case Some(maybeVertex) =>
+          maybeVertex match {
+            case Some(concreteV) => {
+              concreteV
             }
+            case None => Helpers.getOrCreateVertex(vertexCore).getOrElse(throw new Exception("cant add or get vertex"))
+          }
+        case None =>
+          logger.debug(s"didn't find vertex ${vertexCore.toString} in the hashMap")
+          Helpers.getOrCreateVertex(vertexCore).getOrElse(throw new Exception("cant add or get vertex"))
+      }
+    }
+
+    logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.distinct.size}")
+
+    val createdRelations: Future[Seq[(Relation, Option[Edge])]] = Future.sequence {
+      relations.map { r =>
+        logger.debug("adding relation")
+        Helpers.createRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge).map(x => (r, x)).recoverWith {
+          case e: StoreException =>
+            errorCounter.counter.labels("StoreException").inc()
+            logger.error(ErrorsHandler.generateException(e, r.toString))
+            send(producerErrorTopic, ErrorsHandler.generateException(e, r.toString))
+            Future.successful(r, None)
+          case e: Throwable =>
+            errorCounter.counter.labels("Exception").inc()
+            logger.error(ErrorsHandler.generateException(e, r.toString))
+            send(producerErrorTopic, ErrorsHandler.generateException(e, r.toString))
+            Future.successful(r, None)
         }
       }
     }.recover {
@@ -180,16 +168,16 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
         throw e
     }
 
+    createdRelations
   }
 
-  def preprocess(relations: Seq[Relation]): HashMap[VertexCore, () => VertexDatabase] = {
+  def preprocess(relations: Seq[Relation]): HashMap[VertexCore, Option[Vertex]] = {
     // 1: flatten relations to get the vertices
     val vertices: Seq[VertexCore] = Store.getAllVerticeFromRelations(relations)
 
     // 2: create the hashMap [vertexCore, vertexDb]
     vertices.toList
-      .foldLeft(HashMap.empty[VertexCore, () => VertexDatabase])((existing, b) =>
-        existing ++ HashMap(b -> (() => b.toVertexStructDb(gc))))
+      .foldLeft(HashMap.empty[VertexCore, Option[Vertex]])((existing, b) => existing ++ HashMap(b -> Helpers.getOrCreateVertex(b)))
 
   }
 

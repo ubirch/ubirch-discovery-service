@@ -20,7 +20,7 @@ import scala.io.Source
 
 class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
   implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   def deleteDatabase(): Unit = {
@@ -28,7 +28,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
     Thread.sleep(300)
   }
 
-  feature("add vertices - correct tests") {
+  ignore("add vertices - correct tests") {
 
     def executeTestValid(relations: List[Relation], testConfiguration: TestConfValid) = {
       // clean
@@ -86,7 +86,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
     }
   }
 
-  feature("add vertices - properties can be updated") {
+  ignore("add vertices - properties can be updated") {
 
     def executeTestValid(relations: List[Relation], testConfValid: TestConfValid): Unit = {
       // clean
@@ -126,7 +126,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
     }
   }
 
-  feature("add vertices - incorrect tests") {
+  ignore("add vertices - incorrect tests") {
 
     def executeTestInvalid(listCoupleVAndE: List[Relation], testConfInvalid: TestConfInvalid): Unit = {
       deleteDatabase()
