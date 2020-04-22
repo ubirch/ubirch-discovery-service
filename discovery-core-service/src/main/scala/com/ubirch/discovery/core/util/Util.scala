@@ -2,17 +2,19 @@ package com.ubirch.discovery.core.util
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.structure.PropertyType.PropertyType
-import com.ubirch.discovery.core.util.Exceptions.{ KeyNotInList, NumberOfEdgesNotCorrect }
-import gremlin.scala.{ Key, KeyValue }
+import com.ubirch.discovery.core.structure._
+import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, KeyNotInList, NumberOfEdgesNotCorrect }
+import gremlin.scala.{ Key, KeyValue, Vertex }
 import org.apache.tinkerpop.gremlin.structure.Edge
-import org.json4s.{ DefaultFormats, JsonAST }
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods.{ compact, render }
 import org.json4s.jackson.Serialization
+import org.json4s.{ DefaultFormats, JsonAST }
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.implicitConversions
 
 object Util extends LazyLogging {
@@ -80,6 +82,23 @@ object Util extends LazyLogging {
     resWithId.toList
   }
 
+  def getOneEdge(vFrom: VertexDatabase, vTo: VertexDatabase)(implicit gc: GremlinConnector, ec: ExecutionContext): Future[Option[Edge]] = {
+    for {
+      actualVFrom: Option[Vertex] <- vFrom.vertex
+      actualVTo: Option[Vertex] <- vTo.vertex
+      edgeList: immutable.Seq[Any] <- gc.g.V(actualVFrom.get).outE().as("e").inV().is(actualVTo.get).select("e").promise()
+    } yield {
+      edgeList.headOption match {
+        case Some(value) => value match {
+          case e: Edge => Some(e)
+          case _ => throw new ImportToGremlinException(s"Found something else than an edge between ${vFrom.toString} and ${vTo.toString}")
+        }
+        case None => None
+      }
+
+    }
+  }
+
   /**
     *
     * @param gc    The gremlin connector.
@@ -88,17 +107,22 @@ object Util extends LazyLogging {
     * @param size  Number of expected edges connecting the vertexes (default: 1).
     * @return The edge.
     */
-  def getEdge(implicit gc: GremlinConnector, vFrom: VertexDatabase, vTo: VertexDatabase, size: Int = 1): List[Edge] = {
-    val edgeList = gc.g.V(vFrom.vertex).outE().as("e").inV().is(vTo.vertex).select("e").l() //filter(_.inV().is(vTo.vertex)).toList()
-    edgeList match {
-      case x: List[Edge] =>
-        if (x.size != size) throw NumberOfEdgesNotCorrect(s"The required number of edges linked the two vertices is not met: ${x.size}")
-        size match {
-          case 0 => null
-          case _ => x
-        }
-      case _ => null
+  def getEdge(implicit gc: GremlinConnector, vFrom: VertexDatabase, vTo: VertexDatabase, size: Int = 1, ec: ExecutionContext): Future[List[Edge]] = {
+    for {
+      actualV <- vFrom.vertex
+    } yield {
+      val edgeList = gc.g.V(actualV).outE().as("e").inV().is(vTo.vertex).select("e").l() //filter(_.inV().is(vTo.vertex)).toList()
+      edgeList match {
+        case x: List[Edge] =>
+          if (x.size != size) throw NumberOfEdgesNotCorrect(s"The required number of edges linked the two vertices is not met: ${x.size}")
+          size match {
+            case 0 => null
+            case _ => x
+          }
+        case _ => null
+      }
     }
+
   }
 
   def getEdgeProperties(implicit gc: GremlinConnector, edge: Edge): Map[Any, List[String]] = {

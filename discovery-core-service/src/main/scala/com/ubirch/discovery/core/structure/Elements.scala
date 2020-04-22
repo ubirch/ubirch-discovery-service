@@ -1,17 +1,20 @@
 package com.ubirch.discovery.core.structure
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.structure.PropertyType.PropertyType
-import com.ubirch.discovery.core.util.{ Timer, Util }
-import gremlin.scala.{ Edge, Key, KeyValue }
+import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
+import com.ubirch.discovery.core.util.Util
+import gremlin.scala.{ Edge, Key, KeyValue, Vertex }
 import org.json4s
-import org.json4s._
 import org.json4s.JsonDSL._
+import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization
 
-import scala.util.Try
+import scala.collection.immutable
+import scala.concurrent.{ ExecutionContext, Future }
 
 object Elements {
 
@@ -66,7 +69,7 @@ abstract class ElementCore(properties: List[ElementProperty], label: String) {
 
 }
 
-case class VertexCore(properties: List[ElementProperty], label: String) extends ElementCore(properties, label) {
+case class VertexCore(properties: List[ElementProperty], label: String)(implicit ec: ExecutionContext) extends ElementCore(properties, label) {
   def toVertexStructDb(gc: GremlinConnector)(implicit propSet: Set[Property]): VertexDatabase = {
     new VertexDatabase(this, gc)
   }
@@ -89,7 +92,7 @@ case class EdgeCore(properties: List[ElementProperty], label: String) extends El
 
 }
 
-case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
+case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore)(implicit ec: ExecutionContext) {
   def toRelationServer(implicit propSet: Set[Property], gc: GremlinConnector): RelationServer = {
     val vFrom: VertexDatabase = this.vFrom.toVertexStructDb(gc)
     val vTo: VertexDatabase = this.vTo.toVertexStructDb(gc)
@@ -109,7 +112,7 @@ case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
   }
 }
 
-case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: EdgeCore) {
+case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: EdgeCore)(implicit ec: ExecutionContext) extends LazyLogging {
 
   implicit val formats: AnyRef with Formats = Serialization.formats(NoTypeHints)
 
@@ -123,24 +126,49 @@ case class RelationServer(vFromDb: VertexDatabase, vToDb: VertexDatabase, edge: 
       ("edge" -> edge.toJson)
   }
 
-  def createEdge(implicit gc: GremlinConnector): Try[Edge] = {
+  private def createEdgeTraversalPromise(vFrom: Vertex, vTo: Vertex)(implicit gc: GremlinConnector): Future[List[Edge]] = {
+    var constructor = gc.g.V(vTo).addE(edge.label)
+    for (prop <- edge.properties) {
+      constructor = constructor.property(prop.toKeyValue)
+    }
+    constructor.from(vFrom).promise()
+  }
 
-    Timer.time({
-      if (edge.properties.isEmpty) {
-        gc.g.V(vFromDb.vertex).as("a").V(vToDb.vertex).addE(edge.label).from(vFromDb.vertex).toSet().head
-      } else {
-        val edgeOnDb: Edge = gc.g
-          .V(vToDb.vertex)
-          .addE(edge.label)
-          .property(edge.properties.head.toKeyValue)
-          .from(vFromDb.vertex)
-          .toSet().head
-        for (keyV <- edge.properties.tail) {
-          gc.g.E(edgeOnDb).property(keyV.toKeyValue).iterate()
-        }
-        edgeOnDb
+  def createEdge(implicit gc: GremlinConnector): Future[Option[Edge]] = {
+
+    val vertices: Future[(Vertex, Vertex)] = for {
+      maybeVFrom <- vFromDb.vertex
+      maybeVTo <- vToDb.vertex
+    } yield {
+
+      val vFrom = maybeVFrom match {
+        case Some(v) => v
+        case None => throw new ImportToGremlinException(s"can not find vertex ${vFromDb.toString} in graph, while it should have already been created")
       }
-    }).result //.logTimeTaken(s"link vertices of vertices ${vFromDb.vertex.id} and ${vToDb.vertex.id}, len(properties) = ${edge.properties.size} .", criticalTimeMs = 100)
+
+      val vTo = maybeVTo match {
+        case Some(v) => v
+        case None => throw new ImportToGremlinException(s"can not find vertex ${vToDb.toString} in graph, while it should have already been created")
+      }
+
+      (vFrom, vTo)
+    }
+
+    if (edge.properties.isEmpty) {
+      for {
+        (vFrom, vTo) <- vertices
+        createdEdge: immutable.Seq[Edge] <- gc.g.V(vFrom).as("a").V(vTo).addE(edge.label).from(vFrom).promise()
+      } yield {
+        createdEdge.headOption
+      }
+    } else {
+      for {
+        (vFrom, vTo) <- vertices
+        createdEdge <- createEdgeTraversalPromise(vFrom, vTo)
+      } yield {
+        createdEdge.headOption
+      }
+    }
 
   }
 }

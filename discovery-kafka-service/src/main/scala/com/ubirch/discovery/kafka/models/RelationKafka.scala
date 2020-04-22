@@ -3,6 +3,8 @@ package com.ubirch.discovery.kafka.models
 import com.ubirch.discovery.core.structure.{ EdgeCore, Relation, VertexCore }
 import com.ubirch.discovery.kafka.util.Util._
 
+import scala.concurrent.ExecutionContext
+
 /**
   * Only used for parsing kafka messages into core Relations
   */
@@ -11,7 +13,7 @@ case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edg
     s"vFrom: ${v_from.toString} \nvTo: ${v_to.toString} \nedge: ${edge.toString}"
   }
 
-  def toCoreRelation: Relation = {
+  def toCoreRelation(implicit ec: ExecutionContext): Relation = {
     val vFromAsCoreClass = v_from.toVertexToAdd
     val vToAsCoreClass = v_to.toVertexToAdd
     val edgeAsCoreClass = edge.toEdgeToAdd
@@ -24,7 +26,7 @@ case class VertexKafkaStruct(properties: Map[String, Any], label: String = "aLab
     s"label: $label; properties: ${properties.mkString(", ")}"
   }
 
-  def toVertexToAdd: VertexCore = {
+  def toVertexToAdd(implicit ec: ExecutionContext): VertexCore = {
 
     val propertiesToAdd = properties map { kv => convertProp(kv._1, kv._2) }
     VertexCore(propertiesToAdd.toList, label)

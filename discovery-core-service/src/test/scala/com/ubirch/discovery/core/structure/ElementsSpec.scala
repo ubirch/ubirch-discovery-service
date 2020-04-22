@@ -1,12 +1,16 @@
 package com.ubirch.discovery.core.structure
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.core.TestUtil
+import com.ubirch.discovery.core.{ ExecutionContextHelper, TestUtil }
 import gremlin.scala.{ Key, KeyValue }
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 
+import scala.concurrent.ExecutionContext
+
 class ElementsSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
+
+  implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   val label1 = "label1"
   val label2 = "label2"
