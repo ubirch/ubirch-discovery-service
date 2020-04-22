@@ -64,7 +64,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection")
 
   override val process: Process = Process.async { crs =>
-
     try {
 
       val allRelations: immutable.Seq[Relation] = crs.flatMap {
@@ -88,7 +87,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
             }.getOrElse(Nil)
 
       }
-      logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
+      logger.info(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
       store(allRelations).map(_ => ())
 
     } catch {
