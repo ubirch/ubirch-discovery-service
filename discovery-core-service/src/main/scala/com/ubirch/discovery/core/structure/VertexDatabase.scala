@@ -22,8 +22,14 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
 
   val vertex: Future[Option[Vertex]] = {
     searchForVertexByProperties(coreVertex.properties).flatMap {
-      case Some(possibleVertex) => update(possibleVertex)
-      case None => addVertexWithProperties()
+      case Some(possibleVertex) => {
+        logger.debug(s"val vertex: Future[Option[Vertex]] = { - found vertex ${coreVertex.toString}: ${possibleVertex.id()}")
+        update(possibleVertex)
+      }
+      case None => {
+        logger.debug(s"  val vertex: Future[Option[Vertex]] = { - didn't find vertex ${coreVertex.toString}")
+        addVertexWithProperties()
+      }
     }
   }
 
@@ -56,19 +62,19 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   /**
     * Add new properties to vertex
     */
-  def update(vertex: Vertex): Future[Option[Vertex]] = {
+  def update(vertexToUpdate: Vertex): Future[Option[Vertex]] = {
     val shouldBeProps: Map[String, String] = coreVertex.properties.map { ep => ep.keyName -> ep.value.toString }.toMap
     val r = for {
-      map: Map[String, String] <- getPropertiesMap.map(_.map { kv => kv._1.toString -> kv._2.head.toString })
+      map: Map[String, String] <- getPropertiesMap(Future.successful(Some(vertexToUpdate))).map(_.map { kv => kv._1.toString -> kv._2.head.toString })
     } yield {
       if (map.contains("timestamp")) {
-        areTheSame(vertex, map, shouldBeProps)
+        areTheSame(vertexToUpdate, map, shouldBeProps)
 
       } else if (shouldBeProps.contains("timestamp")) {
-        addNewPropertiesToVertex(vertex)
+        addNewPropertiesToVertex(vertexToUpdate)
 
       } else {
-        Future(Option(vertex))
+        Future(Option(vertexToUpdate))
       }
     }
     r.flatMap(identity)
@@ -119,22 +125,25 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     *
     * @return A map containing the properties name and respective values of the vertex contained in this structure.
     */
-  def getPropertiesMap: Future[Map[Any, List[Any]]] = {
-
+  def getPropertiesMap(vertex: Future[Option[Vertex]] = vertex): Future[Map[Any, List[Any]]] = {
+    logger.debug("looking for property map")
     val futureVertex: Future[Vertex] = for {
       maybeVertex: Option[Vertex] <- vertex
     } yield {
       maybeVertex match {
         case Some(v) => v
-        case None => throw new Exception(s"cannot find vertex ${coreVertex.toString} on getPropertiesMap")
+        case None => {
+          logger.warn(s"cannot find vertex ${coreVertex.toString} on getPropertiesMap")
+          throw new Exception(s"cannot find vertex ${coreVertex.toString} on getPropertiesMap")
+        }
       }
     }
-
+    logger.debug(s"found vertex: }")
     for {
-      vertex <- futureVertex
-      res <- g.V(vertex).valueMap.promise()
+      newV: Vertex <- futureVertex
+      res <- g.V(newV).valueMap.promise()
     } yield {
-
+      logger.debug("found valueMap")
       val propertyMapAsJava = res.headOption match {
         case Some(v) => v.asScala.toMap.asInstanceOf[Map[Any, util.ArrayList[Any]]]
         case None => throw new Exception(s"cannot find valueMap of vertex ${coreVertex.toString} even though vertex exist")

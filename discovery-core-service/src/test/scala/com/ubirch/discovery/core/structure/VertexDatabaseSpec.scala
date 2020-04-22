@@ -65,7 +65,7 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
       // vSDb.addVertexWithProperties()
       import scala.concurrent.duration._
 
-      val response: Map[Any, List[Any]] = Await.result(vSDb.getPropertiesMap, 1.second)
+      val response: Map[Any, List[Any]] = Await.result(vSDb.getPropertiesMap(), 1.second)
       logger.debug(response.mkString)
       logger.debug(label)
 

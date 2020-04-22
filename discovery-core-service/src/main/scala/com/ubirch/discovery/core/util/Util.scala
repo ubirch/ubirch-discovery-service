@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.PropertyType.PropertyType
 import com.ubirch.discovery.core.structure._
-import com.ubirch.discovery.core.util.Exceptions.{KeyNotInList, NumberOfEdgesNotCorrect}
+import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList, NumberOfEdgesNotCorrect}
 import gremlin.scala.{Key, KeyValue}
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.json4s.JsonDSL._
@@ -13,6 +13,7 @@ import org.json4s.jackson.Serialization
 import org.json4s.{DefaultFormats, JsonAST}
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
@@ -79,6 +80,22 @@ object Util extends LazyLogging {
         }
     }
     resWithId.toList
+  }
+
+  def getOneEdge(vFrom: VertexDatabase, vTo: VertexDatabase)(implicit gc: GremlinConnector, ec: ExecutionContext): Future[Option[Edge]] = {
+    for {
+      actualV <- vFrom.vertex
+      edgeList: immutable.Seq[Any] <- gc.g.V(actualV).outE().as("e").inV().is(vTo.vertex).select("e").promise()
+    } yield {
+      edgeList.headOption match {
+        case Some(value) => value match {
+          case e: Edge => Some(e)
+          case _ => throw new ImportToGremlinException(s"Found something else than an edge between ${vFrom.toString} and ${vTo.toString}")
+        }
+        case None => None
+      }
+
+    }
   }
 
   /**

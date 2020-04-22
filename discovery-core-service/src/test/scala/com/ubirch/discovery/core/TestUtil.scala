@@ -20,7 +20,7 @@ object TestUtil {
     val keyList = properties.map(x => x.keyName)
     import scala.concurrent.duration._
     for {
-      v <- vertexStruct.getPropertiesMap
+      v <- vertexStruct.getPropertiesMap()
     } yield {
       val propertiesInServerAsListKV = try {
         recompose(v, keyList)

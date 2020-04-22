@@ -6,12 +6,13 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.structure._
-import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, KeyNotInList, PropertiesNotCorrect }
-import com.ubirch.discovery.core.util.Util.{ getEdge, getEdgeProperties, recompose }
+import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList, PropertiesNotCorrect}
+import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
+import com.ubirch.discovery.core.util.Util
 import gremlin.scala.Edge
 import org.janusgraph.core.SchemaViolationException
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 /**
@@ -27,7 +28,7 @@ object AddRelation extends LazyLogging {
     def recoverEdge(error: Throwable) = {
       areVertexLinked(relation.vFromDb, relation.vToDb).flatMap { linked =>
         if (!linked) relation.createEdge
-        else Future.failed(new Exception("Error creating edge"))
+        else Util.getOneEdge(relation.vFromDb, relation.vFromDb)
       }
     }
 

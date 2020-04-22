@@ -36,8 +36,21 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
       // commit
       relations foreach { relation: Relation =>
         implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
-        Await.result(relation.toRelationServer.createEdge, 5 seconds)
-
+        logger.info(s"working on relation ${relations.toString()}")
+        val res = relation.toRelationServer
+        for {
+          vFrom: Option[Vertex] <- res.vFromDb.vertex
+          vTo <- res.vToDb.vertex
+        } yield {
+          logger.info("vFrom: " + vFrom.get.id())
+          logger.info("vTo: " + vTo.get.id())
+        }
+        Thread.sleep(2000)
+        logger.info("went out of yield")
+        Await.result({
+          AddRelation.twoExistCache(res)
+        }, 5 seconds)
+        logger.info(s"passed relation ${relations.toString()}")
       }
       // verif
       relations foreach { relation =>
