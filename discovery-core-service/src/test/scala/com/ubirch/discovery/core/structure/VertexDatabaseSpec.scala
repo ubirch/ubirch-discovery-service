@@ -46,7 +46,7 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
     gc.g.V().headOption()
   }
 
-  feature("generate a vertex") {
+  ignore("generate a vertex") {
 
     scenario("test") {
       deleteDatabase()
@@ -110,7 +110,7 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
 
   }
 
-  feature("adding vertex already existing") {
+  ignore("adding vertex already existing") {
     scenario("catch error") {
 
       deleteDatabase()

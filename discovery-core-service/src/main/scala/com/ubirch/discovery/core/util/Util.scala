@@ -82,11 +82,10 @@ object Util extends LazyLogging {
     resWithId.toList
   }
 
-  def getOneEdge(vFrom: VertexDatabase, vTo: VertexDatabase)(implicit gc: GremlinConnector, ec: ExecutionContext): Future[Option[Edge]] = {
+  def getOneEdge(vFrom: Vertex, vTo: Vertex)(implicit gc: GremlinConnector, ec: ExecutionContext): Future[Option[Edge]] = {
     for {
-      actualVFrom: Option[Vertex] <- vFrom.vertex
-      actualVTo: Option[Vertex] <- vTo.vertex
-      edgeList: immutable.Seq[Any] <- gc.g.V(actualVFrom.get).outE().as("e").inV().is(actualVTo.get).select("e").promise()
+
+      edgeList: immutable.Seq[Any] <- gc.g.V(vFrom).outE().as("e").inV().is(vTo).select("e").promise()
     } yield {
       edgeList.headOption match {
         case Some(value) => value match {

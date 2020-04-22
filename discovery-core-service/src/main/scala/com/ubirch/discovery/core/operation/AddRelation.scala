@@ -26,7 +26,7 @@ object AddRelation extends LazyLogging {
     def recoverEdge(error: Throwable) = {
       areVertexLinked(relation.vFromDb, relation.vToDb).flatMap { linked =>
         if (!linked) relation.createEdge
-        else Util.getOneEdge(relation.vFromDb, relation.vFromDb)
+        else relation.createEdge
       }
     }
 

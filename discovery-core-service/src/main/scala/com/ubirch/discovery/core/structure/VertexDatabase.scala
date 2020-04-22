@@ -20,7 +20,11 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   val g: TraversalSource = gc.g
   val b: Bindings = gc.b
 
-  val vertex: Future[Option[Vertex]] = {
+  def init = {
+    vertex.map(_ => this)
+  }
+
+  lazy val vertex: Future[Option[Vertex]] = {
     searchForVertexByProperties(coreVertex.properties).flatMap {
       case Some(possibleVertex) => {
         logger.debug(s"val vertex: Future[Option[Vertex]] = { - found vertex ${coreVertex.toString}: ${possibleVertex.id()}")
@@ -202,7 +206,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     * Then it's not an actual error that we're catching
     */
   private def recoverVertexAlreadyExist(error: Throwable): Future[Option[Vertex]] = {
-    logger.warn("uniqueness constraint, recovering" + error.getMessage)
+    logger.warn("uniqueness constraint, recovrecoverVertexAlreadyExistering" + error.getMessage)
 
     searchForVertexByProperties(coreVertex.properties)
       .flatMap {
