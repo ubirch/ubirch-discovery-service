@@ -4,18 +4,18 @@ import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.TestUtil._
-import com.ubirch.discovery.core.connector.{ConnectorType, GremlinConnector, GremlinConnectorFactory}
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.core.operation.AddRelation
 import com.ubirch.discovery.core.structure._
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import gremlin.scala._
 import io.prometheus.client.CollectorRegistry
 import org.joda.time.format.ISODateTimeFormat
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.io.Source
 
 class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with LazyLogging {
@@ -45,7 +45,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
           logger.info("vFrom: " + vFrom.get.id())
           logger.info("vTo: " + vTo.get.id())
         }
-        Thread.sleep(2000)
+        Thread.sleep(200)
         logger.info("went out of yield")
         Await.result({
           AddRelation.twoExistCache(res)
@@ -95,7 +95,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
       relations foreach { relation =>
         implicit val propSet: Set[Elements.Property] = putPropsOnPropSet(relation.vFrom.properties) ++ putPropsOnPropSet(relation.vTo.properties)
 
-        Await.result(relation.toRelationServer.createEdge, 5 seconds)
+        Await.result(AddRelation.twoExistCache(relation.toRelationServer), 5 seconds)
 
         // verif
         try {
@@ -166,7 +166,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
 
   }
 
-  feature("verify verifier") {
+  ignore("verify verifier") {
     scenario("add vertices, verify correct data -> should be TRUE") {
       // no need to implement it, scenario("add two unlinked vertex") already covers this topic
     }
@@ -216,6 +216,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
 
       // analyse
       //    count number of vertices and edges
+      Thread.sleep(1000)
       val nbVertices = gc.g.V().count().toSet().head
 
       val nbEdges = gc.g.E.count().toSet().head

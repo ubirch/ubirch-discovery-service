@@ -6,14 +6,14 @@ import java.util.concurrent.CompletionException
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
-import com.ubirch.discovery.core.util.Exceptions.{GraphException, ImportToGremlinException, VertexCreationException, VertexUpdateException}
-import gremlin.scala.{TraversalSource, Vertex}
+import com.ubirch.discovery.core.util.Exceptions.{ GraphException, ImportToGremlinException, VertexCreationException, VertexUpdateException }
+import gremlin.scala.{ TraversalSource, Vertex }
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.janusgraph.core.SchemaViolationException
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(implicit schemaDefinedProperties: Set[Property], ec: ExecutionContext) extends LazyLogging {
 

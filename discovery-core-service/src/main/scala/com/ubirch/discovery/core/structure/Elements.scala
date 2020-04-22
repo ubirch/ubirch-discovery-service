@@ -6,7 +6,7 @@ import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.structure.PropertyType.PropertyType
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Util
-import gremlin.scala.{Edge, Key, KeyValue, Vertex}
+import gremlin.scala.{ Edge, Key, KeyValue, Vertex }
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
@@ -14,7 +14,7 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization
 
 import scala.collection.immutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object Elements {
 

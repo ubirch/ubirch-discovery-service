@@ -1,11 +1,11 @@
 package com.ubirch.discovery.core
 
 import com.ubirch.discovery.core.connector.GremlinConnector
-import com.ubirch.discovery.core.structure.{ElementProperty, Elements, VertexDatabase}
-import com.ubirch.discovery.core.util.Exceptions.{ImportToGremlinException, KeyNotInList}
-import com.ubirch.discovery.core.util.Util.{getEdge, getEdgeProperties, recompose}
+import com.ubirch.discovery.core.structure.{ ElementProperty, Elements, VertexDatabase }
+import com.ubirch.discovery.core.util.Exceptions.{ ImportToGremlinException, KeyNotInList }
+import com.ubirch.discovery.core.util.Util.{ getEdge, getEdgeProperties, recompose }
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{ Await, ExecutionContext }
 
 object TestUtil {
 
@@ -60,7 +60,6 @@ object TestUtil {
       if (!(propertiesInServer.sortBy(x => x.keyName) == properties.sortBy(x => x.keyName)))
         throw new ImportToGremlinException(s"Edge between $vFrom and $vTo wasn't correctly created: properties are not correct")
     }
-    }
-
+  }
 
 }
