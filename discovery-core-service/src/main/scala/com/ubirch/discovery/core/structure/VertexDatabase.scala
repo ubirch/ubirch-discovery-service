@@ -20,7 +20,11 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   val g: TraversalSource = gc.g
   val b: Bindings = gc.b
 
-  val vertex: Future[Option[Vertex]] = {
+  def init = {
+    vertex.map(_ => this)
+  }
+
+  lazy val vertex: Future[Option[Vertex]] = {
     searchForVertexByProperties(coreVertex.properties).flatMap {
       case Some(possibleVertex) => {
         logger.debug(s"val vertex: Future[Option[Vertex]] = { - found vertex ${coreVertex.toString}: ${possibleVertex.id()}")
