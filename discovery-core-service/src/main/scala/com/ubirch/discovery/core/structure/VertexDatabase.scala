@@ -25,6 +25,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   val g: TraversalSource = gc.g
   val b: Bindings = gc.b
 
+  // create a traversal like g.V().or(__.has(prop1), ..., __.has(propn)).coalesce(unfold(), addV(label)).property(prop1).property(prop2)
   def getUpdateOrCreate: Vertex = {
 
     logger.info(s"getUpdateOrCreate(${coreVertex.toString})")

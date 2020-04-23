@@ -50,6 +50,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   override val valueDeserializer: Deserializer[String] = new StringDeserializer
 
+  override def consumerFetchMaxBytesConfig: Int = 52428800
+
+  override def consumerMaxPartitionFetchBytesConfig: Int = 10485760
+
   implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
 
   private val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
