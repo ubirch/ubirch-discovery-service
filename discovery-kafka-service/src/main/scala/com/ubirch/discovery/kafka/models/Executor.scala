@@ -85,7 +85,6 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customRes
     * Add a new item to the execution list.
     * This item will be a Future of f(item).
     * Once the computation of f(item) is over, it'll try to add a new item to the execution list
-    * @param thingToAdd
     * @return
     */
   private def addToExecutionList(thingToAdd: (Int, T)) = {

@@ -1,23 +1,22 @@
 package com.ubirch.discovery.kafka.consumer
 
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import com.ubirch.discovery.core.structure.Elements.Property
-import com.ubirch.discovery.core.structure.{ Helpers, Relation, RelationServer, VertexCore, VertexDatabase }
+import com.ubirch.discovery.core.structure.{ Relation, RelationServer, VertexCore, VertexDatabase }
+import com.ubirch.discovery.core.util.Timer
 import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
-import com.ubirch.discovery.kafka.models.{ KafkaElements, RelationKafka, Store }
+import com.ubirch.discovery.kafka.models.{ Executor, RelationKafka, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
-import gremlin.scala.{ Edge, Vertex }
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
+import org.json4s.JsonDSL._
 
 import scala.collection.immutable
 import scala.collection.immutable.HashMap
-import scala.concurrent.Future
 import scala.language.postfixOps
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
@@ -59,16 +58,13 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
-  implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
-
   val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection")
 
   lazy val flush: Boolean = conf.getBoolean("flush")
 
-  override val process: Process = Process.async { crs =>
+  override val process: Process = Process { crs =>
 
     if (!flush) {
-
       try {
 
         val allRelations: immutable.Seq[Relation] = crs.flatMap {
@@ -83,29 +79,50 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
                   send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
                   logger.error(ErrorsHandler.generateException(exception, cr.value()))
                   Nil
-                case exception: Exception =>
-                  errorCounter.counter.labels("Unknown").inc()
-                  send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-                  logger.error(ErrorsHandler.generateException(exception, cr.value()))
-                  Nil
-
-              }.getOrElse(Nil)
-
+              }
+              .filter(_.nonEmpty)
+              .get
         }
-        logger.info(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
-        store(allRelations).map(_ => ())
+        logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
+        store(allRelations) foreach recoverStoreRelationIfNeeded
 
       } catch {
         case e: Exception =>
           //TODO WHAT IS OK TO LET GO
           logger.error("Error processing: ", e)
-          Future.unit
       }
-
     } else {
-      Future.unit
+      logger.debug("flushing")
     }
 
+    /*    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
+      cr =>
+        logger.debug("Received value: " + cr.value())
+        storeCounter.counter.labels("ReceivedMessage").inc()
+
+        val relations = Try(parseRelations(cr.value()))
+          .recover {
+            case exception: ParsingException =>
+              errorCounter.counter.labels("ParsingException").inc()
+              send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+              logger.error(ErrorsHandler.generateException(exception, cr.value()))
+              Nil
+          }
+          .filter(_.nonEmpty)
+          .get
+        counter += relations.size
+        if (checkIfAllVertexAreTheSame(relations)) {
+          val vertexCached = Store.vertexToCache(relations.head.vFrom)
+          relations map { r => (r, Store.addRelationOneCached(_, vertexCached)) }
+        } else {
+          relations map { r => (r, Store.addRelation(_)) }
+        }
+    }
+    logger.debug(s"Should process $counter relations")
+
+    store(allRelations) foreach recoverStoreRelationIfNeeded
+
+    counter = 0*/
   }
 
   def checkIfAllVertexAreTheSame(relations: Seq[Relation]): Boolean = {
@@ -133,64 +150,63 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def store(relations: Seq[Relation]): Future[Seq[(Relation, Option[Edge])]] = {
+  def store(relations: Seq[Relation]): List[(RelationServer, Try[Unit])] = {
 
-    val hashMapVertices: HashMap[VertexCore, Option[Vertex]] = preprocess(relations)
+    val res = Timer.time({
 
-    def getVertexFromHMap(vertexCore: VertexCore): Vertex = {
-      hashMapVertices.get(vertexCore) match {
-        case Some(maybeVertex) =>
-          maybeVertex match {
-            case Some(concreteV) => {
-              concreteV
-            }
-            case None => Helpers.getOrCreateVertex(vertexCore).getOrElse(throw new Exception("cant add or get vertex"))
-          }
-        case None =>
-          logger.debug(s"didn't find vertex ${vertexCore.toString} in the hashMap")
-          Helpers.getOrCreateVertex(vertexCore).getOrElse(throw new Exception("cant add or get vertex"))
-      }
-    }
+      val hashMapVertices: HashMap[VertexCore, VertexDatabase] = preprocess(relations)
 
-    logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.distinct.size}")
-
-    val createdRelations: Future[Seq[(Relation, Option[Edge])]] = Future.sequence {
-      relations.map { r =>
-        logger.debug("adding relation")
-        Helpers.createRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge).map(x => (r, x)).recoverWith {
-          case e: StoreException =>
-            errorCounter.counter.labels("StoreException").inc()
-            logger.error(ErrorsHandler.generateException(e, r.toString))
-            send(producerErrorTopic, ErrorsHandler.generateException(e, r.toString))
-            Future.successful(r, None)
-          case e: Throwable =>
-            errorCounter.counter.labels("Exception").inc()
-            logger.error(ErrorsHandler.generateException(e, r.toString))
-            send(producerErrorTopic, ErrorsHandler.generateException(e, r.toString))
-            Future.successful(r, None)
+      def getVertexFromHMap(vertexCore: VertexCore) = {
+        hashMapVertices.get(vertexCore) match {
+          case Some(vDb) => vDb
+          case None =>
+            logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}")
+            Store.addVertex(vertexCore)
         }
       }
-    }.recover {
-      case e: Exception =>
-        logger.error("OMG := ", e)
-        throw e
-    }
 
-    createdRelations
+      logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
+      val relationsAsRelationServer: Seq[RelationServer] = relations.map(r => RelationServer(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
+
+      val executor = new Executor[RelationServer, Try[Unit]](objects = relationsAsRelationServer, f = Store.addRelationTwoCached(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+      executor.startProcessing()
+      executor.latch.await()
+      executor.getResultsNoTry
+
+    })
+    //res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)), 10000, warnOnly = false)
+
+    res.result match {
+      case Success(success) => success
+      case Failure(exception) =>
+        logger.error("Error storing relations, out of executor", exception)
+        throw StoreException("Error storing relations, out of executor", exception)
+    }
   }
 
-  def preprocess(relations: Seq[Relation]): HashMap[VertexCore, Option[Vertex]] = {
+  def preprocess(relations: Seq[Relation]) = {
     // 1: flatten relations to get the vertices
-    val vertices: Seq[VertexCore] = Store.getAllVerticeFromRelations(relations)
+    val vertices = Store.getAllVerticeFromRelations(relations)
 
     // 2: create the hashMap [vertexCore, vertexDb]
-    vertices.toList
-      .foldLeft(HashMap.empty[VertexCore, Option[Vertex]])((existing, b) => existing ++ HashMap(b -> Helpers.getOrCreateVertex(b)))
-
+    val executor = new Executor[VertexCore, VertexDatabase](objects = vertices, f = Store.addVertex(_), processSize = maxParallelConnection)
+    executor.startProcessing()
+    executor.latch.await()
+    val executorRes: List[(VertexCore, VertexDatabase)] = executor.getResultsOnlySuccess
+    HashMap(executorRes.map(vCoreAndVDb => vCoreAndVDb._1 -> vCoreAndVDb._2): _*)
   }
 
-  def recoverStoreRelationIfNeeded(relationAndResult: (RelationServer, Future[Option[Edge]])): Future[Object] = {
-    relationAndResult._2
+  def recoverStoreRelationIfNeeded(relationAndResult: (RelationServer, Try[Unit])): Try[Unit] = {
+    relationAndResult._2 recover {
+      case e: StoreException =>
+        errorCounter.counter.labels("StoreException").inc()
+        logger.error(ErrorsHandler.generateException(e, relationAndResult._1.toString))
+        send(producerErrorTopic, ErrorsHandler.generateException(e, relationAndResult._1.toString))
+      case e: Exception =>
+        errorCounter.counter.labels("Exception").inc()
+        logger.error(ErrorsHandler.generateException(e, relationAndResult._1.toString))
+        send(producerErrorTopic, ErrorsHandler.generateException(e, relationAndResult._1.toString))
+    }
 
   }
 
