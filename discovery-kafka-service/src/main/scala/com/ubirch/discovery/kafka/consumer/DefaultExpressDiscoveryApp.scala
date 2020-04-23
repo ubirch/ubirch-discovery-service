@@ -95,34 +95,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       logger.debug("flushing")
     }
 
-    /*    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
-      cr =>
-        logger.debug("Received value: " + cr.value())
-        storeCounter.counter.labels("ReceivedMessage").inc()
-
-        val relations = Try(parseRelations(cr.value()))
-          .recover {
-            case exception: ParsingException =>
-              errorCounter.counter.labels("ParsingException").inc()
-              send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-              logger.error(ErrorsHandler.generateException(exception, cr.value()))
-              Nil
-          }
-          .filter(_.nonEmpty)
-          .get
-        counter += relations.size
-        if (checkIfAllVertexAreTheSame(relations)) {
-          val vertexCached = Store.vertexToCache(relations.head.vFrom)
-          relations map { r => (r, Store.addRelationOneCached(_, vertexCached)) }
-        } else {
-          relations map { r => (r, Store.addRelation(_)) }
-        }
-    }
-    logger.debug(s"Should process $counter relations")
-
-    store(allRelations) foreach recoverStoreRelationIfNeeded
-
-    counter = 0*/
   }
 
   def checkIfAllVertexAreTheSame(relations: Seq[Relation]): Boolean = {
@@ -184,7 +156,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def preprocess(relations: Seq[Relation]) = {
+  def preprocess(relations: Seq[Relation]): HashMap[VertexCore, VertexDatabase] = {
     // 1: flatten relations to get the vertices
     val vertices = Store.getAllVerticeFromRelations(relations)
 
