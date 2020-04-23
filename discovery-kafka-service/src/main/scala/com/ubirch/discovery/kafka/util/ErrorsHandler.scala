@@ -21,7 +21,7 @@ case class StorageError(message: String) extends ErrorsStruct {
 }
 
 object ErrorsHandler {
-  def generateException(exception: Exception, relation: String = ""): String = {
+  def generateException(exception: Throwable, relation: String = ""): String = {
     val errorsStruct = exception match {
       case e: ParsingException => ParsingError(e.message + " relation: " + relation)
       case e: StoreException => StorageError(e.message + " relation: " + relation)

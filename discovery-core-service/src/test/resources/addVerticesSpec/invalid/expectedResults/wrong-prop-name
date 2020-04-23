@@ -1,3 +1,3 @@
-org.apache.tinkerpop.gremlin.driver.exception.ResponseException: Name cannot be in protected namespace: Label
+Error on adding properties to vertex {"label":"aLabel","properties":[{"Number":"5"},{"Label":"Label"}]}: org.apache.tinkerpop.gremlin.driver.exception.ResponseException: Name cannot be in protected namespace: Label
 
 Property key can't be "Label"
