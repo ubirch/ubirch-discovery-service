@@ -146,7 +146,7 @@ class AddRelationSpec extends FeatureSpec with Matchers with BeforeAndAfterEach 
 
   }
 
-  feature("verify verifier") {
+  ignore("verify verifier") {
     scenario("add vertices, verify correct data -> should be TRUE") {
       // no need to implement it, scenario("add two unlinked vertex") already covers this topic
     }

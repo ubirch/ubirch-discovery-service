@@ -8,9 +8,11 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.Exceptions.ImportToGremlinException
 import com.ubirch.discovery.core.util.Timer
-import gremlin.scala.{ TraversalSource, Vertex }
+import gremlin.scala.{ GremlinScala, KeyValue, TraversalSource, Vertex }
+import gremlin.scala.GremlinScala.Aux
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.janusgraph.core.SchemaViolationException
+import shapeless.HNil
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
@@ -23,17 +25,40 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   val g: TraversalSource = gc.g
   val b: Bindings = gc.b
 
-  var vertex: gremlin.scala.Vertex = { // if error check that gremlin.scala.Vertex is the correct type that should be returned
-    val timedPossibleVertex = Timer.time({
-      val possibleVertex = searchForVertexByProperties(coreVertex.properties)
-      if (possibleVertex != null) {
-        addNewPropertiesToVertex(possibleVertex)
+  def getUpdateOrCreate: Vertex = {
+
+    logger.info(s"getUpdateOrCreate(${coreVertex.toString})")
+    val t0 = System.currentTimeMillis()
+
+    def createAllPropertiesTraversal(constructor: Aux[Vertex, HNil]): Aux[Vertex, HNil] = {
+
+      var newConstructor = constructor
+      for { props <- coreVertex.properties } {
+        newConstructor = newConstructor.property(props.toKeyValue)
       }
-      possibleVertex
-    })
-    //timedPossibleVertex.logTimeTakenJson("check_vertex_in_db" -> List(("result" -> Option(timedPossibleVertex.result.getOrElse("false")).getOrElse("false").toString) ~ ("vertex" -> coreVertex.toJson)), 100)
-    timedPossibleVertex.result.getOrElse(null)
+      newConstructor
+    }
+
+    def createWhatWeWant[Any](prop: KeyValue[Any]): GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil] = trav => trav.has(prop)
+
+    val rs: Seq[GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil]] = {
+
+      //Seq(trav => trav.has(oneProp))
+      val res = coreVertex.properties.filter(p => isPropertyIterable(p.keyName)).map { p => createWhatWeWant(p.toKeyValue) }.toSeq
+      res
+    }
+
+    val firstConstructor: Aux[Vertex, HNil] = gc.g.V().or(rs: _*).fold().coalesce(_.unfold(), _.addV(coreVertex.label))
+    val res = createAllPropertiesTraversal(firstConstructor).l().head
+
+    val t1 = System.currentTimeMillis()
+    logger.info(s"getUpdateOrCreate time: ${t1 - t0} ms")
+    //def or(traversals: (GremlinScala.Aux[End, HNil] => GremlinScala[_])*)
+    res
+
   }
+
+  val vertex: gremlin.scala.Vertex = getUpdateOrCreate
 
   @tailrec
   private def searchForVertexByProperties(properties: List[ElementProperty]): gremlin.scala.Vertex = {
@@ -74,7 +99,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
     if (existInJanusGraph) throw new ImportToGremlinException("Vertex already exist in the database")
     try {
       logger.debug(s"adding vertex ${coreVertex.toString}")
-      vertex = initialiseVertex
+      //vertex = initialiseVertex
     } catch {
       case e: CompletionException =>
         logger.error(s"Error on adding vertex and its properties ${coreVertex.toString}: ", e)

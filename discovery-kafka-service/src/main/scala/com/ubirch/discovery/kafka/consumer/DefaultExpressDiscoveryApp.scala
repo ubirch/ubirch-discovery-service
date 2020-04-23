@@ -60,33 +60,39 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection")
 
+  lazy val flush: Boolean = conf.getBoolean("flush")
+
   override val process: Process = Process { crs =>
 
-    try {
+    if (!flush) {
+      try {
 
-      val allRelations: immutable.Seq[Relation] = crs.flatMap {
-        cr =>
-          //logger.debug("Received value: " + cr.value())
-          storeCounter.counter.labels("ReceivedMessage").inc()
+        val allRelations: immutable.Seq[Relation] = crs.flatMap {
+          cr =>
+            //logger.debug("Received value: " + cr.value())
+            storeCounter.counter.labels("ReceivedMessage").inc()
 
-          Try(parseRelations(cr.value()))
-            .recover {
-              case exception: ParsingException =>
-                errorCounter.counter.labels("ParsingException").inc()
-                send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
-                logger.error(ErrorsHandler.generateException(exception, cr.value()))
-                Nil
-            }
-            .filter(_.nonEmpty)
-            .get
+            Try(parseRelations(cr.value()))
+              .recover {
+                case exception: ParsingException =>
+                  errorCounter.counter.labels("ParsingException").inc()
+                  send(producerErrorTopic, ErrorsHandler.generateException(exception, cr.value()))
+                  logger.error(ErrorsHandler.generateException(exception, cr.value()))
+                  Nil
+              }
+              .filter(_.nonEmpty)
+              .get
+        }
+        logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
+        store(allRelations) foreach recoverStoreRelationIfNeeded
+
+      } catch {
+        case e: Exception =>
+          //TODO WHAT IS OK TO LET GO
+          logger.error("Error processing: ", e)
       }
-      logger.debug(s"Pooled ${crs.size} kafka messages containing ${allRelations.size} relations")
-      store(allRelations) foreach recoverStoreRelationIfNeeded
-
-    } catch {
-      case e: Exception =>
-        //TODO WHAT IS OK TO LET GO
-        logger.error("Error processing: ", e)
+    } else {
+      logger.debug("flushing")
     }
 
     /*    val allRelations: immutable.Seq[(Relation, Relation => Try[Unit])] = crs.flatMap {
@@ -153,7 +159,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       def getVertexFromHMap(vertexCore: VertexCore) = {
         hashMapVertices.get(vertexCore) match {
           case Some(vDb) => vDb
-          case None => Store.addVertex(vertexCore)
+          case None =>
+            logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}")
+            Store.addVertex(vertexCore)
         }
       }
 

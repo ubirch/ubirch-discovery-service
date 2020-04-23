@@ -39,14 +39,7 @@ object Store extends LazyLogging {
   }
 
   def addVertex(vertex: VertexCore)(implicit gc: GremlinConnector): VertexDatabase = {
-    val vDb = vertex.toVertexStructDb(gc)
-    if (!vDb.existInJanusGraph) {
-      vDb.addVertexWithProperties()
-      vDb
-    } else {
-      vDb.update()
-      vDb
-    }
+    vertex.toVertexStructDb(gc)
 
   }
 

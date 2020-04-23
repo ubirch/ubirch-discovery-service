@@ -59,7 +59,7 @@ class VertexDatabaseSpec extends FeatureSpec with Matchers with BeforeAndAfterEa
       val vertexInternal = VertexCore(properties, label)
       val vSDb = vertexInternal.toVertexStructDb(gc)
 
-      vSDb.addVertexWithProperties()
+      //      vSDb.addVertexWithProperties()
 
       val response: Map[Any, List[Any]] = vSDb.getPropertiesMap
       logger.debug(response.mkString)
