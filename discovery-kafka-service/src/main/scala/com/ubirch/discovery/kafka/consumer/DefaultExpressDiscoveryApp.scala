@@ -155,7 +155,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     //res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)), 10000, warnOnly = false)
 
     res.result match {
-      case Success(success) => success
+      case Success(success) => {
+        logger.info(s"processed ${relations.size} in ${res.elapsed} ms => ${relations.size / res.elapsed.toInt} rel/ms")
+        success
+      }
       case Failure(exception) =>
         logger.error("Error storing relations, out of executor", exception)
         throw StoreException("Error storing relations, out of executor", exception)
@@ -164,12 +167,15 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   def preprocess(relations: Seq[Relation]): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
+    val t0 = System.currentTimeMillis()
     val vertices: Seq[VertexCore] = Store.getAllVerticeFromRelations(relations)
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val res: Map[VertexCore, Vertex] = Helpers.getUpdateOrCreateMultiple(vertices.toList)
+    val verticesGroups = vertices.grouped(30)
 
-    println(res.mkString(", "))
+    val res: Map[VertexCore, Vertex] = verticesGroups.map{vs => Helpers.getUpdateOrCreateMultiple(vs.toList)}.toList.flatten.toMap
+    val t1 = System.currentTimeMillis()
+    logger.info(s"preprocess of ${vertices.size} done in ${t1 - t0} ms => ${vertices.size / (t1 - t0).toInt} vertice / sec")
     res
   }
 
