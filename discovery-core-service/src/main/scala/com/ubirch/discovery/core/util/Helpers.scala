@@ -29,94 +29,102 @@ object Helpers extends LazyLogging {
   // .select('a', 'b', 'c', 'd')
   def getUpdateOrCreateMultiple(verticesCore: List[VertexCore])(implicit gc: GremlinConnector, ec: ExecutionContext, propSet: Set[Property]): Map[VertexCore, Vertex] = {
 
-    val t0 = System.currentTimeMillis()
+    // case that if only one vertex is present, then finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
+    // will be cast to something that doesn't work
+    if (verticesCore.size == 1) {
+      Map(verticesCore.head -> getUpdateOrCreate(verticesCore.head))
+    } else {
 
-    def initTraversal(vertexCore: VertexCore, aggregateValue: StepLabel[java.util.Set[Vertex]]): Aux[Vertex, HNil] = {
-      // helper function to make the has() step in the or() step
-      def createWhatWeWant[Any](prop: KeyValue[Any]): GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil] = trav => trav.has(prop)
+      val t0 = System.currentTimeMillis()
 
-      // create a list of has(property), has(property) that will be used inside the or step
-      val hasPropertySteps: Seq[GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil]] =
-        vertexCore.properties.filter(p => isPropertyIterable(p.keyName)).map { p => createWhatWeWant(p.toKeyValue) }.toSeq
+      def initTraversal(vertexCore: VertexCore, aggregateValue: StepLabel[java.util.Set[Vertex]]): Aux[Vertex, HNil] = {
+        // helper function to make the has() step in the or() step
+        def createWhatWeWant[Any](prop: KeyValue[Any]): GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil] = trav => trav.has(prop)
 
-      // will property().[..].property steps to the constructor
-      def addPropertiesToTraversal(constructor: Aux[Vertex, HNil]): Aux[Vertex, HNil] = {
-        var newConstructor = constructor
-        for { props <- vertexCore.properties } {
-          newConstructor = newConstructor.property(props.toKeyValue)
+        // create a list of has(property), has(property) that will be used inside the or step
+        val hasPropertySteps: Seq[GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil]] =
+          vertexCore.properties.filter(p => isPropertyIterable(p.keyName)).map { p => createWhatWeWant(p.toKeyValue) }.toSeq
+
+        // will property().[..].property steps to the constructor
+        def addPropertiesToTraversal(constructor: Aux[Vertex, HNil]): Aux[Vertex, HNil] = {
+          var newConstructor = constructor
+          for { props <- vertexCore.properties } {
+            newConstructor = newConstructor.property(props.toKeyValue)
+          }
+          newConstructor
         }
-        newConstructor
+        val firstPartOfQuery = gc.g.V().or(hasPropertySteps: _*).fold().coalesce(_.unfold[Vertex](), _.addV(vertexCore.label)).aggregate(aggregateValue)
+        addPropertiesToTraversal(firstPartOfQuery)
       }
-      val firstPartOfQuery = gc.g.V().or(hasPropertySteps: _*).fold().coalesce(_.unfold[Vertex](), _.addV(vertexCore.label)).aggregate(aggregateValue)
-      addPropertiesToTraversal(firstPartOfQuery)
-    }
 
-    // will add a or(_.has(), ..., _.has()).fold().coalesce(unfold(), addV(label)).aggregate(value).prop().[..].prop() to the previous constructor
-    def createTraversalForOne(previousConstructor: GremlinScala.Aux[Vertex, HNil], vertexCore: VertexCore, aggregateValue: StepLabel[java.util.Set[Vertex]]): Aux[Vertex, HNil] = {
+      // will add a or(_.has(), ..., _.has()).fold().coalesce(unfold(), addV(label)).aggregate(value).prop().[..].prop() to the previous constructor
+      def createTraversalForOne(previousConstructor: GremlinScala.Aux[Vertex, HNil], vertexCore: VertexCore, aggregateValue: StepLabel[java.util.Set[Vertex]]): Aux[Vertex, HNil] = {
 
-      // helper function to make the has() step in the or() step
-      def createWhatWeWant[Any](prop: KeyValue[Any]): GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil] =
-        trav => trav.has(prop)
+        // helper function to make the has() step in the or() step
+        def createWhatWeWant[Any](prop: KeyValue[Any]): GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil] =
+          trav => trav.has(prop)
 
-      // create a list of has(property), has(property) that will be used inside the or step
-      val hasPropertySteps: Seq[GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil]] =
-        vertexCore.properties.filter(p => isPropertyIterable(p.keyName)).map { p => createWhatWeWant(p.toKeyValue) }.toSeq
+        // create a list of has(property), has(property) that will be used inside the or step
+        val hasPropertySteps: Seq[GremlinScala.Aux[Vertex, HNil] => GremlinScala.Aux[Vertex, HNil]] =
+          vertexCore.properties.filter(p => isPropertyIterable(p.keyName)).map { p => createWhatWeWant(p.toKeyValue) }.toSeq
 
-      // will property().[..].property steps to the constructor
-      def addPropertiesToTraversal(constructor: Aux[Vertex, HNil]): Aux[Vertex, HNil] = {
-        var newConstructor = constructor
-        for { props <- vertexCore.properties } {
-          newConstructor = newConstructor.property(props.toKeyValue)
+        // will property().[..].property steps to the constructor
+        def addPropertiesToTraversal(constructor: Aux[Vertex, HNil]): Aux[Vertex, HNil] = {
+          var newConstructor = constructor
+          for { props <- vertexCore.properties } {
+            newConstructor = newConstructor.property(props.toKeyValue)
+          }
+          newConstructor
         }
-        newConstructor
+
+        val firstPartOfQuery = previousConstructor.V().or(hasPropertySteps: _*).fold().coalesce(_.unfold[Vertex](), _.addV(vertexCore.label)).aggregate(aggregateValue)
+        addPropertiesToTraversal(firstPartOfQuery)
+
       }
 
-      val firstPartOfQuery = previousConstructor.V().or(hasPropertySteps: _*).fold().coalesce(_.unfold[Vertex](), _.addV(vertexCore.label)).aggregate(aggregateValue)
-      addPropertiesToTraversal(firstPartOfQuery)
+      /*
+      Will add .select(aggregatedValues) to the traversal
+      The scala gremlin library has a strange behaviour, which forces us to do the following trick
+       */
+      def finishTraversal(almostFinishedTraversal: Aux[Vertex, HNil], allAggregatedValues: List[StepLabel[java.util.Set[Vertex]]]) = {
 
-    }
-
-    /*
-    Will add .select(aggregatedValues) to the traversal
-    The scala gremlin library has a strange behaviour, which forces us to do the following trick
-     */
-    def finishTraversal(almostFinishedTraversal: Aux[Vertex, HNil], allAggregatedValues: List[StepLabel[java.util.Set[Vertex]]]) = {
-
-      val t: List[String] = allAggregatedValues.map(p => p.name)
-      if (t.size == 1) {
-        almostFinishedTraversal.select[java.util.Map[String, Any]](t.head)
-      } else if (t.size == 2) {
-        almostFinishedTraversal.select(t.head, t.tail.head)
-      } else {
-        almostFinishedTraversal.select(t.head, t.tail.head, t.tail.tail: _*)
+        val t: List[String] = allAggregatedValues.map(p => p.name)
+        if (t.size == 1) {
+          almostFinishedTraversal.select[java.util.Map[String, Any]](t.head)
+        } else if (t.size == 2) {
+          almostFinishedTraversal.select(t.head, t.tail.head)
+        } else {
+          almostFinishedTraversal.select(t.head, t.tail.head, t.tail.tail: _*)
+        }
       }
-    }
 
-    case class VerticeAccu(verticeAndStep: Map[StepLabel[java.util.Set[Vertex]], VertexCore], traversable: Aux[Vertex, HNil]) {
+      case class VerticeAccu(verticeAndStep: Map[StepLabel[java.util.Set[Vertex]], VertexCore], traversable: Aux[Vertex, HNil]) {
 
-      def addNewVertex(vertexCore: VertexCore): VerticeAccu = {
+        def addNewVertex(vertexCore: VertexCore): VerticeAccu = {
+          val stepLabel = StepLabel[java.util.Set[Vertex]]()
+          copy(verticeAndStep + (stepLabel -> vertexCore), createTraversalForOne(traversable, vertexCore, stepLabel))
+        }
+
+        def getStepLabels: List[StepLabel[util.Set[Vertex]]] = verticeAndStep.keySet.toList
+
+      }
+
+      var verticeAccu: VerticeAccu = {
         val stepLabel = StepLabel[java.util.Set[Vertex]]()
-        copy(verticeAndStep + (stepLabel -> vertexCore), createTraversalForOne(traversable, vertexCore, stepLabel))
+        VerticeAccu(Map(stepLabel -> verticesCore.head), initTraversal(verticesCore.head, stepLabel))
       }
 
-      def getStepLabels: List[StepLabel[util.Set[Vertex]]] = verticeAndStep.keySet.toList
+      for { v <- verticesCore.tail } {
+        logger.debug(s"adding v: ${v.toString}")
+        verticeAccu = verticeAccu.addNewVertex(v)
+      }
+
+      val traversalRes: mutable.Map[String, Any] = finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
+      val t1 = System.currentTimeMillis()
+      logger.debug(s"took ${t1 - t0} ms to getUpdateOrCreateMultiple of size ${verticesCore.size}")
+      verticeAccu.verticeAndStep.map(sl => sl._2 -> traversalRes(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
 
     }
-
-    var verticeAccu: VerticeAccu = {
-      val stepLabel = StepLabel[java.util.Set[Vertex]]()
-      VerticeAccu(Map(stepLabel -> verticesCore.head), initTraversal(verticesCore.head, stepLabel))
-    }
-
-    for { v <- verticesCore.tail } {
-      logger.debug(s"adding v: ${v.toString}")
-      verticeAccu = verticeAccu.addNewVertex(v)
-    }
-
-    val traversalRes: mutable.Map[String, Any] = finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
-    val t1 = System.currentTimeMillis()
-    logger.debug(s"took ${t1 - t0} ms to getUpdateOrCreateMultiple of size ${verticesCore.size}")
-    verticeAccu.verticeAndStep.map(sl => sl._2 -> traversalRes(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
 
   }
 
