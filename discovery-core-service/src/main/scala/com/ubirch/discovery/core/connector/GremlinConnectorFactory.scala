@@ -5,6 +5,7 @@ import com.ubirch.discovery.core.connector.ConnectorType.ConnectorType
 import org.apache.commons.configuration.PropertiesConfiguration
 
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 object GremlinConnectorFactory {
 
@@ -34,6 +35,12 @@ object GremlinConnectorFactory {
     // cf https://stackoverflow.com/questions/45673861/how-can-i-remotely-connect-to-a-janusgraph-server first answer, second comment ¯\_ツ_/¯
     conf.addProperty("serializer.config.ioRegistries", config.getAnyRef("core.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
     conf.addProperty("serializer.config.ioRegistries", config.getStringList("core.connector.serializer.config.ioRegistries"))
+
+    Try(config.getInt("settings.connectionPool.maxContentLength")) match {
+      case Success(value) => conf.addProperty("settings.connectionPool.maxContentLength", value)
+      case Failure(_) => conf.addProperty("settings.connectionPool.maxContentLength", 4096000)
+    }
+
 
     val maxWaitForConnection = config.getInt("core.connector.connectionPool.maxWaitForConnection")
     if (maxWaitForConnection > 0) conf.addProperty("connectionPool.maxWaitForConnection", maxWaitForConnection)

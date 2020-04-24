@@ -155,10 +155,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     //res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)), 10000, warnOnly = false)
 
     res.result match {
-      case Success(success) => {
-        logger.info(s"processed ${relations.size} in ${res.elapsed} ms => ${relations.size / res.elapsed.toInt} rel/ms")
+      case Success(success) =>
+        logger.info(s"processed ${relations.size} in ${res.elapsed} ms => ${res.elapsed.toDouble/ relations.size.toDouble} ms/rel")
         success
-      }
       case Failure(exception) =>
         logger.error("Error storing relations, out of executor", exception)
         throw StoreException("Error storing relations, out of executor", exception)
@@ -168,15 +167,21 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   def preprocess(relations: Seq[Relation]): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
     val t0 = System.currentTimeMillis()
-    val vertices: Seq[VertexCore] = Store.getAllVerticeFromRelations(relations)
+    val vertices: List[VertexCore] = Store.getAllVerticeFromRelations(relations).toList
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val verticesGroups = vertices.grouped(30)
+    val verticesGroups: Seq[List[VertexCore]] = vertices.grouped(30).toSeq
 
-    val res: Map[VertexCore, Vertex] = verticesGroups.map{vs => Helpers.getUpdateOrCreateMultiple(vs.toList)}.toList.flatten.toMap
+    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticesGroups, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+    executor.startProcessing()
+    executor.latch.await()
+    val j = executor.getResultsNoTry
+    val theRes: Map[VertexCore, Vertex] = j.flatMap(r => r._2).toMap
     val t1 = System.currentTimeMillis()
-    logger.info(s"preprocess of ${vertices.size} done in ${t1 - t0} ms => ${vertices.size / (t1 - t0).toInt} vertice / sec")
-    res
+
+    //val res: Map[VertexCore, Vertex] = verticesGroups.map{vs => Helpers.getUpdateOrCreateMultiple(vs.toList)}.toList.flatten.toMap
+    logger.info(s"preprocess of ${vertices.size} done in ${t1 - t0} ms => ${(t1 - t0).toDouble / vertices.size.toDouble} ms/vertex")
+    theRes
   }
 
   def recoverStoreRelationIfNeeded(relationAndResult: (DumbRelation, Try[Any])): Try[Any] = {
