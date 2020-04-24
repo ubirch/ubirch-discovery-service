@@ -4,7 +4,7 @@ import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.structure.PropertyType.PropertyType
 import com.ubirch.discovery.core.util.{ Timer, Util }
-import gremlin.scala.{ Edge, Key, KeyValue }
+import gremlin.scala.{ Edge, Key, KeyValue, Vertex }
 import org.json4s
 import org.json4s._
 import org.json4s.JsonDSL._
@@ -88,6 +88,8 @@ case class EdgeCore(properties: List[ElementProperty], label: String) extends El
   def addProperty(newProperty: ElementProperty): EdgeCore = copy(properties = newProperty :: properties)
 
 }
+
+case class DumbRelation(vFrom: Vertex, vTo: Vertex, edge: EdgeCore)
 
 case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
   def toRelationServer(implicit propSet: Set[Property], gc: GremlinConnector): RelationServer = {

@@ -25,7 +25,10 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
   val g: TraversalSource = gc.g
   val b: Bindings = gc.b
 
-  // create a traversal like g.V().or(__.has(prop1), ..., __.has(propn)).coalesce(unfold(), addV(label)).property(prop1).property(prop2)
+  // create a traversal like g.V().or(__.has(prop1), ..., __.has(propn)).fold().coalesce(unfold(), addV(label)).property(prop1).[..].property(prop2)
+  // eg: g.V().or(__.has("name", "marco"), __.has("job", "salesman")).fold().coalesce(unfold(), addV("person")).as('a').property("name", "marco").property("job", "salesman")
+  // .or(__.has("name", "paulo")).fold().coalesce(unfold(), addV("person")).as('b').property("name", "paulo").property("job", "salesman").select('a', 'b')
+  // g.V().or(__.has("name", "marco"), __.has("job", "salesman")).fold().coalesce(unfold(), addV("person")).as('a').property("name", "marco").property("job", "salesman").or(__.has("name", "paulo")).fold().coalesce(unfold(), addV("person")).as('b').property("name", "paulo").property("job", "salesman").select('a', 'b')
   def getUpdateOrCreate: Vertex = {
 
     logger.info(s"getUpdateOrCreate(${coreVertex.toString})")
@@ -48,7 +51,7 @@ class VertexDatabase(val coreVertex: VertexCore, val gc: GremlinConnector)(impli
       val res = coreVertex.properties.filter(p => isPropertyIterable(p.keyName)).map { p => createWhatWeWant(p.toKeyValue) }.toSeq
       res
     }
-
+    // HERE
     val firstConstructor: Aux[Vertex, HNil] = gc.g.V().or(rs: _*).fold().coalesce(_.unfold(), _.addV(coreVertex.label))
     val res = createAllPropertiesTraversal(firstConstructor).l().head
 

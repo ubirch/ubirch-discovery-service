@@ -1,20 +1,20 @@
 package com.ubirch.discovery.kafka.consumer
 
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import com.ubirch.discovery.core.structure.{ Relation, RelationServer, VertexCore, VertexDatabase }
-import com.ubirch.discovery.core.util.Timer
+import com.ubirch.discovery.core.structure.{ DumbRelation, Relation, VertexCore }
+import com.ubirch.discovery.core.structure.Elements.Property
+import com.ubirch.discovery.core.util.{ Helpers, Timer }
 import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
-import com.ubirch.discovery.kafka.models.{ Executor, RelationKafka, Store }
+import com.ubirch.discovery.kafka.models.{ Executor, KafkaElements, RelationKafka, Store }
 import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
+import gremlin.scala.Vertex
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
-import org.json4s.JsonDSL._
 
 import scala.collection.immutable
-import scala.collection.immutable.HashMap
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
 
@@ -126,28 +126,30 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def store(relations: Seq[Relation]): List[(RelationServer, Try[Unit])] = {
+  def store(relations: Seq[Relation]): List[(DumbRelation, Try[Any])] = {
+
+    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
     val res = Timer.time({
 
-      val hashMapVertices: HashMap[VertexCore, VertexDatabase] = preprocess(relations)
+      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations)
 
       def getVertexFromHMap(vertexCore: VertexCore) = {
         hashMapVertices.get(vertexCore) match {
           case Some(vDb) => vDb
           case None =>
             logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}")
-            Store.addVertex(vertexCore)
+            Helpers.getUpdateOrCreate(vertexCore)
         }
       }
 
       logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
-      val relationsAsRelationServer: Seq[RelationServer] = relations.map(r => RelationServer(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
+      val relationsAsRelationServer: Seq[DumbRelation] = relations.map(r => DumbRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
 
-      val executor = new Executor[RelationServer, Try[Unit]](objects = relationsAsRelationServer, f = Store.addRelationTwoCached(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+      val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = Helpers.createRelation(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
       executor.startProcessing()
       executor.latch.await()
-      executor.getResultsNoTry
+      executor.getResults
 
     })
     //res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)), 10000, warnOnly = false)
@@ -160,19 +162,18 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def preprocess(relations: Seq[Relation]): HashMap[VertexCore, VertexDatabase] = {
+  def preprocess(relations: Seq[Relation]): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
-    val vertices = Store.getAllVerticeFromRelations(relations)
+    val vertices: Seq[VertexCore] = Store.getAllVerticeFromRelations(relations)
+    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    // 2: create the hashMap [vertexCore, vertexDb]
-    val executor = new Executor[VertexCore, VertexDatabase](objects = vertices, f = Store.addVertex(_), processSize = maxParallelConnection)
-    executor.startProcessing()
-    executor.latch.await()
-    val executorRes: List[(VertexCore, VertexDatabase)] = executor.getResultsOnlySuccess
-    HashMap(executorRes.map(vCoreAndVDb => vCoreAndVDb._1 -> vCoreAndVDb._2): _*)
+    val res: Map[VertexCore, Vertex] = Helpers.getUpdateOrCreateMultiple(vertices.toList)
+
+    println(res.mkString(", "))
+    res
   }
 
-  def recoverStoreRelationIfNeeded(relationAndResult: (RelationServer, Try[Unit])): Try[Unit] = {
+  def recoverStoreRelationIfNeeded(relationAndResult: (DumbRelation, Try[Any])): Try[Any] = {
     relationAndResult._2 recover {
       case e: StoreException =>
         errorCounter.counter.labels("StoreException").inc()
