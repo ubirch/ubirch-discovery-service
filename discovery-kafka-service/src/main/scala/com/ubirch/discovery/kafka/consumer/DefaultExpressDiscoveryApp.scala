@@ -134,9 +134,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
+    val preprocessBatchSize = 1 + scala.util.Random.nextInt(100)
     val res = Timer.time({
 
-      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations)
+      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations, preprocessBatchSize)
 
       def getVertexFromHMap(vertexCore: VertexCore) = {
         hashMapVertices.get(vertexCore) match {
@@ -160,7 +161,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     res.result match {
       case Success(success) =>
-        logger.info(s"processed ${relations.size} in ${res.elapsed} ms => ${res.elapsed.toDouble / relations.size.toDouble} ms/rel")
+        // print totalNumberRel,numberVertice,sizePreprocess,timeTakenProcessAll,timeTakenIndividuallyRelation
+        val verticesNumber = Store.getAllVerticeFromRelations(relations).toList.size
+        logger.info(s"processed {${relations.size},$verticesNumber,$preprocessBatchSize,${res.elapsed.toDouble / relations.size.toDouble}}")
         success
       case Failure(exception) =>
         logger.error("Error storing relations, out of executor", exception)
@@ -168,16 +171,15 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def preprocess(relations: Seq[Relation]): Map[VertexCore, Vertex] = {
+  def preprocess(relations: Seq[Relation], batchSize: Int): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
     val t0 = System.currentTimeMillis()
     val vertices: List[VertexCore] = Store.getAllVerticeFromRelations(relations).toList
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
     // for tests: in order to see which strategy is the best, partitionned in groups between 10 and 50
-    val randomSize = 10 + scala.util.Random.nextInt(40)
 
-    val verticesGroups: Seq[List[VertexCore]] = vertices.grouped(randomSize).toSeq
+    val verticesGroups: Seq[List[VertexCore]] = vertices.grouped(batchSize).toSeq
 
     val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticesGroups, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
     executor.startProcessing()
