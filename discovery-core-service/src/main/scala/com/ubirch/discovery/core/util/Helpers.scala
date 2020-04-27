@@ -29,10 +29,10 @@ object Helpers extends LazyLogging {
   // .select('a', 'b', 'c', 'd')
   def getUpdateOrCreateMultiple(verticesCore: List[VertexCore])(implicit gc: GremlinConnector, ec: ExecutionContext, propSet: Set[Property]): Map[VertexCore, Vertex] = {
 
-    // case that if only one vertex is present, then finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
-    // will be cast to something that doesn't work
-    if (verticesCore.size == 1) {
-      Map(verticesCore.head -> getUpdateOrCreate(verticesCore.head))
+    // case that if only one or two vertex is present, then finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
+    // will be cast to something that doesn't work. This is due to the way the select() method work in scala
+    if (verticesCore.size == 1 || verticesCore.size == 2) {
+      verticesCore.map(vc => vc -> getUpdateOrCreate(vc)).toMap
     } else {
 
       val t0 = System.currentTimeMillis()
@@ -121,7 +121,11 @@ object Helpers extends LazyLogging {
 
       val traversalRes: mutable.Map[String, Any] = finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
       val t1 = System.currentTimeMillis()
-      logger.debug(s"took ${t1 - t0} ms to getUpdateOrCreateMultiple of size ${verticesCore.size}")
+      // for tests, print
+      if (verticesCore.size > 10) {
+        // print totalNumber,timeTakenProcessAll,timeTakenIndividually
+        logger.info(s"getUpdateOrCreateMultiple:[${verticesCore.size},${t1 - t0},${(t1 - t0).toDouble / verticesCore.size.toDouble}]")
+      }
       verticeAccu.verticeAndStep.map(sl => sl._2 -> traversalRes(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
 
     }
@@ -129,8 +133,6 @@ object Helpers extends LazyLogging {
   }
 
   def getUpdateOrCreate(vertexCore: VertexCore)(implicit gc: GremlinConnector, ec: ExecutionContext, propSet: Set[Property]): Vertex = {
-
-    val t0 = System.currentTimeMillis()
 
     def createAllPropertiesTraversal(constructor: Aux[Vertex, HNil]): Aux[Vertex, HNil] = {
 
@@ -149,7 +151,6 @@ object Helpers extends LazyLogging {
     val firstConstructor: Aux[Vertex, HNil] = gc.g.V().or(rs: _*).fold().coalesce(_.unfold(), _.addV(vertexCore.label))
     val res = createAllPropertiesTraversal(firstConstructor).l().head
 
-    val t1 = System.currentTimeMillis()
     //def or(traversals: (GremlinScala.Aux[End, HNil] => GremlinScala[_])*)
     res
 
@@ -169,6 +170,7 @@ object Helpers extends LazyLogging {
   }
 
   def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Edge = {
+    logger.debug("creating edge")
     if (relation.edge.properties.isEmpty) {
       gc.g.V(relation.vFrom).as("a").V(relation.vTo).addE(relation.edge.label).from(relation.vFrom).toSet().head
     } else {

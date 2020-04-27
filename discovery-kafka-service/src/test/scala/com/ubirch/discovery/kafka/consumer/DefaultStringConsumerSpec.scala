@@ -9,6 +9,7 @@ import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 
 import scala.concurrent.ExecutionContext
@@ -22,34 +23,29 @@ class DefaultStringConsumerSpec extends TestBase {
   val topic = "test"
   val errorTopic = "test.error"
   implicit val Deserializer: StringDeserializer = new StringDeserializer
-  implicit val gc = GremlinConnectorFactory.getInstance(ConnectorType.Test)
+  implicit val gc: GremlinConnector = getGremlinConnector
 
   feature("Verifying valid requests") {
 
     def runTest(test: TestStruct): Unit = {
 
-      implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
-      withRunningKafka {
-
-        val consumer = new DefaultExpressDiscoveryApp {
-          override implicit def ec: ExecutionContext = ExecutionContextHelper.ec
-          override def prefix: String = "Ubirch"
-          override def maxTimeAggregationSeconds: Long = 180
-        }
-        /*        consumer.consumption.setForceExit(false)
-        consumer.consumption.start()
-        consumer.consumption.startPolling()*/
-        cleanDb()
-        gc.g.addV("test").iterate()
-        gc.g.addV("test").l().head
-        println("testing " + test.request)
-        publishStringMessageToKafka(topic, test.request)
-        val r = consumeFirstStringMessageFrom(topic)
-        println(s"r: $r")
-        Thread.sleep(5000)
-        howManyElementsInJG shouldBe howManyElementsShouldBeInJg(test.expectedResult)
-        //consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
+      val consumer = new DefaultExpressDiscoveryApp {
+        override implicit def ec: ExecutionContext = ExecutionContextHelper.ec
+        override val gc: GremlinConnector = getGremlinConnector
+        override def prefix: String = "Ubirch"
+        override def maxTimeAggregationSeconds: Long = 180
       }
+
+      cleanDb()
+      logger.debug("testing " + test.request)
+      val crs = new ConsumerRecord[String, String](topic, 0, 79, null, test.request)
+      consumer.letsProcess(Vector(crs))
+      //val r = consumeFirstStringMessageFrom(topic)
+      //println(s"r: $r")
+      Thread.sleep(5000)
+      howManyElementsInJG shouldBe howManyElementsShouldBeInJg(test.expectedResult)
+      //consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
+
     }
 
     val allTests = getAllTests("/valid/")

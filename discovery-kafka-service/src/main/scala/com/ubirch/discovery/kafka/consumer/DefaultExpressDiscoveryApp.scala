@@ -10,6 +10,7 @@ import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
 import gremlin.scala.Vertex
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
@@ -66,8 +67,12 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   lazy val flush: Boolean = conf.getBoolean("flush")
 
-  override val process: Process = Process { crs =>
+  override val process: Process = Process { crs => letsProcess(crs) }
 
+  /*
+  * Logic of process put as a separate method in order to test more easily
+    */
+  def letsProcess(crs: Vector[ConsumerRecord[String, String]]): Unit = {
     if (!flush) {
       try {
 
@@ -98,7 +103,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     } else {
       logger.debug("flushing")
     }
-
   }
 
   def checkIfAllVertexAreTheSame(relations: Seq[Relation]): Boolean = {
@@ -156,7 +160,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     res.result match {
       case Success(success) =>
-        logger.info(s"processed ${relations.size} in ${res.elapsed} ms => ${res.elapsed.toDouble/ relations.size.toDouble} ms/rel")
+        logger.info(s"processed ${relations.size} in ${res.elapsed} ms => ${res.elapsed.toDouble / relations.size.toDouble} ms/rel")
         success
       case Failure(exception) =>
         logger.error("Error storing relations, out of executor", exception)
@@ -170,7 +174,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val vertices: List[VertexCore] = Store.getAllVerticeFromRelations(relations).toList
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val verticesGroups: Seq[List[VertexCore]] = vertices.grouped(30).toSeq
+    // for tests: in order to see which strategy is the best, partitionned in groups between 10 and 50
+    val randomSize = 10 + scala.util.Random.nextInt(40)
+
+    val verticesGroups: Seq[List[VertexCore]] = vertices.grouped(randomSize).toSeq
 
     val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticesGroups, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
     executor.startProcessing()

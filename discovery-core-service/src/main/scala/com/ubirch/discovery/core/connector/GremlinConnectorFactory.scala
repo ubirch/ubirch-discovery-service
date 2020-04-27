@@ -5,7 +5,7 @@ import com.ubirch.discovery.core.connector.ConnectorType.ConnectorType
 import org.apache.commons.configuration.PropertiesConfiguration
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object GremlinConnectorFactory {
 
@@ -40,7 +40,6 @@ object GremlinConnectorFactory {
       case Success(value) => conf.addProperty("settings.connectionPool.maxContentLength", value)
       case Failure(_) => conf.addProperty("settings.connectionPool.maxContentLength", 4096000)
     }
-
 
     val maxWaitForConnection = config.getInt("core.connector.connectionPool.maxWaitForConnection")
     if (maxWaitForConnection > 0) conf.addProperty("connectionPool.maxWaitForConnection", maxWaitForConnection)
