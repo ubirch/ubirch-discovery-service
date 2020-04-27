@@ -122,10 +122,10 @@ object Helpers extends LazyLogging {
       val traversalRes: mutable.Map[String, Any] = finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
       val t1 = System.currentTimeMillis()
       // for tests, print
-      if (verticesCore.size > 10) {
+
         // print totalNumber,timeTakenProcessAll,timeTakenIndividually
-        logger.info(s"getUpdateOrCreateMultiple:[${verticesCore.size},${t1 - t0},${(t1 - t0).toDouble / verticesCore.size.toDouble}]")
-      }
+      logger.info(s"getUpdateOrCreateMultiple:[${verticesCore.size},${t1 - t0},${(t1 - t0).toDouble / verticesCore.size.toDouble}]")
+
       verticeAccu.verticeAndStep.map(sl => sl._2 -> traversalRes(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
 
     }
