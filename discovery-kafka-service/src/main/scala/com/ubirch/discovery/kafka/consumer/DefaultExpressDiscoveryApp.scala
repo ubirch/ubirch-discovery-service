@@ -68,6 +68,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
+  // TODO: change this once going back to normal behaviour
   val maxParallelConnection: Int = 1//conf.getInt("kafkaApi.gremlinConf.maxParallelConnection") // FOR TESTS
 
   lazy val flush: Boolean = conf.getBoolean("flush")
@@ -230,19 +231,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
 
     def addChecksForConsumerRunner(name: String, consumerRunner: ConsumerRunner[_, _]): Unit = {
-      val getConsumerWorkaround: ConsumerRunner[_, _] => Option[Consumer[_, _]] = {
-        val f = consumerRunner.getClass.getDeclaredField("consumer")
-        f.setAccessible(true)
-
-        { cr: ConsumerRunner[_, _] => Option(f.get(cr).asInstanceOf[Consumer[_, _]]) }
-      }
 
       healthCheckServer.setReadinessCheck(name) { implicit ec =>
-        // consumerRunner.getConsumerAsOpt match { // the library needs updating
-        getConsumerWorkaround(consumerRunner) match {
-          case Some(producer) => Checks.kafka(name, producer, connectionCountMustBeNonZero = false)._2(ec)
-          case None => Checks.notInitialized(name)._2(ec)
-        }
+        Checks.notInitialized(name)._2(ec)
       }
     }
 
