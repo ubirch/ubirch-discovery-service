@@ -149,9 +149,11 @@ object Helpers extends LazyLogging {
       vertexCore.properties.filter(p => isPropertyIterable(p.keyName)).map { p => createWhatWeWant(p.toKeyValue) }.toSeq
 
     val firstConstructor: Aux[Vertex, HNil] = gc.g.V().or(rs: _*).fold().coalesce(_.unfold(), _.addV(vertexCore.label))
+    val t0 = System.currentTimeMillis()
     val res = createAllPropertiesTraversal(firstConstructor).l().head
+    val t1 = System.currentTimeMillis()
+    logger.info(s"getUpdateOrCreateSinge:[1,${t1 - t0},${t1 - t0}]")
 
-    //def or(traversals: (GremlinScala.Aux[End, HNil] => GremlinScala[_])*)
     res
 
   }

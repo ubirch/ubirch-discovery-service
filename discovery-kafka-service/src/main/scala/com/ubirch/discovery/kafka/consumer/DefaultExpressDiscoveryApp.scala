@@ -63,7 +63,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
-  val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection")
+  val maxParallelConnection: Int = 1//conf.getInt("kafkaApi.gremlinConf.maxParallelConnection") // FOR TESTS
 
   lazy val flush: Boolean = conf.getBoolean("flush")
 
@@ -176,8 +176,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val t0 = System.currentTimeMillis()
     val vertices: List[VertexCore] = Store.getAllVerticeFromRelations(relations).toList
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
-
-    // for tests: in order to see which strategy is the best, partitionned in groups between 10 and 50
 
     val verticesGroups: Seq[List[VertexCore]] = vertices.grouped(batchSize).toSeq
 
