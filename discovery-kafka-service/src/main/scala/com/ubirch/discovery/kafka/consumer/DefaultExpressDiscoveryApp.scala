@@ -68,8 +68,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
 
-  // TODO: change this once going back to normal behaviour
-  val maxParallelConnection: Int = 1 //conf.getInt("kafkaApi.gremlinConf.maxParallelConnection") // FOR TESTS
+  val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection") // PUT AT 1 FOR TESTS
 
   lazy val flush: Boolean = conf.getBoolean("flush")
 
@@ -143,10 +142,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val preprocessBatchSize = 1 + scala.util.Random.nextInt(100)
+    // FOR TESTS: val preprocessBatchSize = 1 + scala.util.Random.nextInt(100)
     val res = Timer.time({
 
-      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations, preprocessBatchSize)
+      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations, 30)
 
       def getVertexFromHMap(vertexCore: VertexCore) = {
         hashMapVertices.get(vertexCore) match {
@@ -171,8 +170,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     res.result match {
       case Success(success) =>
         // print totalNumberRel,numberVertice,sizePreprocess,timeTakenProcessAll,timeTakenIndividuallyRelation
-        val verticesNumber = Store.getAllVerticeFromRelations(relations).toList.size
-        logger.info(s"processed {${relations.size},$verticesNumber,$preprocessBatchSize,${res.elapsed.toDouble / relations.size.toDouble}}")
+        //val verticesNumber = Store.getAllVerticeFromRelations(relations).toList.size
+        logger.info(s"processed {${relations.size},${res.elapsed.toDouble / relations.size.toDouble},${res.elapsed}")
         success
       case Failure(exception) =>
         logger.error("Error storing relations, out of executor", exception)
@@ -182,7 +181,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   def preprocess(relations: Seq[Relation], batchSize: Int): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
-    val t0 = System.currentTimeMillis()
     val vertices: List[VertexCore] = Store.getAllVerticeFromRelations(relations).toList
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
@@ -193,10 +191,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     executor.latch.await()
     val j = executor.getResultsNoTry
     val theRes: Map[VertexCore, Vertex] = j.flatMap(r => r._2).toMap
-    val t1 = System.currentTimeMillis()
 
     //val res: Map[VertexCore, Vertex] = verticesGroups.map{vs => Helpers.getUpdateOrCreateMultiple(vs.toList)}.toList.flatten.toMap
-    logger.info(s"preprocess of ${vertices.size} done in ${t1 - t0} ms => ${(t1 - t0).toDouble / vertices.size.toDouble} ms/vertex")
+    //logger.info(s"preprocess of ${vertices.size} done in ${t1 - t0} ms => ${(t1 - t0).toDouble / vertices.size.toDouble} ms/vertex")
     theRes
   }
 

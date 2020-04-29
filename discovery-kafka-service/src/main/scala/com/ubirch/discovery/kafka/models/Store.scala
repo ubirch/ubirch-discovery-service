@@ -47,7 +47,7 @@ object Store extends LazyLogging {
     KafkaElements.labelsAllowed.exists(e => e.name.equals(label))
   }
 
-  def getAllVerticeFromRelations(relations: Seq[Relation]) = {
+  def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
     relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
   }
 
