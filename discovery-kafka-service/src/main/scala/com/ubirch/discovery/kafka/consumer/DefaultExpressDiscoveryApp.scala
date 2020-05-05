@@ -237,6 +237,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
             logger.debug("updating vertice on redis: " + v._1.toString)
             updateVertexOnRedis(hashProp.value.toString, getAllPropsExceptHash(v._1) ++ Map("vertexId" -> v._2))
           }
+          case None =>
         }
       }
       theRes ++ redisSuccess
