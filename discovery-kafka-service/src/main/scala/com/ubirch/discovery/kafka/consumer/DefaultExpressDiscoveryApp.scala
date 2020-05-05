@@ -218,7 +218,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     val verticesNotCompleteOnRedisToPreprocess: immutable.List[VertexCore] = verticesWithoutHash ++ redisFailures
 
-    logger.info("verticesNotCompleteOnRedisToPreprocess.size: " + verticesNotCompleteOnRedisToPreprocess.size)
+    logger.info("Vertices not on redis / on redis: " + verticesNotCompleteOnRedisToPreprocess.size + "/" + redisSuccess.size)
     logger.debug("verticesNotCompleteOnRedisToPreprocess: " + verticesNotCompleteOnRedisToPreprocess.mkString(","))
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
