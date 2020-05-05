@@ -115,7 +115,6 @@ object Helpers extends LazyLogging {
       }
 
       for { v <- verticesCore.tail } {
-        logger.debug(s"adding v: ${v.toString}")
         verticeAccu = verticeAccu.addNewVertex(v)
       }
 
@@ -172,29 +171,28 @@ object Helpers extends LazyLogging {
   }
 
   def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Edge = {
-    logger.debug("creating edge")
     if (relation.edge.properties.isEmpty) {
-      gc.g.V(relation.vFrom).as("a").V(relation.vTo).addE(relation.edge.label).from(relation.vFrom).toSet().head
+      gc.g.V(relation.vFrom).as("a").V(relation.vTo).addE(relation.edge.label).from(gc.g.V(relation.vFrom).l().head).toSet().head
     } else {
       var constructor = gc.g.V(relation.vTo).addE(relation.edge.label)
       for (prop <- relation.edge.properties) {
         constructor = constructor.property(prop.toKeyValue)
       }
-      constructor.from(relation.vFrom).l().head
+      constructor.from(gc.g.V(relation.vFrom).l().head).l().head
     }
   }
 
   def recoverEdge(relation: DumbRelation, error: Throwable)(implicit gc: GremlinConnector) {
     logger.debug("exception thrown while adding edge: " + error.getMessage)
     if (!areVertexLinked(relation.vFrom, relation.vTo)) {
-      logger.debug("vertices where not linked, creating edge")
+      logger.debug("vertices were not linked, creating edge")
       createEdge(relation)
     }
 
   }
 
-  def areVertexLinked(vFrom: Vertex, vTo: Vertex)(implicit gc: GremlinConnector): Boolean = {
-    val timedResult = Timer.time(gc.g.V(vFrom).both().is(vTo).l())
+  def areVertexLinked(vFrom: String, vTo: String)(implicit gc: GremlinConnector): Boolean = {
+    val timedResult = Timer.time(gc.g.V(vFrom).both().is(gc.g.V(vTo).l().head).l())
     timedResult.result match {
       case Success(value) =>
         //timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}", criticalTimeMs = 100)

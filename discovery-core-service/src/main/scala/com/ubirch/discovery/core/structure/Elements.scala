@@ -89,7 +89,7 @@ case class EdgeCore(properties: List[ElementProperty], label: String) extends El
 
 }
 
-case class DumbRelation(vFrom: Vertex, vTo: Vertex, edge: EdgeCore)
+case class DumbRelation(vFrom: String, vTo: String, edge: EdgeCore)
 
 case class Relation(vFrom: VertexCore, vTo: VertexCore, edge: EdgeCore) {
   def toRelationServer(implicit propSet: Set[Property], gc: GremlinConnector): RelationServer = {

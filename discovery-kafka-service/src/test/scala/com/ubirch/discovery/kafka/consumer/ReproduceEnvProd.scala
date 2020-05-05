@@ -2,10 +2,12 @@ package com.ubirch.discovery.kafka.consumer
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.ExecutionContextHelper
+import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
 import com.ubirch.discovery.kafka.TestBase
 import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
+import org.apache.kafka.clients.consumer.ConsumerRecord
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext

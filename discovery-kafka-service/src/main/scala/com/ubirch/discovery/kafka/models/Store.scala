@@ -21,32 +21,6 @@ import scala.util.Try
   */
 object Store extends LazyLogging {
 
-  implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
-
-  val relationTimeSummary = new PrometheusRelationMetricsLoggerSummary
-
-  def addRelationTwoCached(relation: RelationServer)(implicit gc: GremlinConnector): Try[Unit] = {
-
-    val res: Timer.Timed[Unit] = Timer.time({
-      AddRelation.twoExistCache(relation)
-    })
-
-    Try(relationTimeSummary.summary.observe(res.elapsed))
-
-    //res.logTimeTakenJson("inscribe relation" -> List(relation.toJson), 300)
-    res.result
-
-  }
-
-  def addVertex(vertex: VertexCore)(implicit gc: GremlinConnector): VertexDatabase = {
-    vertex.toVertexStructDb(gc)
-
-  }
-
-  def checkIfLabelIsAllowed(label: String): Boolean = {
-    KafkaElements.labelsAllowed.exists(e => e.name.equals(label))
-  }
-
   def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
     relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
   }

@@ -38,7 +38,7 @@ object AddRelation extends LazyLogging {
     def recoverEdge(error: Throwable) {
       logger.debug("exception thrown while adding edge: " + error.getMessage)
       if (!areVertexLinked(relation.vFromDb, relation.vToDb)) {
-        logger.debug("vertices where not linked, creating edge")
+        logger.debug("vertices were not linked, creating edge")
         relation.createEdge.get
       }
 
