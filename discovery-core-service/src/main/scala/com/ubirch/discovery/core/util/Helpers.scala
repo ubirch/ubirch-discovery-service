@@ -184,10 +184,8 @@ object Helpers extends LazyLogging {
 
   def recoverEdge(relation: DumbRelation, error: Throwable)(implicit gc: GremlinConnector) {
     logger.debug("exception thrown while adding edge: " + error.getMessage)
-    if (!areVertexLinked(relation.vFrom, relation.vTo)) {
-      logger.debug("vertices were not linked, creating edge")
-      createEdge(relation)
-    }
+    logger.debug("vertices were not linked, creating edge")
+    createEdge(relation)
 
   }
 
