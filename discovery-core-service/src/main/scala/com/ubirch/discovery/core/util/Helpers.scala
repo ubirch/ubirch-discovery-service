@@ -172,13 +172,13 @@ object Helpers extends LazyLogging {
 
   def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Edge = {
     if (relation.edge.properties.isEmpty) {
-      gc.g.V(relation.vFrom).as("a").V(relation.vTo).addE(relation.edge.label).from(gc.g.V(relation.vFrom).l().head).toSet().head
+      gc.g.V(relation.vFrom).as("a").V(relation.vTo).addE(relation.edge.label).from(relation.vFrom).toSet().head
     } else {
       var constructor = gc.g.V(relation.vTo).addE(relation.edge.label)
       for (prop <- relation.edge.properties) {
         constructor = constructor.property(prop.toKeyValue)
       }
-      constructor.from(gc.g.V(relation.vFrom).l().head).l().head
+      constructor.from(relation.vFrom).l().head
     }
   }
 
@@ -225,4 +225,9 @@ object Helpers extends LazyLogging {
     checkOnProps(propSet)
 
   }
+
+  def idToVertex(vc: (VertexCore, String))(implicit gc: GremlinConnector) = {
+    gc.g.V(vc._2).l().head
+  }
+
 }

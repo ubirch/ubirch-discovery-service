@@ -140,14 +140,14 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     // FOR TESTS: val preprocessBatchSize = 1 + scala.util.Random.nextInt(100)
     val res = Timer.time({
 
-      val hashMapVertices: Map[VertexCore, String] = preprocess(relations, 30)
+      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations, 10)
 
       def getVertexFromHMap(vertexCore: VertexCore) = {
         hashMapVertices.get(vertexCore) match {
           case Some(vDb) => vDb
           case None =>
             logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}")
-            Helpers.getUpdateOrCreate(vertexCore).id().toString
+            Helpers.getUpdateOrCreate(vertexCore)
         }
       }
 
@@ -174,7 +174,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def preprocess(relations: Seq[Relation], batchSize: Int): Map[VertexCore, String] = {
+  def preprocess(relations: Seq[Relation], batchSize: Int): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
     val vertices: List[VertexCore] = Store.getAllVerticeFromRelations(relations).toList
 
@@ -216,10 +216,20 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val redisSuccess: immutable.Seq[(VertexCore, String)] = res.filter(p => p._2.isDefined).map(vi => (vi._1, vi._2.get))
     val redisFailures = res.filter(p => p._2.isEmpty).map(vi => vi._1)
 
+    val redisSuccessAsVertices: Map[VertexCore, Vertex] = {
+      if (redisSuccess.nonEmpty) {
+        logger.debug("entering executor redisSuccessAsVertices")
+        val executor = new Executor[(VertexCore, String), Vertex](objects = redisSuccess, f = Helpers.idToVertex, processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+        executor.startProcessing()
+        logger.debug("Waiting for executor redisSuccessAsVertices")
+        executor.latch.await()
+        executor.getResultsNoTry.map { r => r._1._1 -> r._2 }.toMap
+      } else Map.empty
+    }
+
     val verticesNotCompleteOnRedisToPreprocess: immutable.List[VertexCore] = verticesWithoutHash ++ redisFailures
 
     logger.info("Vertices not on redis / on redis: " + verticesNotCompleteOnRedisToPreprocess.size + "/" + redisSuccess.size)
-    logger.debug("verticesNotCompleteOnRedisToPreprocess: " + verticesNotCompleteOnRedisToPreprocess.mkString(","))
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
@@ -230,19 +240,19 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       executor.startProcessing()
       executor.latch.await()
       val j = executor.getResultsNoTry
-      val theRes: Map[VertexCore, String] = j.flatMap(r => r._2).map(v => v._1 -> v._2.id().toString).toMap
+      val theRes: Map[VertexCore, Vertex] = j.flatMap(r => r._2).toMap
       theRes foreach { v =>
         maybeVertexHash(v._1) match {
           case Some(hashProp) => {
             logger.debug("updating vertice on redis: " + v._1.toString)
-            updateVertexOnRedis(hashProp.value.toString, getAllPropsExceptHash(v._1) ++ Map("vertexId" -> v._2))
+            updateVertexOnRedis(hashProp.value.toString, getAllPropsExceptHash(v._1) ++ Map("vertexId" -> v._2.id().toString))
           }
           case None =>
         }
       }
-      theRes ++ redisSuccess
+      theRes ++ redisSuccessAsVertices
     } else {
-      redisSuccess.toMap
+      redisSuccessAsVertices
     }
 
     //val res: Map[VertexCore, Vertex] = verticesGroups.map{vs => Helpers.getUpdateOrCreateMultiple(vs.toList)}.toList.flatten.toMap
