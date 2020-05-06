@@ -219,7 +219,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val redisSuccessAsVertices: Map[VertexCore, Vertex] = {
       if (redisSuccess.nonEmpty) {
         logger.debug("entering executor redisSuccessAsVertices")
-        val executor = new Executor[(VertexCore, String), Vertex](objects = redisSuccess, f = Helpers.idToVertex, processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+        val executor = new Executor[(VertexCore, String), Vertex](objects = redisSuccess, f = Helpers.idToVertex, processSize = maxParallelConnection)
         executor.startProcessing()
         logger.debug("Waiting for executor redisSuccessAsVertices")
         executor.latch.await()
@@ -236,7 +236,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val verticesGroups: Seq[List[VertexCore]] = verticesNotCompleteOnRedisToPreprocess.grouped(batchSize).toSeq
 
     if (verticesGroups.nonEmpty) {
-      val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticesGroups, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+      val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticesGroups, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
       executor.startProcessing()
       executor.latch.await()
       val j = executor.getResultsNoTry

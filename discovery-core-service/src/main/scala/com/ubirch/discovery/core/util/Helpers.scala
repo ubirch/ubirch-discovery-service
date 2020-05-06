@@ -170,22 +170,22 @@ object Helpers extends LazyLogging {
     }
   }
 
-  def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Edge = {
+  def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Aux[Edge, HNil] = {
     if (relation.edge.properties.isEmpty) {
-      gc.g.V(relation.vFrom).as("a").V(relation.vTo).addE(relation.edge.label).from(relation.vFrom).toSet().head
+      gc.g.V(relation.vFrom).addE(relation.edge.label).from(relation.vFrom).iterate()
     } else {
       var constructor = gc.g.V(relation.vTo).addE(relation.edge.label)
       for (prop <- relation.edge.properties) {
         constructor = constructor.property(prop.toKeyValue)
       }
-      constructor.from(relation.vFrom).l().head
+      constructor.from(relation.vFrom).iterate()
     }
   }
 
   def recoverEdge(relation: DumbRelation, error: Throwable)(implicit gc: GremlinConnector) {
-    logger.debug("exception thrown while adding edge: " + error.getMessage)
-    logger.debug("vertices were not linked, creating edge")
-    createEdge(relation)
+    if (!error.getMessage.contains("An edge with the given label already exists between the pair of vertices and the label")) {
+      createEdge(relation)
+    }
 
   }
 
