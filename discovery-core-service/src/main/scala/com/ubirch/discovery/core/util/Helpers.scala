@@ -189,26 +189,6 @@ object Helpers extends LazyLogging {
 
   }
 
-  def areVertexLinked(vFrom: String, vTo: String)(implicit gc: GremlinConnector): Boolean = {
-    val timedResult = Timer.time(gc.g.V(vFrom).both().is(gc.g.V(vTo).l().head).l())
-    timedResult.result match {
-      case Success(value) =>
-        //timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}", criticalTimeMs = 100)
-        value.nonEmpty
-      case Failure(exception) =>
-        logger.error("Couldn't check if vertex is linked, defaulting to false := ", exception)
-        false
-    }
-  }
-
-  private def createEdgeTraversalPromise(vFrom: Vertex, vTo: Vertex, edge: EdgeCore)(implicit gc: GremlinConnector): List[Edge] = {
-    var constructor = gc.g.V(vTo).addE(edge.label)
-    for (prop <- edge.properties) {
-      constructor = constructor.property(prop.toKeyValue)
-    }
-    constructor.from(vFrom).l()
-  }
-
   def isPropertyIterable(propertyName: String)(implicit propSet: Set[Property]): Boolean = {
 
     @tailrec
@@ -227,6 +207,7 @@ object Helpers extends LazyLogging {
   }
 
   def idToVertex(vc: (VertexCore, String))(implicit gc: GremlinConnector) = {
+    logger.debug("id: " + vc._2 + " " + vc._1.toString)
     gc.g.V(vc._2).l().head
   }
 

@@ -1,5 +1,7 @@
 package com.ubirch.discovery.core.util
 
+import java.io.{ File, PrintWriter }
+
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure._
@@ -16,6 +18,26 @@ import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
 object Util extends LazyLogging {
+
+  def createTempFile(
+      contents: String,
+      prefix: Option[String] = None,
+      suffix: Option[String] = None
+  ): File = {
+    val tempFi = File.createTempFile(
+      prefix.getOrElse("prefix-"),
+      suffix.getOrElse("-suffix")
+    )
+    tempFi.deleteOnExit()
+    new PrintWriter(tempFi) {
+      try {
+        write(contents)
+      } finally {
+        close()
+      }
+    }
+    tempFi
+  }
 
   def arrayVertexToJson(arrayVertexes: Array[VertexStruct]): String = {
 
