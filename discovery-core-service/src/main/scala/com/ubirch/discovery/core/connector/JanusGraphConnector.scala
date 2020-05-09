@@ -24,9 +24,8 @@ protected class JanusGraphConnector extends GremlinConnector with LazyLogging wi
   val janusgraphProperties = conf.getString("janus.properties")
 
   //val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(conf))
-  val t = Util.createTempFile(janusgraphProperties)
 
-  implicit val graph = JanusGraphFactory.open(t.getAbsolutePath).asScala()
+  implicit val graph = JanusGraphFactory.open(janusgraphProperties).asScala()
 
   //EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
   val g: TraversalSource = graph.traversal
