@@ -5,7 +5,7 @@ import com.ubirch.discovery.core.structure.{ DumbRelation, ElementProperty, Rela
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.{ Helpers, Timer }
 import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
-import com.ubirch.discovery.kafka.models.{ Executor, KafkaElements, RelationKafka, Store }
+import com.ubirch.discovery.kafka.models.{ Executor, KafkaElements, RelationKafka }
 import com.ubirch.discovery.kafka.util.{ ErrorsHandler, RedisCache }
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
@@ -166,7 +166,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       case Success(success) =>
         // print totalNumberRel,numberVertice,sizePreprocess,timeTakenProcessAll,timeTakenIndividuallyRelation
         //val verticesNumber = Store.getAllVerticeFromRelations(relations).toList.size
-        logger.info(s"processed {${relations.size},${res.elapsed.toDouble / relations.size.toDouble},${res.elapsed}")
+        logger.info(s"processed {${relations.size},${res.elapsed.toDouble / relations.size.toDouble},${res.elapsed}}")
         success
       case Failure(exception) =>
         logger.error("Error storing relations, out of executor", exception)
@@ -176,20 +176,38 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   def preprocess(relations: Seq[Relation], batchSize: Int): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
-    val vertices: List[VertexCore] = Store.getAllVerticeFromRelations(relations).toList
+    val vertices: List[VertexCore] = getAllVerticeFromRelations(relations).toList
+
+    try {
+      if (RedisCache.isRedisUp) {
+        redisPreprocess(vertices, batchSize)
+      } else {
+        noRedisPreprocess(vertices, batchSize)
+      }
+    } catch {
+      case _: Throwable =>
+        logger.warn("can not connect to redis")
+        noRedisPreprocess(vertices, batchSize)
+    }
+  }
+
+  def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
+    relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
+  }
+
+  def redisPreprocess(vertices: List[VertexCore], batchSize: Int) = {
+    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
     val verticesWithHash: List[VertexCore] = vertices.filter(v => v.properties.exists(p => p.keyName.eq("hash")))
     val verticesWithoutHash: List[VertexCore] = vertices.filter(v => !v.properties.exists(p => p.keyName.eq("hash")))
     logger.debug("vertices without hash: " + verticesWithoutHash.mkString("; "))
-
-    val resFromRedis: List[(VertexCore, Option[Map[String, String]])] = verticesWithHash.map { v =>
+    val resFromRedis = verticesWithHash.map { v =>
       {
         val hash = maybeVertexHash(v).get.value.toString
         v -> getVertexFromHash(hash)
       }
     }
-
-    // success = exist on redis, has an id on redis, and are complete on redis
+    //success = exist on redis, has an id on redis, and are complete on redis
     val res: immutable.Seq[(VertexCore, Option[String])] = resFromRedis.map { vm =>
       vm._2 match {
         case Some(map) =>
@@ -201,15 +219,13 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
                 logger.debug("/!\\ VERTEX NOT COMPLETE REDIS: " + vm._1.toString)
                 (vm._1, None)
               }
-            case None => {
+            case None =>
               logger.debug("/!\\ VERTEX NO ID REDIS: " + vm._1.toString)
               (vm._1, None)
-            }
           }
-        case None => {
+        case None =>
           logger.debug("/!\\ VERTEX NOT FOUND REDIS: " + vm._1.toString)
           (vm._1, None)
-        }
       }
     }
 
@@ -230,13 +246,10 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     val verticesNotCompleteOnRedisToPreprocess: immutable.List[VertexCore] = verticesWithoutHash ++ redisFailures
 
     logger.info("Vertices not on redis / on redis: " + verticesNotCompleteOnRedisToPreprocess.size + "/" + redisSuccess.size)
+    val verticeToPreprocess: Seq[List[VertexCore]] = verticesNotCompleteOnRedisToPreprocess.grouped(batchSize).toSeq
 
-    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
-
-    val verticesGroups: Seq[List[VertexCore]] = verticesNotCompleteOnRedisToPreprocess.grouped(batchSize).toSeq
-
-    if (verticesGroups.nonEmpty) {
-      val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticesGroups, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
+    if (verticeToPreprocess.nonEmpty) {
+      val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticeToPreprocess, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
       executor.startProcessing()
       executor.latch.await()
       val j = executor.getResultsNoTry
@@ -254,9 +267,16 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     } else {
       redisSuccessAsVertices
     }
+  }
 
-    //val res: Map[VertexCore, Vertex] = verticesGroups.map{vs => Helpers.getUpdateOrCreateMultiple(vs.toList)}.toList.flatten.toMap
-    //logger.info(s"preprocess of ${vertices.size} done in ${t1 - t0} ms => ${(t1 - t0).toDouble / vertices.size.toDouble} ms/vertex")
+  def noRedisPreprocess(vertices: List[VertexCore], batchSize: Int) = {
+    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
+
+    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = vertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
+    executor.startProcessing()
+    executor.latch.await()
+    val j = executor.getResultsNoTry
+    j.flatMap(r => r._2).toMap
   }
 
   def getAllPropsExceptHash(vertexCore: VertexCore) = {

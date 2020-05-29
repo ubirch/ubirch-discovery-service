@@ -151,7 +151,7 @@ object Helpers extends LazyLogging {
     val t0 = System.currentTimeMillis()
     val res = createAllPropertiesTraversal(firstConstructor).l().head
     val t1 = System.currentTimeMillis()
-    logger.info(s"getUpdateOrCreateSinge:[1,${t1 - t0},${t1 - t0}]")
+    logger.info(s"getUpdateOrCreateSingle:[1,${t1 - t0},${t1 - t0}]")
 
     res
 
@@ -160,7 +160,7 @@ object Helpers extends LazyLogging {
   def createRelation(relation: DumbRelation)(implicit gc: GremlinConnector) = {
     Try(createEdge(relation)) match {
       case Success(edge) => edge
-      case Failure(fail: Exception) => fail match {
+      case Failure(fail) => fail match {
         case e: CompletionException => recoverEdge(relation, e)
         case e: SchemaViolationException => recoverEdge(relation, e)
         case e: Exception =>
