@@ -6,7 +6,7 @@ object RedisFactory {
 
   private lazy val redisDefaultConnector = new DefaultRedisClient
 
-  def getInstance(redisType: RedisType): RedisConnector = {
+  def getInstance(redisType: RedisType): DefaultRedisClient = {
     redisType match {
       case RedisTypes.Test => redisDefaultConnector
       case RedisTypes.DefaultRedisClient => redisDefaultConnector
@@ -19,4 +19,3 @@ object RedisTypes extends Enumeration {
   type RedisType = Value
   val Test, DefaultRedisClient = Value
 }
-

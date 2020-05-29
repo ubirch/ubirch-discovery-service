@@ -178,16 +178,82 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     // 1: flatten relations to get the vertices
     val vertices: List[VertexCore] = Store.getAllVerticeFromRelations(relations).toList
 
+    val verticesWithHash: List[VertexCore] = vertices.filter(v => v.properties.exists(p => p.keyName.eq("hash")))
+    val verticesWithoutHash: List[VertexCore] = vertices.filter(v => !v.properties.exists(p => p.keyName.eq("hash")))
+    logger.debug("vertices without hash: " + verticesWithoutHash.mkString("; "))
+
+    val resFromRedis: List[(VertexCore, Option[Map[String, String]])] = verticesWithHash.map { v =>
+      {
+        val hash = maybeVertexHash(v).get.value.toString
+        v -> getVertexFromHash(hash)
+      }
+    }
+
+    // success = exist on redis, has an id on redis, and are complete on redis
+    val res: immutable.Seq[(VertexCore, Option[String])] = resFromRedis.map { vm =>
+      vm._2 match {
+        case Some(map) =>
+          getRedisVertexId(map) match {
+            case Some(value) =>
+              if (doesRedisAnswerHasAtLeastAllValues(map, vm._1)) {
+                (vm._1, Some(value))
+              } else {
+                logger.debug("/!\\ VERTEX NOT COMPLETE REDIS: " + vm._1.toString)
+                (vm._1, None)
+              }
+            case None => {
+              logger.debug("/!\\ VERTEX NO ID REDIS: " + vm._1.toString)
+              (vm._1, None)
+            }
+          }
+        case None => {
+          logger.debug("/!\\ VERTEX NOT FOUND REDIS: " + vm._1.toString)
+          (vm._1, None)
+        }
+      }
+    }
+
+    val redisSuccess: immutable.Seq[(VertexCore, String)] = res.filter(p => p._2.isDefined).map(vi => (vi._1, vi._2.get))
+    val redisFailures = res.filter(p => p._2.isEmpty).map(vi => vi._1)
+
+    val redisSuccessAsVertices: Map[VertexCore, Vertex] = {
+      if (redisSuccess.nonEmpty) {
+        logger.debug("entering executor redisSuccessAsVertices")
+        val executor = new Executor[(VertexCore, String), Vertex](objects = redisSuccess, f = Helpers.idToVertex, processSize = maxParallelConnection)
+        executor.startProcessing()
+        logger.debug("Waiting for executor redisSuccessAsVertices")
+        executor.latch.await()
+        executor.getResultsNoTry.map { r => r._1._1 -> r._2 }.toMap
+      } else Map.empty
+    }
+
+    val verticesNotCompleteOnRedisToPreprocess: immutable.List[VertexCore] = verticesWithoutHash ++ redisFailures
+
+    logger.info("Vertices not on redis / on redis: " + verticesNotCompleteOnRedisToPreprocess.size + "/" + redisSuccess.size)
+
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val verticesGroups: Seq[List[VertexCore]] = vertices.grouped(batchSize).toSeq
+    val verticesGroups: Seq[List[VertexCore]] = verticesNotCompleteOnRedisToPreprocess.grouped(batchSize).toSeq
 
-    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticesGroups, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
-    executor.startProcessing()
-    executor.latch.await()
-    val j = executor.getResultsNoTry
-    val theRes: Map[VertexCore, Vertex] = j.flatMap(r => r._2).toMap
-    theRes
+    if (verticesGroups.nonEmpty) {
+      val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticesGroups, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
+      executor.startProcessing()
+      executor.latch.await()
+      val j = executor.getResultsNoTry
+      val theRes: Map[VertexCore, Vertex] = j.flatMap(r => r._2).toMap
+      theRes foreach { v =>
+        maybeVertexHash(v._1) match {
+          case Some(hashProp) => {
+            logger.debug("updating vertice on redis: " + v._1.toString)
+            updateVertexOnRedis(hashProp.value.toString, getAllPropsExceptHash(v._1) ++ Map("vertexId" -> v._2.id().toString))
+          }
+          case None =>
+        }
+      }
+      theRes ++ redisSuccessAsVertices
+    } else {
+      redisSuccessAsVertices
+    }
 
     //val res: Map[VertexCore, Vertex] = verticesGroups.map{vs => Helpers.getUpdateOrCreateMultiple(vs.toList)}.toList.flatten.toMap
     //logger.info(s"preprocess of ${vertices.size} done in ${t1 - t0} ms => ${(t1 - t0).toDouble / vertices.size.toDouble} ms/vertex")
