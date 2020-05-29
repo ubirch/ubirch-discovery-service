@@ -25,14 +25,14 @@ protected class JanusGraphConnector extends GremlinConnector with LazyLogging wi
 
   //val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(conf))
 
-  implicit val graph = JanusGraphFactory.open(janusgraphProperties).asScala()
+  implicit val graph: ScalaGraph = JanusGraphFactory.open(janusgraphProperties).asScala()
 
   //EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
   val g: TraversalSource = graph.traversal
   val b: Bindings = Bindings.instance // see https://groups.google.com/forum/#!topic/janusgraph-users/T7wg_dKri1g for binding usages (tl;dr: only use them in lambdas functions)
 
   def closeConnection(): Unit = {
-
+    graph.close()
   }
 
   Lifecycle.get.addStopHook { () =>
