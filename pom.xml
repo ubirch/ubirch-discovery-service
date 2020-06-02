@@ -258,20 +258,6 @@
             <version>${janusGraph.version}</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.janusgraph/janusgraph-cql -->
-        <dependency>
-            <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-cql</artifactId>
-            <version>${janusGraph.version}</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.janusgraph/janusgraph-es -->
-        <dependency>
-            <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-es</artifactId>
-            <version>${janusGraph.version}</version>
-        </dependency>
-
         <!-- /Gremlin -->
 
         <!-- Joda -->

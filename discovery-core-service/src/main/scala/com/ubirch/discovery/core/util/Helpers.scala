@@ -151,7 +151,7 @@ object Helpers extends LazyLogging {
     val t0 = System.currentTimeMillis()
     val res = createAllPropertiesTraversal(firstConstructor).l().head
     val t1 = System.currentTimeMillis()
-    logger.info(s"getUpdateOrCreateSinge:[1,${t1 - t0},${t1 - t0}]")
+    logger.info(s"getUpdateOrCreateSingle:[1,${t1 - t0},${t1 - t0}]")
 
     res
 
@@ -160,7 +160,7 @@ object Helpers extends LazyLogging {
   def createRelation(relation: DumbRelation)(implicit gc: GremlinConnector) = {
     Try(createEdge(relation)) match {
       case Success(edge) => edge
-      case Failure(fail: Exception) => fail match {
+      case Failure(fail) => fail match {
         case e: CompletionException => recoverEdge(relation, e)
         case e: SchemaViolationException => recoverEdge(relation, e)
         case e: Exception =>
@@ -190,6 +190,26 @@ object Helpers extends LazyLogging {
 
   }
 
+  def areVertexLinked(vFrom: String, vTo: String)(implicit gc: GremlinConnector): Boolean = {
+    val timedResult = Timer.time(gc.g.V(vFrom).both().is(gc.g.V(vTo).l().head).l())
+    timedResult.result match {
+      case Success(value) =>
+        //timedResult.logTimeTaken(s"check if vertices ${vFrom.vertex.id} and ${vTo.vertex.id} were linked. Result: ${value.nonEmpty}", criticalTimeMs = 100)
+        value.nonEmpty
+      case Failure(exception) =>
+        logger.error("Couldn't check if vertex is linked, defaulting to false := ", exception)
+        false
+    }
+  }
+
+  private def createEdgeTraversalPromise(vFrom: Vertex, vTo: Vertex, edge: EdgeCore)(implicit gc: GremlinConnector): List[Edge] = {
+    var constructor = gc.g.V(vTo).addE(edge.label)
+    for (prop <- edge.properties) {
+      constructor = constructor.property(prop.toKeyValue)
+    }
+    constructor.from(vFrom).l()
+  }
+
   def isPropertyIterable(propertyName: String)(implicit propSet: Set[Property]): Boolean = {
 
     @tailrec
@@ -208,7 +228,6 @@ object Helpers extends LazyLogging {
   }
 
   def idToVertex(vc: (VertexCore, String))(implicit gc: GremlinConnector) = {
-    logger.debug("id: " + vc._2 + " " + vc._1.toString)
     gc.g.V(vc._2).l().head
   }
 

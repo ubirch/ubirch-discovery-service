@@ -181,6 +181,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   }
 
   def redisPreprocess(vertices: List[VertexCore], batchSize: Int): Map[VertexCore, Vertex] = {
+
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
     val verticesWithHash: List[VertexCore] = vertices.filter(v => v.properties.exists(p => p.keyName.eq("hash")))
@@ -256,6 +257,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   def noRedisPreprocess(vertices: List[VertexCore], batchSize: Int): Map[VertexCore, Vertex] = {
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
+
 
     val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = vertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
     executor.startProcessing()
