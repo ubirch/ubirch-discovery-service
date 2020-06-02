@@ -22,43 +22,28 @@ import scala.util.{ Failure, Success, Try }
 trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   override val producerBootstrapServers: String = conf.getString("kafkaApi.kafkaProducer.bootstrapServers")
-
   override val keySerializer: serialization.Serializer[String] = new StringSerializer
-
   override val valueSerializer: serialization.Serializer[String] = new StringSerializer
-
   override val consumerTopics: Set[String] = conf.getString("kafkaApi.kafkaProducer.topic").split(", ").toSet
 
   val producerErrorTopic: String = conf.getString("kafkaApi.kafkaConsumer.errorTopic")
 
   override val consumerBootstrapServers: String = conf.getString("kafkaApi.kafkaConsumer.bootstrapServers")
-
   override val consumerGroupId: String = conf.getString("kafkaApi.kafkaConsumer.groupId")
-
   override val consumerMaxPollRecords: Int = conf.getInt("kafkaApi.kafkaConsumer.maxPoolRecords")
-
   override val consumerGracefulTimeout: Int = conf.getInt("kafkaApi.kafkaConsumer.gracefulTimeout")
-
   override val lingerMs: Int = conf.getInt("kafkaApi.kafkaProducer.lingerMS")
-
   override val metricsSubNamespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
-
   override val consumerReconnectBackoffMsConfig: Long = conf.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMsConfig")
-
   override val consumerReconnectBackoffMaxMsConfig: Long = conf.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMaxMsConfig")
-
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
-
   override val valueDeserializer: Deserializer[String] = new StringDeserializer
 
   override def consumerFetchMaxBytesConfig: Int = 52428800
-
   override def consumerMaxPartitionFetchBytesConfig: Int = 10485760
 
   implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
-
   private val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
-
   private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
 
   implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
@@ -195,7 +180,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
   }
 
-  def redisPreprocess(vertices: List[VertexCore], batchSize: Int) = {
+  def redisPreprocess(vertices: List[VertexCore], batchSize: Int): Map[VertexCore, Vertex] = {
+
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
     val verticesWithHash: List[VertexCore] = vertices.filter(v => v.properties.exists(p => p.keyName.eq("hash")))
@@ -269,8 +255,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def noRedisPreprocess(vertices: List[VertexCore], batchSize: Int) = {
+  def noRedisPreprocess(vertices: List[VertexCore], batchSize: Int): Map[VertexCore, Vertex] = {
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
+
 
     val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = vertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
     executor.startProcessing()
@@ -279,7 +266,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     j.flatMap(r => r._2).toMap
   }
 
-  def getAllPropsExceptHash(vertexCore: VertexCore) = {
+  def getAllPropsExceptHash(vertexCore: VertexCore): Map[String, String] = {
     vertexCore.properties.filter(p => p.keyName != "hash").map { p => p.keyName -> p.value.toString }.toMap
   }
 
@@ -303,10 +290,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
           logger.debug("notSameValues: should be" + vertexProperty.keyName + "->" + vertexProperty.value.toString + " but on redis is: " + redisValue)
           notSameValues = notSameValues += (vertexProperty.keyName -> vertexProperty.value.toString)
         }
-        case None => {
+        case None =>
           logger.debug("notSameValues: doesn't exist on redis: " + vertexProperty.keyName + "->" + vertexProperty.value.toString)
           notSameValues = notSameValues += (vertexProperty.keyName -> vertexProperty.value.toString)
-        }
       }
     }
     notSameValues.isEmpty

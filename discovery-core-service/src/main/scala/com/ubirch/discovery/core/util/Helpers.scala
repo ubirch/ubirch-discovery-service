@@ -172,13 +172,14 @@ object Helpers extends LazyLogging {
 
   def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Aux[Edge, HNil] = {
     if (relation.edge.properties.isEmpty) {
-      gc.g.V(relation.vFrom).addE(relation.edge.label).from(relation.vFrom).iterate()
+      gc.g.V(relation.vTo).addE(relation.edge.label).from(relation.vFrom).iterate()
     } else {
       var constructor = gc.g.V(relation.vTo).addE(relation.edge.label)
       for (prop <- relation.edge.properties) {
         constructor = constructor.property(prop.toKeyValue)
       }
-      constructor.from(relation.vFrom).iterate()
+      //constructor.from(relation.vFrom).iterate()
+      constructor.from(gc.g.V(relation.vFrom.id()).head()).iterate()
     }
   }
 
