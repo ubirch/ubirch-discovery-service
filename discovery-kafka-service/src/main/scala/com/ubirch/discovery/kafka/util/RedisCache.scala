@@ -1,18 +1,15 @@
 package com.ubirch.discovery.kafka.util
 
-import com.redis.RedisClientPool
+import com.redis.RedisClient
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.kafka.redis.{ RedisFactory, RedisTypes }
 import com.ubirch.kafka.express.ConfigBase
 
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.util.{ Failure, Success }
-import scala.concurrent.duration._
+import scala.util.Try
 
 object RedisCache extends ConfigBase with LazyLogging {
 
-  val r = RedisFactory.getInstance(RedisTypes.DefaultRedisClient).r
+  val r: RedisClient = RedisFactory.getInstance(RedisTypes.DefaultRedisClient).r
 
   def hgetall(hash: String): Option[Map[String, String]] = {
     r.hgetall("vHash:" + hash)
@@ -27,13 +24,6 @@ object RedisCache extends ConfigBase with LazyLogging {
     r.expire("vHash:" + hash, 600)
   }
 
-  def flow[A](noOfRecipients: Int, opsPerClient: Int, keyPrefix: String,
-      fn: (Int, String) => A)(implicit ec: ExecutionContext) = {
-    (1 to noOfRecipients) map { i =>
-      Future {
-        fn(opsPerClient, keyPrefix + i)
-      }
-    }
-  }
+  def isRedisUp: Boolean = r.connected
 
 }

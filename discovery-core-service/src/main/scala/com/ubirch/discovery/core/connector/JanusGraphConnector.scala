@@ -21,7 +21,7 @@ import scala.concurrent.Future
   */
 protected class JanusGraphConnector extends GremlinConnector with LazyLogging with ConfigBase {
 
-  val janusgraphProperties = conf.getString("janus.properties")
+  val janusgraphProperties: Label = conf.getString("janus.properties")
 
   //val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(conf))
 

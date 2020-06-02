@@ -178,7 +178,8 @@ object Helpers extends LazyLogging {
       for (prop <- relation.edge.properties) {
         constructor = constructor.property(prop.toKeyValue)
       }
-      constructor.from(relation.vFrom).iterate()
+      //constructor.from(relation.vFrom).iterate()
+      constructor.from(gc.g.V(relation.vFrom.id()).head()).iterate()
     }
   }
 
