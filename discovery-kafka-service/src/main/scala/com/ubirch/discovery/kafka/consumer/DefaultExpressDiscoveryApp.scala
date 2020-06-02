@@ -68,7 +68,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   lazy val flush: Boolean = conf.getBoolean("flush")
 
   //  val healthCheckServer = new HealthCheckServer(Map(), Map())
-  //  initHealthChecks()
+  ///  initHealthChecks()
 
   override val process: Process = Process { crs => letsProcess(crs) }
 
