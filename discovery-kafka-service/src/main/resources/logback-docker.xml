@@ -41,6 +41,7 @@
     <logger name="org.apache.zookeeper" level="WARN"/>
     <logger name="io.netty" level="WARN"/>
 
+    <logger name="org.janusgraph" level="INFO"/>
     <logger name="com.ubirch" level="INFO"/>
 
     <root level="INFO">
