@@ -7,8 +7,9 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.connector.GremlinConnector
 import com.ubirch.discovery.core.structure.{ DumbRelation, EdgeCore, VertexCore }
 import com.ubirch.discovery.core.structure.Elements.Property
-import gremlin.scala.{ Edge, GremlinScala, KeyValue, StepLabel, Vertex }
+import gremlin.scala.{ Edge, GremlinScala, KeyValue, StepLabel, TraversalSource, Vertex }
 import gremlin.scala.GremlinScala.Aux
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.apache.tinkerpop.gremlin.process.traversal.step.util.BulkSet
 import org.janusgraph.core.SchemaViolationException
 import shapeless.HNil
@@ -27,7 +28,7 @@ object Helpers extends LazyLogging {
   // .V().or(__.has('hash', 'c'), __.has('signature', '3')).fold().coalesce(unfold(), addV('person')).aggregate('c').property('hash', 'c').property('signature', '3')
   // .V().or(__.has('hash', 'c')).fold().coalesce(unfold(), addV('person')).aggregate('d').property('hash', 'c').property('signature', '3')
   // .select('a', 'b', 'c', 'd')
-  def getUpdateOrCreateMultiple(verticesCore: List[VertexCore])(implicit gc: GremlinConnector, ec: ExecutionContext, propSet: Set[Property]): Map[VertexCore, Vertex] = {
+  def getUpdateOrCreateMultiple(g: TraversalSource = null, verticesCore: List[VertexCore])(implicit gc: GremlinConnector, ec: ExecutionContext, propSet: Set[Property]): Map[VertexCore, Vertex] = {
 
     // case that if only one or two vertex is present, then finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
     // will be cast to something that doesn't work. This is due to the way the select() method work in scala
@@ -53,7 +54,7 @@ object Helpers extends LazyLogging {
           }
           newConstructor
         }
-        val firstPartOfQuery = gc.g.V().or(hasPropertySteps: _*).fold().coalesce(_.unfold[Vertex](), _.addV(vertexCore.label)).aggregate(aggregateValue)
+        val firstPartOfQuery = g.V().or(hasPropertySteps: _*).fold().coalesce(_.unfold[Vertex](), _.addV(vertexCore.label)).aggregate(aggregateValue)
         addPropertiesToTraversal(firstPartOfQuery)
       }
 
@@ -119,6 +120,7 @@ object Helpers extends LazyLogging {
       }
 
       val traversalRes: mutable.Map[String, Any] = finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
+
       val t1 = System.currentTimeMillis()
       // for tests, print
 
@@ -157,7 +159,7 @@ object Helpers extends LazyLogging {
 
   }
 
-  def createRelation(relation: DumbRelation)(implicit gc: GremlinConnector) = {
+  def createRelation(relation: DumbRelation)(implicit g: TraversalSource) = {
     Try(createEdge(relation)) match {
       case Success(edge) => edge
       case Failure(fail) => fail match {
@@ -170,20 +172,20 @@ object Helpers extends LazyLogging {
     }
   }
 
-  def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Aux[Edge, HNil] = {
+  def createEdge(relation: DumbRelation)(implicit g: TraversalSource): Aux[Edge, HNil] = {
     if (relation.edge.properties.isEmpty) {
-      gc.g.V(relation.vTo).addE(relation.edge.label).from(relation.vFrom).iterate()
+      g.V(relation.vTo).addE(relation.edge.label).from(relation.vFrom).iterate()
     } else {
-      var constructor = gc.g.V(relation.vTo).addE(relation.edge.label)
+      var constructor = g.V(relation.vTo).addE(relation.edge.label)
       for (prop <- relation.edge.properties) {
         constructor = constructor.property(prop.toKeyValue)
       }
       //constructor.from(relation.vFrom).iterate()
-      constructor.from(gc.g.V(relation.vFrom.id()).head()).iterate()
+      constructor.from(g.V(relation.vFrom.id()).head()).iterate()
     }
   }
 
-  def recoverEdge(relation: DumbRelation, error: Throwable)(implicit gc: GremlinConnector) {
+  def recoverEdge(relation: DumbRelation, error: Throwable)(implicit g: TraversalSource) {
     if (!error.getMessage.contains("An edge with the given label already exists between the pair of vertices and the label")) {
       createEdge(relation)
     }

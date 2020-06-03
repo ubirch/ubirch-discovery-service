@@ -2,14 +2,10 @@ package com.ubirch.discovery.core.connector
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.Lifecycle
-import com.ubirch.discovery.core.util.Util
 import com.ubirch.kafka.express.ConfigBase
 import gremlin.scala._
-import org.apache.tinkerpop.gremlin.driver.Cluster
-import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
-import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
-import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
+import org.janusgraph.core.JanusGraphFactory
 
 import scala.concurrent.Future
 
