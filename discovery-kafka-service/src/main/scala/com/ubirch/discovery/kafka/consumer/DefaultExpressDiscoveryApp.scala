@@ -168,18 +168,18 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   def preprocess(relations: Seq[Relation]): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
     val vertices: List[VertexCore] = getAllVerticeFromRelations(relations).toList
-
-    try {
-      if (RedisCache.isRedisUp) {
-        redisPreprocess(vertices)
-      } else {
-        noRedisPreprocess(vertices)
-      }
-    } catch {
-      case _: Throwable =>
-        logger.warn("can not connect to redis")
-        noRedisPreprocess(vertices)
-    }
+    noRedisPreprocess(vertices)
+//    try {
+//      if (RedisCache.isRedisUp) {
+//        redisPreprocess(vertices)
+//      } else {
+//        noRedisPreprocess(vertices)
+//      }
+//    } catch {
+//      case _: Throwable =>
+//        logger.warn("can not connect to redis")
+//        noRedisPreprocess(vertices)
+//    }
   }
 
   def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
