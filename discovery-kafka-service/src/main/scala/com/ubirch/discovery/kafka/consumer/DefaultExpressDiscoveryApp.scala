@@ -51,6 +51,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection") // PUT AT 1 FOR TESTS
 
+  val batchSize: Int = conf.getInt("kafkaApi.batchSize")
+
   lazy val flush: Boolean = conf.getBoolean("flush")
 
   //  val healthCheckServer = new HealthCheckServer(Map(), Map())
@@ -126,7 +128,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     // FOR TESTS: val preprocessBatchSize = 1 + scala.util.Random.nextInt(100)
     val res = Timer.time({
 
-      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations, 10)
+      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations)
 
       def getVertexFromHMap(vertexCore: VertexCore) = {
         hashMapVertices.get(vertexCore) match {
@@ -163,20 +165,20 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def preprocess(relations: Seq[Relation], batchSize: Int): Map[VertexCore, Vertex] = {
+  def preprocess(relations: Seq[Relation]): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
     val vertices: List[VertexCore] = getAllVerticeFromRelations(relations).toList
 
     try {
       if (RedisCache.isRedisUp) {
-        redisPreprocess(vertices, batchSize)
+        redisPreprocess(vertices)
       } else {
-        noRedisPreprocess(vertices, batchSize)
+        noRedisPreprocess(vertices)
       }
     } catch {
       case _: Throwable =>
         logger.warn("can not connect to redis")
-        noRedisPreprocess(vertices, batchSize)
+        noRedisPreprocess(vertices)
     }
   }
 
@@ -184,7 +186,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
   }
 
-  def redisPreprocess(vertices: List[VertexCore], batchSize: Int): Map[VertexCore, Vertex] = {
+  def redisPreprocess(vertices: List[VertexCore]): Map[VertexCore, Vertex] = {
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
@@ -262,7 +264,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def noRedisPreprocess(vertices: List[VertexCore], batchSize: Int): Map[VertexCore, Vertex] = {
+  def noRedisPreprocess(vertices: List[VertexCore]): Map[VertexCore, Vertex] = {
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
     val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
