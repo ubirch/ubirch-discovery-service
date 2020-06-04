@@ -153,7 +153,7 @@ object Helpers extends LazyLogging {
     val t0 = System.currentTimeMillis()
     val res = createAllPropertiesTraversal(firstConstructor).l().head
     val t1 = System.currentTimeMillis()
-    logger.info(s"getUpdateOrCreateSingle:[1,${t1 - t0},${t1 - t0}]")
+    logger.debug(s"getUpdateOrCreateSingle:[1,${t1 - t0},${t1 - t0}]")
 
     res
 
