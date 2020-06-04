@@ -51,6 +51,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection") // PUT AT 1 FOR TESTS
 
+  val batchSize = conf.getInt("kafkaApi.batchSize")
+
   lazy val flush: Boolean = conf.getBoolean("flush")
 
   //  val healthCheckServer = new HealthCheckServer(Map(), Map())
@@ -126,7 +128,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     // FOR TESTS: val preprocessBatchSize = 1 + scala.util.Random.nextInt(100)
     val res = Timer.time({
 
-      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations, 10)
+      val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations, batchSize)
 
       def getVertexFromHMap(vertexCore: VertexCore) = {
         hashMapVertices.get(vertexCore) match {
