@@ -479,12 +479,12 @@
                 </executions>
                 <configuration>
                     <buildDirectory>${project.build.outputDirectory}</buildDirectory>
-                    <repository>ubirch/${project.artifactId}</repository>
+                    <repository>ubirch/discovery-kafka-service</repository>
                     <tag>${build.number}</tag>
                     <buildArgs>
                         <VERSION>${project.version}</VERSION>
                         <BUILD>${build.number}</BUILD>
-                        <SERVICE_NAME>discovery-kafka-service</SERVICE_NAME>
+                        <SERVICE_NAME>${project.name}</SERVICE_NAME>
                         <JAR_LIBS>target/lib</JAR_LIBS>
                         <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
                     </buildArgs>
