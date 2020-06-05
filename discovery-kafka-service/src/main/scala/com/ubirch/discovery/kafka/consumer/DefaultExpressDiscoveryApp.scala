@@ -168,103 +168,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   def preprocess(relations: Seq[Relation]): Map[VertexCore, Vertex] = {
     // 1: flatten relations to get the vertices
     val vertices: List[VertexCore] = getAllVerticeFromRelations(relations).toList
-    noRedisPreprocess(vertices)
-//    try {
-//      if (RedisCache.isRedisUp) {
-//        redisPreprocess(vertices)
-//      } else {
-//        noRedisPreprocess(vertices)
-//      }
-//    } catch {
-//      case _: Throwable =>
-//        logger.warn("can not connect to redis")
-//        noRedisPreprocess(vertices)
-//    }
-  }
 
-  def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
-    relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
-  }
-
-  def redisPreprocess(vertices: List[VertexCore]): Map[VertexCore, Vertex] = {
-
-    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
-
-    val verticesWithHash: List[VertexCore] = vertices.filter(v => v.properties.exists(p => p.keyName.eq("hash")))
-    val verticesWithoutHash: List[VertexCore] = vertices.filter(v => !v.properties.exists(p => p.keyName.eq("hash")))
-    logger.debug("vertices without hash: " + verticesWithoutHash.mkString("; "))
-    val resFromRedis = verticesWithHash.map { v =>
-      {
-        val hash = maybeVertexHash(v).get.value.toString
-        v -> getVertexFromHash(hash)
-      }
-    }
-    //success = exist on redis, has an id on redis, and are complete on redis
-    val res: immutable.Seq[(VertexCore, Option[String])] = resFromRedis.map { vm =>
-      vm._2 match {
-        case Some(map) =>
-          getRedisVertexId(map) match {
-            case Some(value) =>
-              if (doesRedisAnswerHasAtLeastAllValues(map, vm._1)) {
-                (vm._1, Some(value))
-              } else {
-                logger.debug("/!\\ VERTEX NOT COMPLETE REDIS: " + vm._1.toString)
-                (vm._1, None)
-              }
-            case None =>
-              logger.debug("/!\\ VERTEX NO ID REDIS: " + vm._1.toString)
-              (vm._1, None)
-          }
-        case None =>
-          logger.debug("/!\\ VERTEX NOT FOUND REDIS: " + vm._1.toString)
-          (vm._1, None)
-      }
-    }
-
-    val redisSuccess: immutable.Seq[(VertexCore, String)] = res.filter(p => p._2.isDefined).map(vi => (vi._1, vi._2.get))
-    val redisFailures = res.filter(p => p._2.isEmpty).map(vi => vi._1)
-
-    val redisSuccessAsVertices: Map[VertexCore, Vertex] = {
-      if (redisSuccess.nonEmpty) {
-        logger.debug("entering executor redisSuccessAsVertices")
-        val executor = new Executor[(VertexCore, String), Vertex](objects = redisSuccess, f = Helpers.idToVertex, processSize = maxParallelConnection)
-        executor.startProcessing()
-        logger.debug("Waiting for executor redisSuccessAsVertices")
-        executor.latch.await()
-        executor.getResultsNoTry.map { r => r._1._1 -> r._2 }.toMap
-      } else Map.empty
-    }
-
-    val verticesNotCompleteOnRedisToPreprocess: immutable.List[VertexCore] = verticesWithoutHash ++ redisFailures
-
-    logger.info("Vertices not on redis / on redis: " + verticesNotCompleteOnRedisToPreprocess.size + "/" + redisSuccess.size)
-    val verticeToPreprocess: Seq[List[VertexCore]] = verticesNotCompleteOnRedisToPreprocess.grouped(batchSize).toSeq
-
-    if (verticeToPreprocess.nonEmpty) {
-      val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
-      val g = threadedGraph.traversal
-      val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = verticeToPreprocess, f = Helpers.getUpdateOrCreateMultiple(g, _), processSize = maxParallelConnection)
-      executor.startProcessing()
-      executor.latch.await()
-      val j = executor.getResultsNoTry
-      threadedGraph.tx().commit()
-      val theRes: Map[VertexCore, Vertex] = j.flatMap(r => r._2).toMap
-      theRes foreach { v =>
-        maybeVertexHash(v._1) match {
-          case Some(hashProp) => {
-            logger.debug("updating vertice on redis: " + v._1.toString)
-            updateVertexOnRedis(hashProp.value.toString, getAllPropsExceptHash(v._1) ++ Map("vertexId" -> v._2.id().toString))
-          }
-          case None =>
-        }
-      }
-      theRes ++ redisSuccessAsVertices
-    } else {
-      redisSuccessAsVertices
-    }
-  }
-
-  def noRedisPreprocess(vertices: List[VertexCore]): Map[VertexCore, Vertex] = {
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
     val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
@@ -275,6 +179,12 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     threadedGraph.tx().commit()
     val j = executor.getResultsNoTry
     j.flatMap(r => r._2).toMap
+
+  }
+
+
+  def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
+    relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
   }
 
   def getAllPropsExceptHash(vertexCore: VertexCore): Map[String, String] = {

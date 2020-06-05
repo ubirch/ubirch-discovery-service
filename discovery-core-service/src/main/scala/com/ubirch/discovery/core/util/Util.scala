@@ -81,7 +81,6 @@ object Util extends LazyLogging {
   }
 
 
-
   def kvToJson(keyValue: ElementProperty): (String, String) = keyValue.keyName -> keyValue.value.toString
 
   def relationStrategyJson(relation: RelationServer, strat: String): String = compact(render("RelationStrategy" -> ("type" -> strat) ~ ("relation" -> relation.toJson)))
