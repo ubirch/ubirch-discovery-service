@@ -1,16 +1,15 @@
 package com.ubirch.discovery.kafka.consumer
 
 import com.ubirch.discovery.core.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import com.ubirch.discovery.core.structure.{ DumbRelation, ElementProperty, Relation, VertexCore }
+import com.ubirch.discovery.core.structure.{ DumbRelation, Relation, VertexCore }
 import com.ubirch.discovery.core.structure.Elements.Property
 import com.ubirch.discovery.core.util.{ Helpers, Timer }
 import com.ubirch.discovery.kafka.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
 import com.ubirch.discovery.kafka.models.{ Executor, KafkaElements, RelationKafka }
-import com.ubirch.discovery.kafka.util.{ ErrorsHandler, RedisCache }
+import com.ubirch.discovery.kafka.util.ErrorsHandler
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
-import gremlin.scala.{ Graph, ScalaGraph, Vertex }
-import gremlin.scala._
+import gremlin.scala.Vertex
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
@@ -142,12 +141,8 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
       val relationsAsRelationServer: Seq[DumbRelation] = relations.map(r => DumbRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
 
-      val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
-      val g = threadedGraph.traversal
       val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = Helpers.createRelation(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
       executor.startProcessing()
-      executor.latch.await()
-      threadedGraph.tx().commit()
       executor.getResults
 
     })
@@ -171,12 +166,9 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
-    val g = threadedGraph.traversal
     val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = vertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
     executor.startProcessing()
     executor.latch.await()
-    threadedGraph.tx().commit()
     val j = executor.getResultsNoTry
     j.flatMap(r => r._2).toMap
 
@@ -184,47 +176,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
   def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
     relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
-  }
-
-  def getAllPropsExceptHash(vertexCore: VertexCore): Map[String, String] = {
-    vertexCore.properties.filter(p => p.keyName != "hash").map { p => p.keyName -> p.value.toString }.toMap
-  }
-
-  def maybeVertexHash(vertexCore: VertexCore): Option[ElementProperty] = vertexCore.properties.find(p => p.keyName.equals("hash"))
-
-  def getVertexFromHash(hash: String): Option[Map[String, String]] = {
-    RedisCache.getAllFromHash(hash)
-  }
-
-  def getRedisVertexId(redisValue: Map[String, String]): Option[String] = {
-    redisValue.get("vertexId")
-  }
-
-  def doesRedisAnswerHasAtLeastAllValues(redisAnswer: Map[String, String], vertexCore: VertexCore): Boolean = {
-
-    var notSameValues: scala.collection.mutable.Map[String, String] = scala.collection.mutable.Map.empty
-
-    for (vertexProperty <- vertexCore.properties.filter(p => p.keyName != "hash")) {
-      redisAnswer.get(vertexProperty.keyName) match {
-        case Some(redisValue) => if (!redisValue.equals(vertexProperty.value.toString)) {
-          logger.debug("notSameValues: should be" + vertexProperty.keyName + "->" + vertexProperty.value.toString + " but on redis is: " + redisValue)
-          notSameValues = notSameValues += (vertexProperty.keyName -> vertexProperty.value.toString)
-        }
-        case None =>
-          logger.debug("notSameValues: doesn't exist on redis: " + vertexProperty.keyName + "->" + vertexProperty.value.toString)
-          notSameValues = notSameValues += (vertexProperty.keyName -> vertexProperty.value.toString)
-      }
-    }
-    notSameValues.isEmpty
-  }
-
-  def updateVertexOnRedis(hash: String, thingsToUpdate: Map[String, String]): Boolean = {
-    logger.debug("things to update: " + thingsToUpdate.mkString("; "))
-    RedisCache.updateVertex(hash, thingsToUpdate)
-  }
-
-  def createVertexOnRedis(hash: String, properties: List[ElementProperty]): Boolean = {
-    RedisCache.updateVertex(hash, properties.filter(p => p.keyName != "hash").map { p => p.keyName -> p.value.toString }.toMap)
   }
 
   def recoverStoreRelationIfNeeded(relationAndResult: (DumbRelation, Try[Any])): Try[Any] = {
