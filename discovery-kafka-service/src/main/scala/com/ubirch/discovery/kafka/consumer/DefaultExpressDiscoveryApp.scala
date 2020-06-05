@@ -144,7 +144,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
       val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
       val g = threadedGraph.traversal
-      val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = Helpers.createRelation(_)(g), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+      val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = Helpers.createRelation(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
       executor.startProcessing()
       executor.latch.await()
       threadedGraph.tx().commit()
@@ -173,7 +173,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
     val g = threadedGraph.traversal
-    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = vertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateMultiple(g, _), processSize = maxParallelConnection)
+    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = vertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
     executor.startProcessing()
     executor.latch.await()
     threadedGraph.tx().commit()
@@ -181,7 +181,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     j.flatMap(r => r._2).toMap
 
   }
-
 
   def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
     relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
