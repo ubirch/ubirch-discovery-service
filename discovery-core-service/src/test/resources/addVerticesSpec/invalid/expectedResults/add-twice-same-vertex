@@ -1,2 +1,0 @@
-PropertiesNotCorrect: p1 = List(IdOfV = 2, ) should not be equal to the properties of the second vertex
-Adding twice the same ID
