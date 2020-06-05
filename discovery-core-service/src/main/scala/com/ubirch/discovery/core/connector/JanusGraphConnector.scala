@@ -4,10 +4,8 @@ import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.core.Lifecycle
 import com.ubirch.kafka.express.ConfigBase
 import gremlin.scala._
-import org.apache.tinkerpop.gremlin.driver.Cluster
-import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
-import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
+import org.janusgraph.core.JanusGraphFactory
 
 import scala.concurrent.Future
 
@@ -19,18 +17,22 @@ import scala.concurrent.Future
   */
 protected class JanusGraphConnector extends GremlinConnector with LazyLogging with ConfigBase {
 
-  val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(conf))
+  val janusgraphProperties: Label = conf.getString("janus.properties")
 
-  implicit val graph: ScalaGraph = EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
+  //val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(conf))
+
+  implicit val graph: ScalaGraph = JanusGraphFactory.open(janusgraphProperties).asScala()
+
+  //EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
   val g: TraversalSource = graph.traversal
   val b: Bindings = Bindings.instance // see https://groups.google.com/forum/#!topic/janusgraph-users/T7wg_dKri1g for binding usages (tl;dr: only use them in lambdas functions)
 
   def closeConnection(): Unit = {
-    cluster.close()
+    graph.close()
   }
 
   Lifecycle.get.addStopHook { () =>
-    logger.info("Shutting down connection with Janus: " + cluster.toString)
+    logger.info("Shutting down janusgraph server ")
     Future.successful(closeConnection())
   }
 

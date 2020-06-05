@@ -9,7 +9,8 @@ import com.ubirch.discovery.kafka.models.{ Executor, KafkaElements, RelationKafk
 import com.ubirch.discovery.kafka.util.{ ErrorsHandler, RedisCache }
 import com.ubirch.discovery.kafka.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.kafka.express.ExpressKafkaApp
-import gremlin.scala.Vertex
+import gremlin.scala.{ Graph, ScalaGraph, Vertex }
+import gremlin.scala._
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
@@ -43,7 +44,6 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   override def consumerMaxPartitionFetchBytesConfig: Int = 10485760
 
   implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
-
   private val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
   private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
 
@@ -142,9 +142,12 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
       logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
       val relationsAsRelationServer: Seq[DumbRelation] = relations.map(r => DumbRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
 
-      val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = Helpers.createRelation(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+      val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
+      val g = threadedGraph.traversal
+      val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = Helpers.createRelation(_)(g), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
       executor.startProcessing()
       executor.latch.await()
+      threadedGraph.tx().commit()
       executor.getResults
 
     })
@@ -168,13 +171,17 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = vertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateMultiple(_), processSize = maxParallelConnection)
+    val threadedGraph: ScalaGraph = gc.graph.tx().createThreadedTx[Graph]().asScala
+    val g = threadedGraph.traversal
+    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = vertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateMultiple(g, _), processSize = maxParallelConnection)
     executor.startProcessing()
     executor.latch.await()
+    threadedGraph.tx().commit()
     val j = executor.getResultsNoTry
     j.flatMap(r => r._2).toMap
 
   }
+
 
   def getAllVerticeFromRelations(relations: Seq[Relation]): Seq[VertexCore] = {
     relations.flatMap(r => List(r.vFrom, r.vTo)).distinct
