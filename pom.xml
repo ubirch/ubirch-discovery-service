@@ -484,7 +484,7 @@
                     <buildArgs>
                         <VERSION>${project.version}</VERSION>
                         <BUILD>${build.number}</BUILD>
-                        <SERVICE_NAME>${project.name}</SERVICE_NAME>
+                        <SERVICE_NAME>discovery-kafka-service</SERVICE_NAME>
                         <JAR_LIBS>target/lib</JAR_LIBS>
                         <JAR_FILE>target/${project.build.finalName}.${project.packaging}</JAR_FILE>
                     </buildArgs>
