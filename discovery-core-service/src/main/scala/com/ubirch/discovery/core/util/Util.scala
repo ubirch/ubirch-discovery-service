@@ -80,32 +80,6 @@ object Util extends LazyLogging {
     resWithId.toList
   }
 
-  /**
-    *
-    * @param gc    The gremlin connector.
-    * @param vFrom vertex from where the edge goes.
-    * @param vTo   vertex to where the edge goes.
-    * @param size  Number of expected edges connecting the vertexes (default: 1).
-    * @return The edge.
-    */
-  def getEdge(implicit gc: GremlinConnector, vFrom: VertexDatabase, vTo: VertexDatabase, size: Int = 1): List[Edge] = {
-    val edgeList = gc.g.V(vFrom.vertex).outE().as("e").inV().is(vTo.vertex).select("e").l() //filter(_.inV().is(vTo.vertex)).toList()
-    edgeList match {
-      case x: List[Edge] =>
-        if (x.size != size) throw NumberOfEdgesNotCorrect(s"The required number of edges linked the two vertices is not met: ${x.size}")
-        size match {
-          case 0 => null
-          case _ => x
-        }
-      case _ => null
-    }
-  }
-
-  def getEdgeProperties(implicit gc: GremlinConnector, edge: Edge): Map[Any, List[String]] = {
-    val edgePropertiesAsJava = gc.g.E(edge).valueMap().toList().head.asScala.toMap.asInstanceOf[Map[Any, Any]]
-    edgePropertiesAsJava map { x => x._1 -> List(x._2.asInstanceOf[String]) }
-  }
-
   def kvToJson(keyValue: ElementProperty): (String, String) = keyValue.keyName -> keyValue.value.toString
 
   def relationStrategyJson(relation: RelationServer, strat: String): String = compact(render("RelationStrategy" -> ("type" -> strat) ~ ("relation" -> relation.toJson)))
