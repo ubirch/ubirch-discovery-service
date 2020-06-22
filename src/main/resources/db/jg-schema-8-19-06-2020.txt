@@ -1,4 +1,4 @@
-// Added PUB_KEY as a label
+// Added PUB_KEY->DEVICE as a label for edges
 
 :rem connect tinkerpop.server conf/remote.yaml session
 :rem console
@@ -22,6 +22,7 @@ mgmt.makeEdgeLabel('MASTER_TREE->MASTER_TREE').multiplicity(SIMPLE).make()
 mgmt.makeEdgeLabel('MASTER_TREE_UPGRADE').multiplicity(SIMPLE).make()
 mgmt.makeEdgeLabel('PUBLIC_CHAIN->MASTER_TREE').multiplicity(SIMPLE).make()
 mgmt.makeEdgeLabel('CHAIN').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('PUB_KEY->DEVICE').multiplicity(SIMPLE).make()
 
 mgmt.makePropertyKey('signature').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('type').dataType(String.class).cardinality(SINGLE).make()
