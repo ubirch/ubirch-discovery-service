@@ -56,15 +56,16 @@ object RemoteJanusGraph extends LazyLogging {
     val url = "https://github.com/JanusGraph/janusgraph/releases/download/v0.5.1/janusgraph-0.5.1.zip"
     val janusGraphZipFileName = "src/test/resources/embedded-jg/jgServer.zip"
     val janusGraphZipFilePath = Paths.get(janusGraphZipFileName)
-    val outputPath = Paths.get("src/test/resources/embedded-jg/")
+    val outputPath = Paths.get("src/test/resources/embedded-jg/janusgraph-0.5.1")
     if (!Files.exists(outputPath)) {
+      logger.info("janusgraph folder doesn't exist")
       if (!Files.exists(janusGraphZipFilePath)) {
         logger.info("janusgraph.zip doesn't exist, downloading...")
         downloadFile(url, janusGraphZipFileName)
         logger.info("janusgraph.zip download complete")
       }
       logger.info("unzipping")
-      unzip(janusGraphZipFilePath, outputPath)
+      unzip(janusGraphZipFilePath, outputPath.getParent)
     }
   }
 
