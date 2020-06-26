@@ -9,13 +9,10 @@ import scala.util.{ Failure, Success, Try }
 
 object GremlinConnectorFactory {
 
-  private lazy val instanceTest = new JanusGraphForTests
-  private lazy val instanceJanusGraph = new JanusGraphConnector
-
   def getInstance(connectorType: ConnectorType): GremlinConnector = {
     connectorType match {
-      case ConnectorType.JanusGraph => instanceJanusGraph
-      case ConnectorType.Test => instanceTest
+      case ConnectorType.JanusGraph => null
+      case ConnectorType.Test => null
     }
   }
 

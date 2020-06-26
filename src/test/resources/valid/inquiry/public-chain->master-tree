@@ -1,0 +1,1 @@
+[ { "v_from": { "label": "PUBLIC_CHAIN", "properties": { "hash": "hashPubChain", "public_chain": "IOTA_TESTNET_IOTA_TESTNET_NETWORK", "timestamp": 1593173111922 } }, "v_to": { "label": "MASTER_TREE", "properties": { "hash": "hashMasterTree" } }, "edge": { "label": "PUBLIC_CHAIN->MASTER_TREE", "properties": { "timestamp": 1593173111922 } } } ]

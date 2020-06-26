@@ -1,14 +1,14 @@
 package com.ubirch.discovery
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.models.{ EdgeCore, ElementProperty, Relation, VertexCore }
-import com.ubirch.discovery.util.{ ExecutionContextHelper, Util }
+import com.ubirch.discovery.models.{ EdgeCore, Relation, VertexCore }
+import com.ubirch.discovery.util.Util
 import net.manub.embeddedkafka.EmbeddedKafka
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
+import org.scalatest.concurrent.ScalaFutures
 
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.duration.Duration
 import scala.util.Random
 
 trait TestBase
@@ -19,8 +19,6 @@ trait TestBase
   with Matchers
   with LazyLogging
   with EmbeddedKafka {
-
-  implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   def await[T](future: Future[T]): T = await(future, Duration.Inf)
 

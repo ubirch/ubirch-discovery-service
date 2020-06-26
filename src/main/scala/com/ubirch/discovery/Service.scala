@@ -1,15 +1,8 @@
 package com.ubirch.discovery
 
-import com.ubirch.discovery.consumer.DefaultExpressDiscoveryApp
-import com.ubirch.discovery.util.ExecutionContextHelper
+object Service extends Boot(List(new Binder)) {
 
-import scala.concurrent.ExecutionContext
-
-object Service extends Boot with DefaultExpressDiscoveryApp {
-
-  override implicit val ec: ExecutionContext = ExecutionContextHelper.ec
-
-  override val prefix: String = "Ubirch"
-
-  override val maxTimeAggregationSeconds: Long = 180
+  def main(args: Array[String]): Unit = {
+    get[DiscoverySystem].start()
+  }
 }

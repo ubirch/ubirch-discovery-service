@@ -3,46 +3,68 @@ package com.ubirch.discovery
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-import com.ubirch.discovery.consumer.DefaultExpressDiscoveryApp
-import com.ubirch.discovery.services.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import com.ubirch.discovery.util.ExecutionContextHelper
+import com.google.inject.binder.ScopedBindingBuilder
+import com.typesafe.config.{ Config, ConfigValueFactory }
+import com.ubirch.discovery.consumer.AbstractDiscoveryService
+import com.ubirch.discovery.services.config.ConfigProvider
+import com.ubirch.discovery.services.connector.{ GremlinConnector, JanusGraphForTests }
+import com.ubirch.discovery.util.RemoteJanusGraph
 import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 
-import scala.concurrent.ExecutionContext
 import scala.io.Source
 
 //TODO: We need to rethink the tests here are they are causing issues on the ci pipelines
 class DefaultStringConsumerSpec extends TestBase {
 
-  def getGremlinConnector: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
-
   val topic = "test"
   val errorTopic = "test.error"
   implicit val Deserializer: StringDeserializer = new StringDeserializer
-  implicit val gc: GremlinConnector = getGremlinConnector
+
+  /**
+    * Simple injector that replaces the kafka bootstrap server and topics to the given ones
+    */
+  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+    override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(bootstrapServers, port))
+  })) {}
+
+  /**
+    * Overwrite default bootstrap server and topic values of the kafka consumer and producers
+    */
+  def customTestConfigProvider(bootstrapServers: String, port: Int): ConfigProvider = new ConfigProvider {
+    override def conf: Config = super.conf.withValue(
+      "core.connector.port",
+      ConfigValueFactory.fromAnyRef(port)
+    ).withValue(
+        "kafkaApi.kafkaConsumer.bootstrapServers",
+        ConfigValueFactory.fromAnyRef(bootstrapServers)
+      ).withValue(
+          "kafkaApi.kafkaProducer.bootstrapServers",
+          ConfigValueFactory.fromAnyRef(bootstrapServers)
+        )
+  }
+
+  RemoteJanusGraph.startJanusGraphServer()
+
+  val Injector = FakeSimpleInjector("")
 
   feature("Verifying valid requests") {
 
     def runTest(test: TestStruct): Unit = {
 
-      val consumer = new DefaultExpressDiscoveryApp {
-        override implicit def ec: ExecutionContext = ExecutionContextHelper.ec
-        override val gc: GremlinConnector = getGremlinConnector
-        override def prefix: String = "Ubirch"
-        override def maxTimeAggregationSeconds: Long = 180
-      }
-
-      cleanDb()
+      implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
+      cleanDb
+      val consumer = Injector.get[AbstractDiscoveryService]
+      //cleanDb
       logger.debug("testing " + test.request)
       val crs = new ConsumerRecord[String, String](topic, 0, 79, null, test.request)
       consumer.letsProcess(Vector(crs))
       //val r = consumeFirstStringMessageFrom(topic)
       //println(s"r: $r")
-      Thread.sleep(5000)
+      Thread.sleep(2000)
       howManyElementsInJG shouldBe howManyElementsShouldBeInJg(test.expectedResult)
       //consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
 
@@ -50,30 +72,31 @@ class DefaultStringConsumerSpec extends TestBase {
 
     val allTests = getAllTests("/valid/")
 
-    ignore("NeedForJanus") {
-      allTests foreach { test =>
-        scenario(test.nameOfTest) {
-          runTest(test)
-        }
+    //ignore("NeedForJanus") {
+    allTests foreach { test =>
+      scenario(test.nameOfTest) {
+        runTest(test)
       }
     }
+    //}
 
   }
 
   feature("Invalid requests: Parsing errors") {
 
     def runTest(test: TestStruct): Unit = {
-      implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
+      implicit val kafkaConfig: EmbeddedKafkaConfig =
+        EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+      val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
       withRunningKafka {
 
-        val consumer = new DefaultExpressDiscoveryApp {
-          override implicit def ec: ExecutionContext = ExecutionContextHelper.ec
-          override def prefix: String = "Ubirch"
-          override def maxTimeAggregationSeconds: Long = 180
-        }
+        val Injector = FakeSimpleInjector(bootstrapServers)
+
+        val consumer = Injector.get[AbstractDiscoveryService]
+        implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
+
         consumer.consumption.setForceExit(false)
         consumer.consumption.start()
-        cleanDb()
         publishStringMessageToKafka(topic, test.request)
         Thread.sleep(100)
         consumeFirstMessageFrom(errorTopic) shouldBe test.expectedResult
@@ -83,14 +106,10 @@ class DefaultStringConsumerSpec extends TestBase {
 
     val allTests = getAllTests("/invalid/parsing/")
 
-    ignore("NeedForJanus") {
-
-      allTests foreach { test =>
-        scenario(test.nameOfTest) {
-          runTest(test)
-        }
+    allTests foreach { test =>
+      scenario(test.nameOfTest) {
+        runTest(test)
       }
-
     }
 
   }
@@ -99,17 +118,19 @@ class DefaultStringConsumerSpec extends TestBase {
 
     def runTest(test: TestStruct): Unit = {
 
-      implicit val config: EmbeddedKafkaConfig = getDefaultEmbeddedKafkaConfig
+      implicit val kafkaConfig: EmbeddedKafkaConfig =
+        EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+      val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
+
+      val Injector = FakeSimpleInjector(bootstrapServers)
+      implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
       withRunningKafka {
 
-        val consumer = new DefaultExpressDiscoveryApp {
-          override implicit def ec: ExecutionContext = ExecutionContextHelper.ec
-          override def prefix: String = "Ubirch"
-          override def maxTimeAggregationSeconds: Long = 180
-        }
+        cleanDb
+        val consumer = Injector.get[AbstractDiscoveryService]
         consumer.consumption.setForceExit(false)
         consumer.consumption.start()
-        cleanDb()
+
         publishStringMessageToKafka(topic, test.request)
         Thread.sleep(4000)
         consumeFirstMessageFrom(errorTopic) shouldBe test.expectedResult
@@ -120,14 +141,10 @@ class DefaultStringConsumerSpec extends TestBase {
 
     val allTests = getAllTests("/invalid/storing/")
 
-    ignore("NeedForJanus") {
-
-      allTests foreach { test =>
-        scenario(test.nameOfTest) {
-          runTest(test)
-        }
+    allTests foreach { test =>
+      scenario(test.nameOfTest) {
+        runTest(test)
       }
-
     }
 
   }
@@ -191,7 +208,7 @@ class DefaultStringConsumerSpec extends TestBase {
     lines
   }
 
-  def cleanDb(): Unit = {
+  def cleanDb(implicit gc: GremlinConnector): Unit = {
     gc.g.V().drop().iterate()
   }
 
@@ -199,7 +216,7 @@ class DefaultStringConsumerSpec extends TestBase {
     * Determine how many elements (vertex and edges) are stored in janusgraph.
     * @return tuple(numberOfVertex: Int, numberOfEdges: Int).
     */
-  def howManyElementsInJG(): (Int, Int) = {
+  def howManyElementsInJG(implicit gc: GremlinConnector): (Int, Int) = {
     val numberOfVertices = gc.g.V().count().l().head.toInt
     val numberOfEdges = gc.g.E().count().l().head.toInt
     (numberOfVertices, numberOfEdges)

@@ -1,40 +1,57 @@
 package com.ubirch.discovery.consumer
 
-import com.ubirch.discovery.models.{ DumbRelation, KafkaElements, Relation, RelationKafka, VertexCore }
+import com.typesafe.config.Config
+import com.ubirch.discovery.models._
 import com.ubirch.discovery.models.Elements.Property
-import com.ubirch.discovery.process.{ Executor, Helpers }
-import com.ubirch.discovery.services.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.discovery.process.{ Executor, Storer }
 import com.ubirch.discovery.services.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
 import com.ubirch.discovery.util.{ ErrorsHandler, Timer }
 import com.ubirch.discovery.util.Exceptions.{ ParsingException, StoreException }
-import com.ubirch.kafka.express.ExpressKafkaApp
+import com.ubirch.discovery.Lifecycle
+import com.ubirch.kafka.express.ExpressKafka
 import gremlin.scala.Vertex
+import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
 
 import scala.collection.immutable
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
 
-trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
+trait DiscoveryApp {
 
-  override val producerBootstrapServers: String = conf.getString("kafkaApi.kafkaProducer.bootstrapServers")
+  def letsProcess(crs: Vector[ConsumerRecord[String, String]]): Unit
+
+  def parseRelations(data: String): Seq[Relation]
+
+  def store(relations: Seq[Relation]): List[(DumbRelation, Try[Any])]
+
+}
+
+abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycle: Lifecycle) extends DiscoveryApp with ExpressKafka[String, String, Unit] {
+
+  override val prefix: String = "Ubirch"
+
+  override val maxTimeAggregationSeconds: Long = 180
+
+  override val producerBootstrapServers: String = config.getString("kafkaApi.kafkaProducer.bootstrapServers")
   override val keySerializer: serialization.Serializer[String] = new StringSerializer
   override val valueSerializer: serialization.Serializer[String] = new StringSerializer
-  override val consumerTopics: Set[String] = conf.getString("kafkaApi.kafkaProducer.topic").split(", ").toSet
+  override val consumerTopics: Set[String] = config.getString("kafkaApi.kafkaProducer.topic").split(", ").toSet
 
-  val producerErrorTopic: String = conf.getString("kafkaApi.kafkaConsumer.errorTopic")
+  val producerErrorTopic: String = config.getString("kafkaApi.kafkaConsumer.errorTopic")
 
-  override val consumerBootstrapServers: String = conf.getString("kafkaApi.kafkaConsumer.bootstrapServers")
-  override val consumerGroupId: String = conf.getString("kafkaApi.kafkaConsumer.groupId")
-  override val consumerMaxPollRecords: Int = conf.getInt("kafkaApi.kafkaConsumer.maxPoolRecords")
-  override val consumerGracefulTimeout: Int = conf.getInt("kafkaApi.kafkaConsumer.gracefulTimeout")
-  override val lingerMs: Int = conf.getInt("kafkaApi.kafkaProducer.lingerMS")
-  override val metricsSubNamespace: String = conf.getString("kafkaApi.metrics.prometheus.namespace")
-  override val consumerReconnectBackoffMsConfig: Long = conf.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMsConfig")
-  override val consumerReconnectBackoffMaxMsConfig: Long = conf.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMaxMsConfig")
+  override val consumerBootstrapServers: String = config.getString("kafkaApi.kafkaConsumer.bootstrapServers")
+  override val consumerGroupId: String = config.getString("kafkaApi.kafkaConsumer.groupId")
+  override val consumerMaxPollRecords: Int = config.getInt("kafkaApi.kafkaConsumer.maxPoolRecords")
+  override val consumerGracefulTimeout: Int = config.getInt("kafkaApi.kafkaConsumer.gracefulTimeout")
+  override val lingerMs: Int = config.getInt("kafkaApi.kafkaProducer.lingerMS")
+  override val metricsSubNamespace: String = config.getString("kafkaApi.metrics.prometheus.namespace")
+  override val consumerReconnectBackoffMsConfig: Long = config.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMsConfig")
+  override val consumerReconnectBackoffMaxMsConfig: Long = config.getLong("kafkaApi.kafkaConsumer.reconnectBackoffMaxMsConfig")
   override val keyDeserializer: Deserializer[String] = new StringDeserializer
   override val valueDeserializer: Deserializer[String] = new StringDeserializer
 
@@ -45,13 +62,11 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
   private val errorCounter: Counter = new DefaultConsumerRecordsErrorCounter
   private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.JanusGraph)
+  val maxParallelConnection: Int = config.getInt("kafkaApi.gremlinConf.maxParallelConnection") // PUT AT 1 FOR TESTS
 
-  val maxParallelConnection: Int = conf.getInt("kafkaApi.gremlinConf.maxParallelConnection") // PUT AT 1 FOR TESTS
+  val batchSize: Int = config.getInt("kafkaApi.batchSize")
 
-  val batchSize: Int = conf.getInt("kafkaApi.batchSize")
-
-  lazy val flush: Boolean = conf.getBoolean("flush")
+  lazy val flush: Boolean = config.getBoolean("flush")
 
   //  val healthCheckServer = new HealthCheckServer(Map(), Map())
   //  initHealthChecks()
@@ -111,7 +126,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     }
   }
 
-  def stopIfEmptyMessage(data: String): Unit = {
+  private def stopIfEmptyMessage(data: String): Unit = {
     data match {
       case "" => throw ParsingException(s"Error parsing data [received empty message: $data]")
       case "[]" => throw ParsingException(s"Error parsing data [received empty message: $data]")
@@ -123,8 +138,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    // FOR TESTS: val preprocessBatchSize = 1 + scala.util.Random.nextInt(100)
-    val res = Timer.time({
+    val timedResult = Timer.time({
 
       val hashMapVertices: Map[VertexCore, Vertex] = preprocess(relations)
 
@@ -133,25 +147,26 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
           case Some(vDb) => vDb
           case None =>
             logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}")
-            Helpers.getUpdateOrCreateSingle(vertexCore)
+            storer.getUpdateOrCreateSingle(vertexCore)
         }
       }
 
       logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
       val relationsAsRelationServer: Seq[DumbRelation] = relations.map(r => DumbRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
 
-      val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = Helpers.createRelation(_), processSize = maxParallelConnection, customResultFunction = Some(() => DefaultExpressDiscoveryApp.this.increasePrometheusRelationCount()))
+      val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = storer.createRelation, processSize = maxParallelConnection, customResultFunction = Some(() => AbstractDiscoveryService.this.increasePrometheusRelationCount()))
       executor.startProcessing()
+      executor.latch.await(100, java.util.concurrent.TimeUnit.SECONDS)
       executor.getResults
 
     })
     //res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)), 10000, warnOnly = false)
 
-    res.result match {
+    timedResult.result match {
       case Success(success) =>
         // print totalNumberRel,numberVertice,sizePreprocess,timeTakenProcessAll,timeTakenIndividuallyRelation
         //val verticesNumber = Store.getAllVerticeFromRelations(relations).toList.size
-        logger.info(s"processed {${relations.size},${res.elapsed.toDouble / relations.size.toDouble},${res.elapsed}}")
+        logger.info(s"processed {${relations.size},${timedResult.elapsed.toDouble / relations.size.toDouble},${timedResult.elapsed}}")
         success
       case Failure(exception) =>
         logger.error("Error storing relations, out of executor", exception)
@@ -171,7 +186,7 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = distinctVertices.grouped(batchSize).toSeq, f = Helpers.getUpdateOrCreateVertices(_), processSize = maxParallelConnection)
+    val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](objects = distinctVertices.grouped(batchSize).toSeq, f = storer.getUpdateOrCreateVertices(_), processSize = maxParallelConnection)
     executor.startProcessing()
     executor.latch.await()
     val j = executor.getResultsNoTry
@@ -197,47 +212,12 @@ trait DefaultExpressDiscoveryApp extends ExpressKafkaApp[String, String, Unit] {
     storeCounter.counter.labels("RelationStoredSuccessfully").inc()
   }
 
-  //  def initHealthChecks(): Unit = {
-  //    if (!conf.getBoolean("kafkaApi.healthcheck.enabled")) return
-  //
-  //    def addChecksForProducerRunner(name: String, producerRunner: ProducerRunner[_, _]): Unit = {
-  //      healthCheckServer.setReadinessCheck(name) { implicit ec =>
-  //        producerRunner.getProducerAsOpt match {
-  //          case Some(producer) => Checks.kafka(name, producer, connectionCountMustBeNonZero = false)._2(ec)
-  //          case None => Checks.notInitialized(name)._2(ec)
-  //        }
-  //      }
-  //    }
-  //
-  //    def addChecksForConsumerRunner(name: String, consumerRunner: ConsumerRunner[_, _]): Unit = {
-  //
-  //      healthCheckServer.setReadinessCheck(name) { implicit ec =>
-  //        Checks.notInitialized(name)._2(ec)
-  //      }
-  //    }
-  //
-  //    def addReachabilityCheckForProducerRunner(checkName: String, producerRunner: ProducerRunner[_, _]): Unit = {
-  //      def checkReachabilityForRunner(producerRunner: ProducerRunner[_, _]): CheckerFn = { ec: ExecutionContext =>
-  //        producerRunner.getProducerAsOpt match {
-  //          case Some(producer) => Checks.kafkaNodesReachable(producer)._2(ec)
-  //          case None =>
-  //            Checks.notInitialized(checkName)._2(ec)
-  //        }
-  //      }
-  //
-  //      healthCheckServer.setReadinessCheck(checkName)(checkReachabilityForRunner(producerRunner))
-  //      healthCheckServer.setLivenessCheck(checkName)(checkReachabilityForRunner(producerRunner))
-  //    }
-  //
-  //    healthCheckServer.setLivenessCheck(Checks.process())
-  //    healthCheckServer.setReadinessCheck(Checks.process())
-  //
-  //    addChecksForProducerRunner("express-kafka-producer", production)
-  //    addChecksForConsumerRunner("express-kafka-consumer", consumption)
-  //    addReachabilityCheckForProducerRunner("kafka-nodes-reachable", production)
-  //
-  //    healthCheckServer.run(conf.getInt("kafkaApi.healthcheck.port"))
-  //  }
+  lifecycle.addStopHook { () =>
+    logger.info("Shutting down kafka")
+    Future.successful(consumption.shutdown(consumerGracefulTimeout, java.util.concurrent.TimeUnit.SECONDS))
+  }
 
 }
 
+@Singleton
+class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle)(implicit val ec: ExecutionContext) extends AbstractDiscoveryService(storer, config, lifecycle)

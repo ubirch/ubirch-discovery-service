@@ -3,17 +3,24 @@ package com.ubirch.discovery.models
 import java.util.concurrent.{ CountDownLatch, ThreadFactory }
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.ubirch.discovery.TestBase
+import com.ubirch.discovery.{ Binder, InjectorHelper, TestBase }
 import com.ubirch.discovery.process.Executor
-import com.ubirch.discovery.services.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
+import com.ubirch.discovery.services.connector.GremlinConnector
 
 import scala.collection.immutable
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 class ExecutorSpec extends TestBase {
 
-  implicit val gc: GremlinConnector = GremlinConnectorFactory.getInstance(ConnectorType.Test)
+  def FakeSimpleInjector: InjectorHelper = new InjectorHelper(List(new Binder {
+    //override def Storer: ScopedBindingBuilder = bind(classOf[GremlinConnector]).to(classOf[JanusGraphForTests])
+  })) {}
+
+  val Injector: InjectorHelper = FakeSimpleInjector
+
+  implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
+  implicit val ec: ExecutionContext = Injector.get[ExecutionContext]
 
   /**
     * Simple dummy operations to "warm-up" the connection between the spec and JanusGraph

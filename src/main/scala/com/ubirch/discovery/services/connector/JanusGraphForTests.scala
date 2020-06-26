@@ -3,19 +3,21 @@ package com.ubirch.discovery.services.connector
 import java.util.Date
 
 import gremlin.scala._
+import javax.inject.Singleton
 import org.apache.commons.configuration.PropertiesConfiguration
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.apache.tinkerpop.gremlin.structure.{ Direction, Vertex }
+import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
 import org.janusgraph.core.Cardinality._
 import org.janusgraph.core.Multiplicity._
 import org.janusgraph.core.schema.SchemaAction
-import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
 import org.janusgraph.graphdb.database.management.ManagementSystem
 
 import scala.language.postfixOps
 import scala.util.Try
 
-protected class JanusGraphForTests extends GremlinConnector {
+@Singleton
+class JanusGraphForTests extends GremlinConnector {
 
   val jg: JanusGraph = JanusGraphFactory.open(buildTestProperties)
   implicit val graph: ScalaGraph = jg.asScala
@@ -32,22 +34,20 @@ protected class JanusGraphForTests extends GremlinConnector {
     * embedded without issues
     */
   def buildTestProperties: PropertiesConfiguration = {
-
     import sys.process._
     Try("rm -rf /tmp/db/berkeleyje" !) // delete previous graph database stored here to start with a fresh graph
 
     val conf = new PropertiesConfiguration()
 
     conf.addProperty("gremlin.graph", "org.janusgraph.core.JanusGraphFactory")
-    conf.addProperty("storage.backend", "berkeleyje")
+    conf.addProperty("storage.backend", "inmemory")
     conf.addProperty("storage.directory", "/tmp/db/berkeleyje")
-    conf.addProperty("index.search.backend", "lucene")
-    conf.addProperty("index.search.directory", "/tmp/db/lucene")
+    conf.addProperty("storage.transactions", false)
 
     conf
   }
 
-  def addSchema() = {
+  def addSchema(): Unit = {
     graph.tx().rollback()
     var mgmt = jg.openManagement()
 
@@ -78,17 +78,10 @@ protected class JanusGraphForTests extends GremlinConnector {
     val idx_device_id = mgmt.buildIndex("indexDeviceId", classOf[Vertex])
     val idx_blockchain = mgmt.buildIndex("indexBlockchain", classOf[Vertex])
     val idx_transaction_id = mgmt.buildIndex("indexTransactionId", classOf[Vertex])
-    val idx_timestamp_and_producer = mgmt.buildIndex("indexTimestampAndOwner", classOf[Vertex])
+    val idx_timestamp = mgmt.buildIndex("indexTimestamp", classOf[Vertex])
 
     val timestamp = mgmt.getPropertyKey("timestamp")
     val eLabelDeviceUpp = mgmt.getEdgeLabel("UPP->DEVICE")
-    val eLabelSlaveUpp = mgmt.getEdgeLabel("SLAVE_TREE->UPP")
-    val eLabelChain = mgmt.getEdgeLabel("CHAIN")
-    val eLabelSlaveSlave = mgmt.getEdgeLabel("SLAVE_TREE->SLAVE_TREE")
-    val eLabelMasterSlave = mgmt.getEdgeLabel("MASTER_TREE->SLAVE_TREE")
-    val eLabelMasterMaster = mgmt.getEdgeLabel("MASTER_TREE->MASTER_TREE")
-    val eLabelMasterUpgrade = mgmt.getEdgeLabel("MASTER_TREE_UPGRADE")
-    val eLabelBlockchainMaster = mgmt.getEdgeLabel("PUBLIC_CHAIN->MASTER_TREE")
 
     idx_signature.addKey(mgmt.getPropertyKey("signature")).buildCompositeIndex()
     idx_type.addKey(mgmt.getPropertyKey("type")).buildCompositeIndex()
@@ -96,16 +89,9 @@ protected class JanusGraphForTests extends GremlinConnector {
     idx_hash.addKey(mgmt.getPropertyKey("hash")).unique().buildCompositeIndex()
     idx_device_id.addKey(mgmt.getPropertyKey("device_id")).unique().buildCompositeIndex()
     idx_transaction_id.addKey(mgmt.getPropertyKey("transaction_id")).unique().buildCompositeIndex()
-    idx_timestamp_and_producer.addKey(mgmt.getPropertyKey("timestamp")).addKey(mgmt.getPropertyKey("producer_id")).buildMixedIndex("search")
+    idx_timestamp.addKey(mgmt.getPropertyKey("timestamp")).buildCompositeIndex()
 
-    val idx_edge_UPP_DEVICE = mgmt.buildEdgeIndex(eLabelDeviceUpp, "indexEdgeUppDevice", Direction.IN, timestamp)
-    val idx_edge_CHAIN = mgmt.buildEdgeIndex(eLabelChain, "indexEdgeChain", Direction.BOTH, timestamp)
-    val idx_edge_SLAVE_UPP = mgmt.buildEdgeIndex(eLabelSlaveUpp, "indexEdgeSlaveUpp", Direction.BOTH, timestamp)
-    val idx_edge_SLAVE_SLAVE = mgmt.buildEdgeIndex(eLabelSlaveSlave, "indexEdgeSlaveSlave", Direction.BOTH, timestamp)
-    val idx_edge_MASTER_SLAVE = mgmt.buildEdgeIndex(eLabelMasterSlave, "indexEdgeMasterSlave", Direction.BOTH, timestamp)
-    val idx_edge_MASTER_MASTER = mgmt.buildEdgeIndex(eLabelMasterMaster, "indexEdgeMasterMaster", Direction.BOTH, timestamp)
-    val idx_edge_UPGRADE = mgmt.buildEdgeIndex(eLabelMasterUpgrade, "indexEdgeMasterUpgrade", Direction.BOTH, timestamp)
-    val idx_edge_BLOCKCHAIN_MASTER = mgmt.buildEdgeIndex(eLabelBlockchainMaster, "indexEdgeBlockchainMaster", Direction.BOTH, timestamp)
+    mgmt.buildEdgeIndex(eLabelDeviceUpp, "indexEdgeUppDevice", Direction.IN, timestamp)
 
     mgmt.commit()
 
@@ -115,15 +101,9 @@ protected class JanusGraphForTests extends GremlinConnector {
     ManagementSystem.awaitGraphIndexStatus(jg, "indexDeviceId").call()
     ManagementSystem.awaitGraphIndexStatus(jg, "indexBlockchain").call()
     ManagementSystem.awaitGraphIndexStatus(jg, "indexTransactionId").call()
-    ManagementSystem.awaitGraphIndexStatus(jg, "indexTimestampAndOwner").call()
+    ManagementSystem.awaitGraphIndexStatus(jg, "indexTimestamp").call()
 
     ManagementSystem.awaitRelationIndexStatus(jg, "indexEdgeUppDevice", "UPP->DEVICE").call()
-    ManagementSystem.awaitRelationIndexStatus(jg, "indexEdgeChain", "CHAIN").call()
-    ManagementSystem.awaitRelationIndexStatus(jg, "indexEdgeSlaveUpp", "SLAVE_TREE->UPP").call()
-    ManagementSystem.awaitRelationIndexStatus(jg, "indexEdgeSlaveSlave", "SLAVE_TREE->SLAVE_TREE").call()
-    ManagementSystem.awaitRelationIndexStatus(jg, "indexEdgeMasterMaster", "MASTER_TREE->MASTER_TREE").call()
-    ManagementSystem.awaitRelationIndexStatus(jg, "indexEdgeMasterUpgrade", "MASTER_TREE_UPGRADE").call()
-    ManagementSystem.awaitRelationIndexStatus(jg, "indexEdgeBlockchainMaster", "PUBLIC_CHAIN->MASTER_TREE").call()
 
     mgmt = jg.openManagement()
     mgmt.updateIndex(mgmt.getGraphIndex("indexSignature"), SchemaAction.REINDEX).get()
@@ -132,16 +112,9 @@ protected class JanusGraphForTests extends GremlinConnector {
     mgmt.updateIndex(mgmt.getGraphIndex("indexDeviceId"), SchemaAction.REINDEX).get()
     mgmt.updateIndex(mgmt.getGraphIndex("indexBlockchain"), SchemaAction.REINDEX).get()
     mgmt.updateIndex(mgmt.getGraphIndex("indexTransactionId"), SchemaAction.REINDEX).get()
-    mgmt.updateIndex(mgmt.getGraphIndex("indexTimestampAndOwner"), SchemaAction.REINDEX).get()
+    mgmt.updateIndex(mgmt.getGraphIndex("indexTimestamp"), SchemaAction.REINDEX).get()
 
     mgmt.updateIndex(mgmt.getRelationIndex(eLabelDeviceUpp, "indexEdgeUppDevice"), SchemaAction.REINDEX).get()
-    mgmt.updateIndex(mgmt.getRelationIndex(eLabelChain, "indexEdgeChain"), SchemaAction.REINDEX).get()
-    mgmt.updateIndex(mgmt.getRelationIndex(eLabelSlaveUpp, "indexEdgeSlaveUpp"), SchemaAction.REINDEX).get()
-    mgmt.updateIndex(mgmt.getRelationIndex(eLabelSlaveSlave, "indexEdgeSlaveSlave"), SchemaAction.REINDEX).get()
-    mgmt.updateIndex(mgmt.getRelationIndex(eLabelMasterSlave, "indexEdgeMasterSlave"), SchemaAction.REINDEX).get()
-    mgmt.updateIndex(mgmt.getRelationIndex(eLabelMasterMaster, "indexEdgeMasterMaster"), SchemaAction.REINDEX).get()
-    mgmt.updateIndex(mgmt.getRelationIndex(eLabelMasterUpgrade, "indexEdgeMasterUpgrade"), SchemaAction.REINDEX).get()
-    mgmt.updateIndex(mgmt.getRelationIndex(eLabelBlockchainMaster, "indexEdgeBlockchainMaster"), SchemaAction.REINDEX).get()
 
     mgmt.commit()
 

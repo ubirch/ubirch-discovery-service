@@ -1,9 +1,11 @@
 package com.ubirch.discovery.services.connector
 
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.Lifecycle
 import com.ubirch.kafka.express.ConfigBase
 import gremlin.scala._
+import javax.inject.{ Inject, Singleton }
 import org.apache.tinkerpop.gremlin.driver.Cluster
 import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
@@ -17,9 +19,10 @@ import scala.concurrent.Future
   * g: the traversal of the graph
   * cluster: the cluster used by the graph to connect to the janusgraph server
   */
-protected class JanusGraphConnector extends GremlinConnector with LazyLogging with ConfigBase {
+@Singleton
+class JanusGraphConnector @Inject() (lifecycle: Lifecycle, config: Config) extends GremlinConnector with LazyLogging {
 
-  val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(conf))
+  val cluster: Cluster = Cluster.open(GremlinConnectorFactory.buildProperties(config))
 
   implicit val graph: ScalaGraph = EmptyGraph.instance.asScala.configure(_.withRemote(DriverRemoteConnection.using(cluster)))
   val g: TraversalSource = graph.traversal
@@ -29,7 +32,7 @@ protected class JanusGraphConnector extends GremlinConnector with LazyLogging wi
     cluster.close()
   }
 
-  Lifecycle.get.addStopHook { () =>
+  lifecycle.addStopHook { () =>
     logger.info("Shutting down connection with Janus: " + cluster.toString)
     Future.successful(closeConnection())
   }

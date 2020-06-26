@@ -1,12 +1,13 @@
 package com.ubirch.discovery
 
-import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.{ ConcurrentLinkedDeque, CountDownLatch, TimeUnit }
 
 import com.typesafe.scalalogging.LazyLogging
-import com.ubirch.discovery.util.ExecutionContextHelper
+import javax.inject.{ Inject, Singleton }
 
 import scala.annotation.tailrec
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 /**
   * Basic definition for a Life CyCle Component.
@@ -16,12 +17,10 @@ trait Lifecycle {
 
   def addStopHook(hook: () => Future[_]): Unit
 
+  def addStopHooks(hooks: (() => Future[_])*): Unit = hooks.foreach(addStopHook)
+
   def stop(): Future[_]
 
-}
-
-object Lifecycle {
-  def get: Lifecycle = DefaultLifecycle
 }
 
 /**
@@ -29,11 +28,10 @@ object Lifecycle {
   * It actually executes or clears StopHooks.
   */
 
-object DefaultLifecycle
+@Singleton
+class DefaultLifecycle @Inject() (implicit ec: ExecutionContext)
   extends Lifecycle
   with LazyLogging {
-
-  implicit val ec: ExecutionContext = ExecutionContextHelper.ec
 
   private val hooks = new ConcurrentLinkedDeque[() => Future[_]]()
 
@@ -55,6 +53,7 @@ object DefaultLifecycle
     logger.info("Running life cycle hooks...")
     clearHooks()
   }
+
 }
 
 /**
@@ -65,29 +64,32 @@ trait JVMHook {
   protected def registerShutdownHooks(): Unit
 }
 
-object JVMHook {
-  def get: JVMHook = DefaultJVMHook
-}
-
 /**
   * Default Implementation of the JVMHook.
   * It takes LifeCycle stop hooks and adds a corresponding shut down hook.
+  * @param lifecycle LifeCycle Component that allows for StopDownHooks
   */
 
-object DefaultJVMHook extends JVMHook with LazyLogging {
+@Singleton
+class DefaultJVMHook @Inject() (lifecycle: Lifecycle)(implicit ec: ExecutionContext) extends JVMHook with LazyLogging {
 
   protected def registerShutdownHooks() {
-
-    def lifecycle: Lifecycle = Lifecycle.get
 
     logger.info("Registering Shutdown Hooks")
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
-        lifecycle.stop()
-
-        Thread.sleep(5000) //Waiting 5 secs
-        logger.info("Bye bye, see you later...")
+        val countDownLatch = new CountDownLatch(1)
+        lifecycle.stop().onComplete {
+          case Success(_) =>
+            countDownLatch.countDown()
+          case Failure(e) =>
+            logger.error("Error running jvm hook={}", e.getMessage)
+            countDownLatch.countDown()
+        }
+        val res = countDownLatch.await(5, TimeUnit.SECONDS) //Waiting 5 secs
+        if (!res) logger.warn("Taking too much time shutting down :(  ..")
+        else logger.info("Bye bye, see you later...")
       }
     })
 

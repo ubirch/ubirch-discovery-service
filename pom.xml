@@ -90,6 +90,8 @@
         <jodaTime.version>2.10</jodaTime.version>
         <jodaConverter.version>2.1.1</jodaConverter.version>
 
+        <guice.version>4.1.0</guice.version>
+
         <embedded-kafka>2.3.0</embedded-kafka>
 
 
@@ -262,12 +264,6 @@
             <version>${janusGraph.version}</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.janusgraph/janusgraph-es -->
-        <dependency>
-            <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-es</artifactId>
-            <version>${janusGraph.version}</version>
-        </dependency>
 
         <!-- Janusgraph libraries for testing -->
         <dependency>
@@ -276,11 +272,14 @@
             <version>${janusGraph.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.janusgraph/janusgraph-inmemory -->
         <dependency>
             <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-lucene</artifactId>
+            <artifactId>janusgraph-inmemory</artifactId>
             <version>${janusGraph.version}</version>
         </dependency>
+
+
 
         <!-- /Gremlin -->
 
@@ -311,6 +310,12 @@
             <groupId>com.ubirch.niomon</groupId>
             <artifactId>health-check</artifactId>
             <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <version>${guice.version}</version>
         </dependency>
 
 <!--        <dependency>-->
