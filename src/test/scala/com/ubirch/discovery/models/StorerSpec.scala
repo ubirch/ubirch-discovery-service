@@ -113,7 +113,8 @@ class StorerSpec extends TestBase {
     }
   }
 
-  feature("execute gremlin queries") {
+
+  ignore("execute gremlin queries") {
     val Injector = FakeSimpleInjector("")
     val jgs = Injector.get[DefaultJanusgraphStorer]
     val gc = Injector.get[GremlinConnector]
