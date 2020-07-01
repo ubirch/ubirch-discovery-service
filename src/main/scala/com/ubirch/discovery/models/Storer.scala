@@ -206,10 +206,19 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
     * @return A map making the relation between the vertexCore passed in argument and their reference in the graph.
     */
   def getUpdateOrCreateVerticesConcrete(verticesCore: List[VertexCore])(implicit propSet: Set[Property]): Map[VertexCore, Vertex] = {
-    val (traversal, verticeAccu) = gc.g.V().getUpdateOrCreateVertices(verticesCore)
-    val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
 
-    verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
+    // case that if only one or two vertex is present, then finishTraversal(verticeAccu.traversable, verticeAccu.getStepLabels).l().head.asScala
+    // will be cast to something that doesn't work. This is due to the way the select() method work in scala
+    if (verticesCore.size == 1 || verticesCore.size == 2) {
+      verticesCore.map(vc => vc -> getUpdateOrCreateSingleConcrete(vc)).toMap
+    } else {
+
+      val (traversal, verticeAccu) = gc.g.V().getUpdateOrCreateVertices(verticesCore)
+      val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
+
+      verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
+    }
+
 
   }
 
