@@ -1,0 +1,1 @@
+[ { "v_from": { "label": "UPP", "properties": { "hash": "hashUpp", "signature": "signatureUpp", "timestamp": 1593173464239 } }, "v_to": { "label": "DEVICE", "properties": { "device_id": "theDeviceId" } }, "edge": { "label": "UPP->DEVICE", "properties": { "timestamp": 1593173464239 } } } ]
