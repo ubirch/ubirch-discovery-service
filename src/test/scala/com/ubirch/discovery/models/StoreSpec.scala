@@ -1,12 +1,44 @@
 package com.ubirch.discovery.models
 
-import com.ubirch.discovery.TestBase
-import com.ubirch.discovery.services.connector.{ ConnectorType, GremlinConnector, GremlinConnectorFactory }
-import org.scalatest.Assertion
+import com.google.inject.binder.ScopedBindingBuilder
+import com.typesafe.config.{ Config, ConfigValueFactory }
+import com.ubirch.discovery.{ Binder, InjectorHelper, TestBase }
+import com.ubirch.discovery.services.config.ConfigProvider
+import com.ubirch.discovery.services.connector.GremlinConnector
+import com.ubirch.discovery.util.RemoteJanusGraph
+import org.scalatest.{ Assertion, Ignore }
 
+@Ignore
 class StoreSpec extends TestBase {
 
-  implicit val gc: GremlinConnector = null // TODO change that
+  /**
+    * Simple injector that replaces the kafka bootstrap server and topics to the given ones
+    */
+  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+    override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(bootstrapServers, port))
+  })) {}
+
+  /**
+    * Overwrite default bootstrap server and topic values of the kafka consumer and producers
+    */
+  def customTestConfigProvider(bootstrapServers: String, port: Int): ConfigProvider = new ConfigProvider {
+    override def conf: Config = super.conf.withValue(
+      "core.connector.port",
+      ConfigValueFactory.fromAnyRef(port)
+    ).withValue(
+        "kafkaApi.kafkaConsumer.bootstrapServers",
+        ConfigValueFactory.fromAnyRef(bootstrapServers)
+      ).withValue(
+          "kafkaApi.kafkaProducer.bootstrapServers",
+          ConfigValueFactory.fromAnyRef(bootstrapServers)
+        )
+  }
+
+  RemoteJanusGraph.startJanusGraphServer()
+
+  val Injector = FakeSimpleInjector("")
+
+  implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -29,6 +61,7 @@ class StoreSpec extends TestBase {
     val v2 = VertexCore(Nil, listLabelsVertex.head).addProperty(generateElementProperty("hash", "abcde"))
     val edge = generateEdge
     val r = Relation(v1, v2, edge)
+    //Injector.get[Storer].
     //Store.addVerticesPresentMultipleTimes(List(r))
     expectedGraphVertexCount(0)
   }

@@ -43,7 +43,7 @@ object RemoteJanusGraph extends LazyLogging {
   private def isPortInUse(host: String, port: Int) = {
     var result = false
     try {
-      new Socket(host, port).close
+      new Socket(host, port).close()
       result = true
     } catch {
       case _: SocketException =>

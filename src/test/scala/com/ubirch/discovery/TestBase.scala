@@ -2,6 +2,7 @@ package com.ubirch.discovery
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.models.{ EdgeCore, Relation, VertexCore }
+import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.util.Util
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
@@ -26,7 +27,7 @@ trait TestBase
 
   val random = new Random
 
-  def giveMeRandomString: String = Random.alphanumeric.take(32).mkString
+  def giveMeRandomString: String = Random.alphanumeric.take(64).mkString
 
   def generateRelation = Relation(generateVertex, generateVertex, generateEdge)
 

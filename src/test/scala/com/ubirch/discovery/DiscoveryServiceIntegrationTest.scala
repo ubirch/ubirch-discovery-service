@@ -7,22 +7,23 @@ import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
 import com.ubirch.discovery.consumer.AbstractDiscoveryService
 import com.ubirch.discovery.services.config.ConfigProvider
-import com.ubirch.discovery.services.connector.{ GremlinConnector, JanusGraphForTests }
+import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.util.RemoteJanusGraph
 import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.common.serialization.StringDeserializer
+import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer }
 
 import scala.io.Source
 
 //TODO: We need to rethink the tests here are they are causing issues on the ci pipelines
-class DefaultStringConsumerSpec extends TestBase {
+class DiscoveryServiceIntegrationTest extends TestBase {
 
   val topic = "test"
   val errorTopic = "test.error"
-  implicit val Deserializer: StringDeserializer = new StringDeserializer
+  implicit val deString: Deserializer[String] = new StringDeserializer
+  implicit val deError: Deserializer[DiscoveryError] = DiscoveryErrorDeserializer
 
   /**
     * Simple injector that replaces the kafka bootstrap server and topics to the given ones
@@ -54,7 +55,9 @@ class DefaultStringConsumerSpec extends TestBase {
   feature("Verifying valid requests") {
 
     def runTest(test: TestStruct): Unit = {
-
+      implicit val kafkaConfig: EmbeddedKafkaConfig =
+        EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+      val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
       implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
       cleanDb
       val consumer = Injector.get[AbstractDiscoveryService]
@@ -84,39 +87,8 @@ class DefaultStringConsumerSpec extends TestBase {
 
   feature("Invalid requests: Parsing errors") {
 
-    def runTest(test: TestStruct): Unit = {
-      implicit val kafkaConfig: EmbeddedKafkaConfig =
-        EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
-      val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
-      withRunningKafka {
-
-        val Injector = FakeSimpleInjector(bootstrapServers)
-
-        val consumer = Injector.get[AbstractDiscoveryService]
-        implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
-
-        consumer.consumption.setForceExit(false)
-        consumer.consumption.start()
-        publishStringMessageToKafka(topic, test.request)
-        Thread.sleep(100)
-        consumeFirstMessageFrom(errorTopic) shouldBe test.expectedResult
-        consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
-      }
-    }
-
-    val allTests = getAllTests("/invalid/parsing/")
-
-    allTests foreach { test =>
-      scenario(test.nameOfTest) {
-        runTest(test)
-      }
-    }
-
-  }
-
-  feature("Invalid requests: Storing errors") {
-
-    def runTest(test: TestStruct): Unit = {
+    scenario("empty request") {
+      val test = ""
 
       implicit val kafkaConfig: EmbeddedKafkaConfig =
         EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
@@ -131,22 +103,78 @@ class DefaultStringConsumerSpec extends TestBase {
         consumer.consumption.setForceExit(false)
         consumer.consumption.start()
 
-        publishStringMessageToKafka(topic, test.request)
+        publishStringMessageToKafka(topic, test)
         Thread.sleep(4000)
-        consumeFirstMessageFrom(errorTopic) shouldBe test.expectedResult
+        val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
+        println(res)
+        res.message shouldBe "Error when parsing relations"
+        res.exceptionName shouldBe "ParsingException"
+        res.serviceName shouldBe "discovery-service"
         howManyElementsInJG shouldBe (0, 0)
         consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
       }
     }
 
-    val allTests = getAllTests("/invalid/storing/")
+  }
 
-    allTests foreach { test =>
-      scenario(test.nameOfTest) {
-        runTest(test)
+  feature("Invalid request that can be parsed should throw storing errors") {
+    scenario("should catch error when trying to pass a vertex whose property name is a protected name, such as edge") {
+      val test = "[{\"v_from\":{\"properties\":{\"edge\": \"truc\", \"hash\": \"truc\"}, \"label\":\"vvrt\"},\"v_to\": {\"properties\": {\"name\": \"aName\", \"hash\": \"truc\"}, \"label\": \"v_to\"},\"edge\": {\"properties\": {}}}]"
+
+      implicit val kafkaConfig: EmbeddedKafkaConfig =
+        EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+      val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
+
+      val Injector = FakeSimpleInjector(bootstrapServers)
+      implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
+      withRunningKafka {
+
+        cleanDb
+        val consumer = Injector.get[AbstractDiscoveryService]
+        consumer.consumption.setForceExit(false)
+        consumer.consumption.start()
+
+        publishStringMessageToKafka(topic, test)
+        Thread.sleep(4000)
+        val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
+        println(res)
+        res.message shouldBe "General error when processing crs Vector[ConsumerRecord[String, String]]"
+        res.exceptionName shouldBe "StoreException"
+        res.serviceName shouldBe "discovery-service"
+        res.value.contains("{\"v_from\":{\"properties\":{\"edge\": \"truc\", \"hash\": \"truc\"}, \"label\":\"vvrt\"},\"v") shouldBe true
+        howManyElementsInJG shouldBe (0, 0)
+        consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
       }
     }
 
+    scenario("property does not conform to janusgraph schema") {
+      val test = "[{\"v_from\":{\"properties\":{\"stuff\": \"truc\", \"hash\": \"truc\"}, \"label\":\"UPP\"},\"v_to\": {\"properties\": {\"hash\": \"aName\"}, \"label\": \"SLAVE_TREE\"},\"edge\": {\"properties\": {}, \"label\": \"SLAVE_TREE->UPP\"}}]"
+
+      implicit val kafkaConfig: EmbeddedKafkaConfig =
+        EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
+      val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
+
+      val Injector = FakeSimpleInjector(bootstrapServers)
+      implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
+      withRunningKafka {
+
+        cleanDb
+        val consumer = Injector.get[AbstractDiscoveryService]
+        consumer.consumption.setForceExit(false)
+        consumer.consumption.start()
+
+        publishStringMessageToKafka(topic, test)
+        Thread.sleep(4000)
+        val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
+        println(res)
+        res.message shouldBe "General error when processing crs Vector[ConsumerRecord[String, String]]"
+        res.exceptionName shouldBe "StoreException"
+        res.serviceName shouldBe "discovery-service"
+        res.value.contains("[{\"v_from\":{\"properties\":{\"stuff\": \"truc\", \"hash\": \"truc\"}, \"label\":\"UPP\"},\"v_to") shouldBe true
+        howManyElementsInJG shouldBe (0, 0)
+        consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
+      }
+    }
   }
 
   //   ------ helpers -------

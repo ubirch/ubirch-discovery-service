@@ -4,7 +4,7 @@ import com.google.inject.{ AbstractModule, Module }
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.Config
 import com.ubirch.discovery.consumer.{ AbstractDiscoveryService, DefaultDiscoveryService }
-import com.ubirch.discovery.process.{ DefaultJanusgraphStorer, Storer }
+import com.ubirch.discovery.models.{ DefaultJanusgraphStorer, Storer }
 import com.ubirch.discovery.services.config.ConfigProvider
 import com.ubirch.discovery.services.connector.{ GremlinConnector, JanusGraphConnector }
 import com.ubirch.discovery.util.ExecutionProvider
