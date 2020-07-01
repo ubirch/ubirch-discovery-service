@@ -72,6 +72,6 @@ Requests should have the following format
 Such request will create two vertex and link them together
 
 ### REST
-TODO
+TODO.
 
 ### JanusGraph
