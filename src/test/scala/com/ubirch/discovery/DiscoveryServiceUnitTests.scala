@@ -2,7 +2,7 @@ package com.ubirch.discovery
 
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
-import com.ubirch.discovery.consumer.{ AbstractDiscoveryService, DiscoveryServiceSendErrorOk }
+import com.ubirch.discovery.services.consumer.{ AbstractDiscoveryService, DiscoveryServiceSendErrorOk }
 import com.ubirch.discovery.models.{ EdgeCore, KafkaElements, Relation, VertexCore }
 import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.services.config.ConfigProvider

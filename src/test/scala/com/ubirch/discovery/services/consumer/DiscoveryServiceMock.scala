@@ -1,4 +1,4 @@
-package com.ubirch.discovery.consumer
+package com.ubirch.discovery.services.consumer
 
 import com.typesafe.config.Config
 import com.ubirch.discovery.Lifecycle

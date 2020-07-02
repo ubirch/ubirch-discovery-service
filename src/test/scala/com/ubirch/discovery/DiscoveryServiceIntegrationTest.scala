@@ -4,8 +4,8 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.{Config, ConfigValueFactory}
-import com.ubirch.discovery.consumer.AbstractDiscoveryService
+import com.typesafe.config.{ Config, ConfigValueFactory }
+import com.ubirch.discovery.services.consumer.AbstractDiscoveryService
 import com.ubirch.discovery.services.config.ConfigProvider
 import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.util.RemoteJanusGraph
@@ -13,7 +13,7 @@ import com.ubirch.kafka.util.PortGiver
 import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer}
+import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer }
 import org.scalatest.Ignore
 
 import scala.io.Source

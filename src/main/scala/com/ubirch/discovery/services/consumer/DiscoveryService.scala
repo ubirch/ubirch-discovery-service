@@ -1,7 +1,10 @@
-package com.ubirch.discovery.consumer
+package com.ubirch.discovery.services.consumer
+
+import java.util.concurrent.{ ScheduledFuture, ScheduledThreadPoolExecutor, TimeUnit }
+import java.util.Calendar
 
 import com.typesafe.config.Config
-import com.ubirch.discovery.{ DiscoveryError, Lifecycle }
+import com.ubirch.discovery.{ DiscoveryError, Lifecycle, Service }
 import com.ubirch.discovery.models._
 import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.process.Executor
@@ -9,7 +12,10 @@ import com.ubirch.discovery.services.metrics.{ Counter, DefaultConsumerRecordsEr
 import com.ubirch.discovery.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.discovery.util.Timer
 import com.ubirch.discovery.ConfPaths.{ ConsumerConfPaths, DiscoveryConfPath, ProducerConfPaths }
+import com.ubirch.discovery.services.connector.GremlinConnector
+import com.ubirch.discovery.services.health.HealthChecks
 import com.ubirch.kafka.express.ExpressKafka
+import com.ubirch.niomon.healthcheck.HealthCheckServer
 import gremlin.scala.Vertex
 import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -17,9 +23,10 @@ import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
+import org.scalatest.time.Millisecond
 
 import scala.collection.immutable
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
 
@@ -87,8 +94,9 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
 
   lazy val flush: Boolean = config.getBoolean(FLUSH)
 
-  //  val healthCheckServer = new HealthCheckServer(Map(), Map())
+  val healthCheckServer = new HealthCheckServer(Map(), Map())
   //  initHealthChecks()
+  consumption.getConsumerRecordsController()
 
   override val process: Process = Process { crs => letsProcess(crs) }
 
@@ -265,6 +273,37 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
     logger.info("Shutting down kafka")
     Future.successful(consumption.shutdown(consumerGracefulTimeout, java.util.concurrent.TimeUnit.SECONDS))
   }
+
+  val ex = new ScheduledThreadPoolExecutor(1)
+  val gc = Service.get[GremlinConnector]
+  val task: Runnable = new Runnable {
+    def run() = {
+
+      import scala.concurrent.duration._
+      // will fail if the graph is empty
+      val healthReportJG = try {
+        Await.result(gc.g.V().limit(1).promise(), 50.millis) match {
+          case Nil => HealthReport(HealthChecks.JANUSGRAPH, "fail", isUp = false, Calendar.getInstance().getTime)
+          case ::(_, _) => HealthReport(HealthChecks.JANUSGRAPH, "ok", isUp = true, Calendar.getInstance().getTime)
+        }
+      } catch {
+        case e: Throwable => HealthReport(HealthChecks.JANUSGRAPH, e.getMessage, isUp = false, Calendar.getInstance().getTime)
+      }
+
+      //      val healthReportJG = gc.g.V().headOption() match {
+      //        case Some(_) => HealthReport(HealthChecks.JANUSGRAPH, "ok", isUp = true, Calendar.getInstance().getTime)
+      //        case None => HealthReport(HealthChecks.JANUSGRAPH, "fail", isUp = false, Calendar.getInstance().getTime)
+      //      }
+      DefaultHealthAggregator.updateHealth(HealthChecks.JANUSGRAPH, healthReportJG)
+      val healthReportConsumer = HealthReport(HealthChecks.KAFKA_CONSUMER, "ok", isUp = true, Calendar.getInstance().getTime)
+      DefaultHealthAggregator.updateHealth(HealthChecks.KAFKA_CONSUMER, healthReportConsumer)
+      val healthReportProducer = HealthReport(HealthChecks.KAFKA_PRODUCER, "ok", isUp = true, Calendar.getInstance().getTime)
+      DefaultHealthAggregator.updateHealth(HealthChecks.KAFKA_PRODUCER, healthReportProducer)
+    }
+  }
+  val f: ScheduledFuture[_] = ex.scheduleAtFixedRate(task, 1, 1, TimeUnit.SECONDS)
+
+  //f.cancel(false)
 
 }
 
