@@ -12,10 +12,10 @@ case class RelationKafka(v_from: VertexKafkaStruct, v_to: VertexKafkaStruct, edg
     s"vFrom: ${v_from.toString} \nvTo: ${v_to.toString} \nedge: ${edge.toString}"
   }
 
-  def toCoreRelation(implicit ec: ExecutionContext): Relation = {
-    val vFromAsCoreClass = v_from.toVertexToAdd
-    val vToAsCoreClass = v_to.toVertexToAdd
-    val edgeAsCoreClass = edge.toEdgeToAdd
+  def toRelationCore(implicit ec: ExecutionContext): Relation = {
+    val vFromAsCoreClass = v_from.toVertexCore
+    val vToAsCoreClass = v_to.toVertexCore
+    val edgeAsCoreClass = edge.toEdgeCore
     Relation(vFromAsCoreClass, vToAsCoreClass, edgeAsCoreClass)
   }
 }
@@ -25,7 +25,7 @@ case class VertexKafkaStruct(properties: Map[String, Any], label: String = "aLab
     s"label: $label; properties: ${properties.mkString(", ")}"
   }
 
-  def toVertexToAdd(implicit ec: ExecutionContext): VertexCore = {
+  def toVertexCore(implicit ec: ExecutionContext): VertexCore = {
 
     val propertiesToAdd = properties map { kv => Util.convertProp(kv._1, kv._2) }
     VertexCore(propertiesToAdd.toList, label)
@@ -37,7 +37,7 @@ case class EdgeKafkaStruct(properties: Map[String, Any], label: String = "aLabel
     s"label: $label; properties: ${properties.mkString(", ")}"
   }
 
-  def toEdgeToAdd: EdgeCore = {
+  def toEdgeCore: EdgeCore = {
     val propertiesToAdd = properties map { kv => Util.convertProp(kv._1, kv._2) }
     EdgeCore(propertiesToAdd.toList, label)
   }

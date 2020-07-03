@@ -6,8 +6,6 @@ import scala.collection.concurrent.TrieMap
 
 trait HealthAggregator {
 
-  val healthAllService: TrieMap[String, HealthReport]
-
   def updateHealth(className: String, healthReport: HealthReport)
 
   def getHealth(className: String): Option[HealthReport]
@@ -18,7 +16,7 @@ trait HealthAggregator {
 
 object DefaultHealthAggregator extends HealthAggregator {
 
-  override val healthAllService: TrieMap[String, HealthReport] = scala.collection.concurrent.TrieMap.empty
+  val healthAllService: TrieMap[String, HealthReport] = scala.collection.concurrent.TrieMap.empty
 
   override def updateHealth(className: String, healthReport: HealthReport): Unit = {
     healthAllService += (className -> healthReport)

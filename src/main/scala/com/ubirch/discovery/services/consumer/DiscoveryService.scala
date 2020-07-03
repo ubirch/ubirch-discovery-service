@@ -10,7 +10,7 @@ import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.process.Executor
 import com.ubirch.discovery.services.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
 import com.ubirch.discovery.util.Exceptions.{ ParsingException, StoreException }
-import com.ubirch.discovery.util.Timer
+import com.ubirch.discovery.util.{ HealthUtil, Timer }
 import com.ubirch.discovery.ConfPaths.{ ConsumerConfPaths, DiscoveryConfPath, ProducerConfPaths }
 import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.services.health.HealthChecks
@@ -23,12 +23,12 @@ import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
-import org.scalatest.time.Millisecond
 
 import scala.collection.immutable
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
+import scala.collection.JavaConverters._
 
 trait DiscoveryApp {
 
@@ -138,7 +138,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
     try {
       stopIfEmptyMessage(data)
       val relationAsInternalStruct = jackson.parseJson(data).extract[Seq[RelationKafka]]
-      Some(relationAsInternalStruct map { r => r.toCoreRelation })
+      Some(relationAsInternalStruct map { r => r.toRelationCore })
     } catch {
       case e: Exception =>
         errorCounter.counter.labels("ParsingException").inc()
@@ -289,15 +289,22 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
       } catch {
         case e: Throwable => HealthReport(HealthChecks.JANUSGRAPH, e.getMessage, isUp = false, Calendar.getInstance().getTime)
       }
-
-      //      val healthReportJG = gc.g.V().headOption() match {
-      //        case Some(_) => HealthReport(HealthChecks.JANUSGRAPH, "ok", isUp = true, Calendar.getInstance().getTime)
-      //        case None => HealthReport(HealthChecks.JANUSGRAPH, "fail", isUp = false, Calendar.getInstance().getTime)
-      //      }
       DefaultHealthAggregator.updateHealth(HealthChecks.JANUSGRAPH, healthReportJG)
+
       val healthReportConsumer = HealthReport(HealthChecks.KAFKA_CONSUMER, "ok", isUp = true, Calendar.getInstance().getTime)
       DefaultHealthAggregator.updateHealth(HealthChecks.KAFKA_CONSUMER, healthReportConsumer)
-      val healthReportProducer = HealthReport(HealthChecks.KAFKA_PRODUCER, "ok", isUp = true, Calendar.getInstance().getTime)
+      val healthReportProducer = try {
+        production.getProducerAsOpt match {
+          case Some(producer) =>
+            val productionMetrics = producer.metrics().asScala
+            HealthUtil.processKafkaMetrics("KafkaProducerErrorTopic", productionMetrics, connectionCountMustBeNonZero = false)
+          case None =>
+            HealthReport(HealthChecks.KAFKA_PRODUCER, "Producer not started but OK", isUp = true, Calendar.getInstance().getTime)
+        }
+      } catch {
+        case e: Throwable =>
+          HealthReport(HealthChecks.KAFKA_PRODUCER, e.getMessage, isUp = false, Calendar.getInstance().getTime)
+      }
       DefaultHealthAggregator.updateHealth(HealthChecks.KAFKA_PRODUCER, healthReportProducer)
     }
   }
