@@ -14,7 +14,7 @@ class HealthChecks @Inject() (lifecycle: Lifecycle) extends ScalatraServlet {
 
   // definis dans helm chart: port et url
   get("/live") {
-    Ok()
+    Ok("Ok")
   }
 
   get("/ready") {
@@ -30,7 +30,7 @@ class HealthChecks @Inject() (lifecycle: Lifecycle) extends ScalatraServlet {
         if (healthChecksOutdated.nonEmpty) {
           halt(400, s"Some services have not reported during the last 10 seconds -> ${healthChecksOutdated.mkString(", ")}")
         } else {
-          Ok(healthReports.mkString(", "))
+          Ok("[" + healthReports.mkString(", ") + "]")
         }
       }
     }

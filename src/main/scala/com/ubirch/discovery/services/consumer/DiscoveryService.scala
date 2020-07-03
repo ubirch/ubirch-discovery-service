@@ -276,7 +276,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
 
   val ex = new ScheduledThreadPoolExecutor(1)
   val gc = Service.get[GremlinConnector]
-  val task: Runnable = new Runnable {
+  val healthChecks: Runnable = new Runnable {
     def run() = {
 
       import scala.concurrent.duration._
@@ -308,10 +308,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
       DefaultHealthAggregator.updateHealth(HealthChecks.KAFKA_PRODUCER, healthReportProducer)
     }
   }
-  val f: ScheduledFuture[_] = ex.scheduleAtFixedRate(task, 1, 1, TimeUnit.SECONDS)
-
-  //f.cancel(false)
-
+  ex.scheduleAtFixedRate(healthChecks, 1, 1, TimeUnit.SECONDS)
 }
 
 object AbstractDiscoveryService {
