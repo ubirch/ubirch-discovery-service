@@ -83,7 +83,7 @@
         <json4s.version>3.5.2</json4s.version>
 
         <gremlinScala.version>3.4.4.5</gremlinScala.version>
-        <janusGraph.version>0.5.1</janusGraph.version>
+        <janusGraph.version>0.5.2</janusGraph.version>
         <tinkerPopDriver.version>3.4.6</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
 

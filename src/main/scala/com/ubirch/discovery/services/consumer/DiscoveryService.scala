@@ -274,10 +274,11 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
     Future.successful(consumption.shutdown(consumerGracefulTimeout, java.util.concurrent.TimeUnit.SECONDS))
   }
 
+  // Metrics
   val ex = new ScheduledThreadPoolExecutor(1)
-  val gc = Service.get[GremlinConnector]
+  val gc: GremlinConnector = Service.get[GremlinConnector]
   val healthChecks: Runnable = new Runnable {
-    def run() = {
+    def run(): Unit = {
 
       import scala.concurrent.duration._
       // will fail if the graph is empty
