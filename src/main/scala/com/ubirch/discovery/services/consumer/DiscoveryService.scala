@@ -1,6 +1,6 @@
 package com.ubirch.discovery.services.consumer
 
-import java.util.concurrent.{ ScheduledFuture, ScheduledThreadPoolExecutor, TimeUnit }
+import java.util.concurrent.{ ScheduledThreadPoolExecutor, TimeUnit }
 import java.util.Calendar
 
 import com.typesafe.config.Config
@@ -9,13 +9,12 @@ import com.ubirch.discovery.models._
 import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.process.Executor
 import com.ubirch.discovery.services.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
-import com.ubirch.discovery.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.discovery.util.{ HealthUtil, Timer }
+import com.ubirch.discovery.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.discovery.ConfPaths.{ ConsumerConfPaths, DiscoveryConfPath, ProducerConfPaths }
 import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.services.health.HealthChecks
 import com.ubirch.kafka.express.ExpressKafka
-import com.ubirch.niomon.healthcheck.HealthCheckServer
 import gremlin.scala.Vertex
 import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -25,10 +24,10 @@ import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer,
 import org.json4s._
 
 import scala.collection.immutable
+import scala.collection.JavaConverters._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
-import scala.collection.JavaConverters._
 
 trait DiscoveryApp {
 

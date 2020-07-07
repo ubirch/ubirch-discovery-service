@@ -1,29 +1,20 @@
 package com.ubirch.discovery.util
 
-import java.net.{ InetSocketAddress, Socket }
-import java.util.{ Calendar, Collections }
+import java.util.Calendar
 
-import com.avsystem.commons.rpc.AsRaw
 import com.fasterxml.jackson.databind.JsonNode
-import com.typesafe.scalalogging.{ LazyLogging, StrictLogging }
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.models.HealthReport
-import com.ubirch.niomon.healthcheck.HealthCheckServer._
-import io.prometheus.client.CollectorRegistry
 import net.logstash.logback.argument.StructuredArguments.v
-import org.apache.kafka.clients.Metadata
-import org.apache.kafka.clients.consumer.Consumer
-import org.apache.kafka.clients.producer.{ KafkaProducer, Producer }
 import org.apache.kafka.common.{ Metric, MetricName }
 import org.json4s.JsonAST._
-import org.json4s.{ JsonDSL, NoTypeHints }
+import org.json4s.NoTypeHints
 import org.json4s.jackson.JsonMethods
-import org.json4s.native.Serialization.{ read, write }
 import org.json4s.native.Serialization
+import org.json4s.native.Serialization.write
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.implicitConversions
-import scala.util.{ Failure, Success }
 
 object HealthUtil extends LazyLogging {
 
