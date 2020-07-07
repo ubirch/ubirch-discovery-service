@@ -94,8 +94,6 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
 
   lazy val flush: Boolean = config.getBoolean(FLUSH)
 
-  val healthCheckServer = new HealthCheckServer(Map(), Map())
-  //  initHealthChecks()
   consumption.getConsumerRecordsController()
 
   override val process: Process = Process { crs => letsProcess(crs) }
