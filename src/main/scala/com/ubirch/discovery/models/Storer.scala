@@ -219,12 +219,12 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
       try {
         verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
       } catch {
-        case e: org.apache.tinkerpop.gremlin.driver.exception.ResponseException =>
+        case e: java.util.concurrent.CompletionException =>
           logger.debug("Uniqueness prop error, trying again", e.getMessage)
           try {
             verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
           } catch {
-            case e: org.apache.tinkerpop.gremlin.driver.exception.ResponseException =>
+            case e: java.util.concurrent.CompletionException =>
               logger.debug("Uniqueness prop error AGAIN, returning null preprocess hashmap", e.getMessage)
               Map.empty
           }

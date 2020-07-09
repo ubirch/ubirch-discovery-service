@@ -23,8 +23,7 @@ import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
 
-import scala.annotation.tailrec
-import scala.collection.{ immutable, LinearSeq }
+import scala.collection.immutable
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ Await, ExecutionContext, Future }
