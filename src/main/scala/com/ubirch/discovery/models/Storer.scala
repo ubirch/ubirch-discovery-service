@@ -219,13 +219,13 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
         verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
       } catch {
         case e: java.util.concurrent.CompletionException =>
-          logger.info("Uniqueness prop error, trying again", e.getMessage)
+          logger.info(s"Uniqueness prop error multiple vertices ${verticesCore.map(v => v.toString).mkString(", ")}, trying again", e.getMessage)
           try {
             val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
             verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
           } catch {
             case e: java.util.concurrent.CompletionException =>
-              logger.warn("Uniqueness prop error AGAIN, returning null preprocess hashmap", e.getMessage)
+              logger.warn(s"Uniqueness prop error AGAIN multiple vertices ${verticesCore.map(v => v.toString).mkString(", ")}, returning null preprocess hashmap", e.getMessage)
               Map.empty
             case e: Throwable =>
               logger.error("error getUpdateOrCreateVerticesConcrete AGAIN", e)
@@ -255,12 +255,12 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
       gc.g.V().getUpdateOrCreateSingle(vertexCore).l().head
     } catch {
       case e: java.util.concurrent.CompletionException =>
-        logger.info("Uniqueness prop error, trying again", e.getMessage)
+        logger.info(s"Uniqueness prop error single vertex ${vertexCore.toString}, trying again", e.getMessage)
         try {
           gc.g.V().getUpdateOrCreateSingle(vertexCore).l().head
         } catch {
           case e: java.util.concurrent.CompletionException =>
-            logger.warn("Uniqueness prop error AGAIN, returning null preprocess hashmap", e.getMessage)
+            logger.warn(s"Uniqueness prop error AGAIN, returning null single vertex ${vertexCore.toString}", e.getMessage)
             null
           case e: Throwable =>
             logger.error("error getUpdateOrCreateVerticesConcrete AGAIN", e)
