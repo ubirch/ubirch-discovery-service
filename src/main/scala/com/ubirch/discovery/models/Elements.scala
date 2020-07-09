@@ -38,7 +38,7 @@ object Elements {
 
 }
 
-abstract class ElementCore(properties: List[ElementProperty], label: String) {
+abstract class ElementCore(val properties: List[ElementProperty], val label: String) {
 
   def equals(that: ElementCore): Boolean
 
@@ -57,13 +57,27 @@ abstract class ElementCore(properties: List[ElementProperty], label: String) {
     this.getUniqueProperties.exists(uniqueProp => that.getUniqueProperties.contains(uniqueProp))
   }
 
+  def containsUniqueProperty(p: ElementProperty)(implicit propSet: Set[Property]): Boolean = {
+    this.getUniqueProperties.exists(uniqueProp => uniqueProp.equals(p))
+  }
+
   def getUniqueProperties(implicit propSet: Set[Property]): List[ElementProperty] = {
     properties filter (p => p.isUnique)
   }
 
+  def mergeWith(that: ElementCore)(implicit propSet: Set[Property]): VertexCore = {
+    if (!equalsUniqueProperty(that) || that.label != label) {
+      throw new Exception("can not merge with that! not equal in term of unique props")
+    } else {
+      val mergedProps = this.properties.union(that.properties).distinct
+      VertexCore(mergedProps, this.label)
+    }
+
+  }
+
 }
 
-case class VertexCore(properties: List[ElementProperty], label: String) extends ElementCore(properties, label) {
+case class VertexCore(override val properties: List[ElementProperty], override val label: String) extends ElementCore(properties, label) {
 
   def equals(that: ElementCore): Boolean = {
     this.sortProperties equals that.sortProperties
@@ -73,7 +87,7 @@ case class VertexCore(properties: List[ElementProperty], label: String) extends 
 
 }
 
-case class EdgeCore(properties: List[ElementProperty], label: String) extends ElementCore(properties, label) {
+case class EdgeCore(override val properties: List[ElementProperty], override val label: String) extends ElementCore(properties, label) {
 
   def equals(that: ElementCore): Boolean = {
     this.sortProperties equals that.sortProperties

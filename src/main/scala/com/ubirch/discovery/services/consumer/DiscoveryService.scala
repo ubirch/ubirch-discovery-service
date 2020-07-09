@@ -23,8 +23,10 @@ import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
 
-import scala.collection.immutable
+import scala.annotation.tailrec
+import scala.collection.{ immutable, LinearSeq }
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
 import scala.util.{ Failure, Success, Try }
@@ -160,7 +162,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
 
       preprocess(relations) match {
         case Some(hashMap) =>
-          val hashMapVertices: Map[VertexCore, Vertex] = hashMap
+          val hashMapVertices: VertexMap = hashMap
 
           def getVertexFromHMap(vertexCore: VertexCore): Vertex = {
             hashMapVertices.get(vertexCore) match {
@@ -200,10 +202,10 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
     * @param relations The list of relations that contains the vertices
     * @return a hashmap corresponding, on the key, to the individual vertices, and on the value, to the janusgraph vertex
     */
-  def preprocess(relations: Seq[Relation]): Option[Map[VertexCore, Vertex]] = {
+  def preprocess(relations: Seq[Relation]): Option[VertexMap] = {
+    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
     // 1: flatten relations to get the vertices
     val distinctVertices: List[VertexCore] = getDistinctVertices(relations)
-    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
     validateVerticesAreCorrect(distinctVertices) match {
       case None =>
         val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](
@@ -214,7 +216,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
         executor.startProcessing()
         executor.latch.await() // that's blocking but it's because we have to wait for all the relations to be preprocessed before continuing
         val j = executor.getResultsNoTry
-        Some(j.flatMap(r => r._2).toMap)
+        Some(DefaultVertexMap(j.flatMap(r => r._2).toMap))
       case Some(value) =>
         publishErrorMessage(
           errorMessage = "At least one vertex does not contain an iterable (unique) property",
@@ -309,13 +311,31 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
   ex.scheduleAtFixedRate(healthChecks, 1, 1, TimeUnit.SECONDS)
 }
 
+/**
+  * Private methods put in the object in order to be able to test them
+  */
 object AbstractDiscoveryService {
 
   /**
     * From a relation, return unique vertices
     */
-  private def getDistinctVertices(relations: Seq[Relation]): List[VertexCore] =
-    relations.flatMap(r => List(r.vFrom, r.vTo)).distinct.toList
+  private def getDistinctVertices(relations: Seq[Relation])(implicit propSet: Set[Property]): List[VertexCore] = {
+    val firstCheck = relations.flatMap(r => List(r.vFrom, r.vTo)).distinct.toList
+
+    var mutableListOfProcessedVerticesUntilNow = new ListBuffer[VertexCore]()
+
+    for (newV <- firstCheck) {
+      mutableListOfProcessedVerticesUntilNow.find(v => v.equalsUniqueProperty(newV)) match {
+        case Some(foundSameVertex) =>
+          mutableListOfProcessedVerticesUntilNow -= foundSameVertex
+          mutableListOfProcessedVerticesUntilNow += foundSameVertex.mergeWith(newV)
+        case None =>
+          mutableListOfProcessedVerticesUntilNow += newV
+      }
+    }
+    mutableListOfProcessedVerticesUntilNow.toList
+
+  }
 
   /**
     * Validate that all vertices have at least one unique property. If not, throw error

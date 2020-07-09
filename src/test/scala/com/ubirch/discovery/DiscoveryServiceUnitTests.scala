@@ -54,6 +54,7 @@ class DiscoveryServiceUnitTests extends TestBase with PrivateMethodTester {
 
   feature("get distinct vertices") {
     val Injector = FakeSimpleInjector("")
+    implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
     scenario("should return 3 vertices in this relation of 4 with 3 distinct") {
       val relation1 = generateRelation
       val vertice2_1 = generateVertex
@@ -61,14 +62,14 @@ class DiscoveryServiceUnitTests extends TestBase with PrivateMethodTester {
       val edge2 = generateEdge
       val relation2 = Relation(vertice2_1, vertice2_2, edge2)
       val getDistinctVertices = PrivateMethod[List[VertexCore]]('getDistinctVertices)
-      val res = AbstractDiscoveryService invokePrivate getDistinctVertices(List(relation1, relation2))
+      val res = AbstractDiscoveryService invokePrivate getDistinctVertices(List(relation1, relation2), propSet)
       res.sortBy(_.label) shouldBe List(relation1.vFrom, relation1.vTo, vertice2_1).sortBy(_.label)
     }
 
     scenario("should return 2 vertices in a relation of 2 distinct vertices") {
       val relation = generateRelation
       val getDistinctVertices = PrivateMethod[List[VertexCore]]('getDistinctVertices)
-      val res = AbstractDiscoveryService invokePrivate getDistinctVertices(List(relation))
+      val res = AbstractDiscoveryService invokePrivate getDistinctVertices(List(relation), propSet)
       res.sortBy(_.label) shouldBe List(relation.vFrom, relation.vTo).sortBy(_.label)
     }
 
@@ -78,10 +79,43 @@ class DiscoveryServiceUnitTests extends TestBase with PrivateMethodTester {
         relations = relations :+ generateRelation
       }
       val getDistinctVertices = PrivateMethod[List[VertexCore]]('getDistinctVertices)
-      val res = AbstractDiscoveryService invokePrivate getDistinctVertices(relations)
+      val res = AbstractDiscoveryService invokePrivate getDistinctVertices(relations, propSet)
       val allVertices = relations.flatMap(r => List(r.vFrom, r.vTo))
       res.sortBy(_.label) shouldBe allVertices.sortBy(_.label)
 
+    }
+
+    scenario("should return 1 with two vertices different but equal in term of unique props, should return merged vertex") {
+      val label = giveMeRandomVertexLabel
+      val hash = generateElementProperty("hash")
+      val t1 = generateElementProperty("timestamp", giveMeATimestamp)
+      val t2 = generateElementProperty("timestamp2", giveMeATimestamp)
+      val signature = generateElementProperty("signature")
+      val v1 = VertexCore(Nil, label)
+        .addProperty(hash)
+        .addProperty(signature)
+        .addProperty(t1)
+      val v2 = VertexCore(Nil, label)
+        .addProperty(hash)
+        .addProperty(t2)
+      val mergedVertex = VertexCore(Nil, label)
+        .addProperty(t2)
+        .addProperty(hash)
+        .addProperty(signature)
+        .addProperty(t1)
+      // here v1 and v2 are unique in term of iterable properties
+      val edge = generateEdge
+      val r = Relation(v1, v2, edge)
+      val getDistinctVertices = PrivateMethod[List[VertexCore]]('getDistinctVertices)
+      val res = AbstractDiscoveryService invokePrivate getDistinctVertices(List(r), propSet)
+      res.size shouldBe 1
+      res.head shouldBe mergedVertex
+
+      // testing in the other way
+      val r2 = Relation(v2, v1, edge)
+      val res2 = AbstractDiscoveryService invokePrivate getDistinctVertices(List(r2), propSet)
+      res2.size shouldBe 1
+      res.head shouldBe mergedVertex
     }
   }
 
