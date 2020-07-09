@@ -66,12 +66,11 @@ abstract class ElementCore(val properties: List[ElementProperty], val label: Str
   }
 
   def mergeWith(that: ElementCore)(implicit propSet: Set[Property]): VertexCore = {
-    if (!equalsUniqueProperty(that) || that.label != label) {
-      throw new Exception("can not merge with that! not equal in term of unique props")
-    } else {
-      val mergedProps = this.properties.union(that.properties).distinct
-      VertexCore(mergedProps, this.label)
-    }
+    if (!equalsUniqueProperty(that)) throw new Exception(s"can not merge this ${this.toString} with that ${that.toString}! not equal in term of unique props")
+    if( that.label != label) throw new Exception(s"can not merge this ${this.toString} with that ${that.toString}! not equal in term of label")
+    val mergedProps = this.properties.union(that.properties).distinct
+    VertexCore(mergedProps, this.label)
+
 
   }
 
