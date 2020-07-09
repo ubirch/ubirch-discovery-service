@@ -157,40 +157,29 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-    val timedResult = Timer.time({
 
-      preprocess(relations) match {
-        case Some(hashMap) =>
-          val hashMapVertices: VertexMap = hashMap
 
-          def getVertexFromHMap(vertexCore: VertexCore): Vertex = {
-            hashMapVertices.get(vertexCore) match {
-              case Some(vDb) => vDb
-              case None =>
-                logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}")
-                storer.getUpdateOrCreateSingleConcrete(vertexCore)
-            }
+    preprocess(relations) match {
+      case Some(hashMap) =>
+        val hashMapVertices: VertexMap = hashMap
+
+        def getVertexFromHMap(vertexCore: VertexCore): Vertex = {
+          hashMapVertices.get(vertexCore) match {
+            case Some(vDb) => vDb
+            case None =>
+              logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}")
+              storer.getUpdateOrCreateSingleConcrete(vertexCore)
           }
+        }
 
-          logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
-          val relationsAsRelationServer: Seq[DumbRelation] = relations.map(r => DumbRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
+        logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
+        val relationsAsRelationServer: Seq[DumbRelation] = relations.map(r => DumbRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
 
-          val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = storer.createRelation, processSize = maxParallelConnection, customResultFunction = Some(() => this.increasePrometheusRelationCount()))
-          executor.startProcessing()
-          executor.latch.await(100, java.util.concurrent.TimeUnit.SECONDS)
-          Some(executor.getResults)
-        case None => None
-      }
-
-    })
-    //res.logTimeTakenJson(s"process_relations" -> List(("size" -> relations.size) ~ ("value" -> relations.map { r => r.toJson }.toList)), 10000, warnOnly = false)
-
-    timedResult.result match {
-      case Success(success) =>
-        logger.info(s"processed {${relations.size},${timedResult.elapsed.toDouble / relations.size.toDouble},${timedResult.elapsed}}")
-        success
-      case Failure(exception) =>
-        throw StoreException("Error storing relations, out of executor", exception)
+        val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = storer.createRelation, processSize = maxParallelConnection, customResultFunction = Some(() => this.increasePrometheusRelationCount()))
+        executor.startProcessing()
+        executor.latch.await(100, java.util.concurrent.TimeUnit.SECONDS)
+        Some(executor.getResults)
+      case None => None
     }
   }
 
