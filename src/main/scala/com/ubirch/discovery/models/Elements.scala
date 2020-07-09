@@ -71,7 +71,7 @@ abstract class ElementCore(val properties: List[ElementProperty], val label: Str
     if (that.label != label) {
       //TODO: dirty hack, fix
       if (this.label == "MASTER_TREE" || that.label == "MASTER_TREE") {
-        logger.debug(s"merged ${this.toString} with ${that.toString} even though they had different label")
+        logger.info(s"merged ${this.toString} with ${that.toString} even though they had different label")
         val mergedProps = this.properties.union(that.properties).distinct
         VertexCore(mergedProps, "MASTER_TREE")
       } else {
