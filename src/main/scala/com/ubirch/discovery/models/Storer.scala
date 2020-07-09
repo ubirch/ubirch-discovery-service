@@ -227,7 +227,13 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
             case e: java.util.concurrent.CompletionException =>
               logger.warn("Uniqueness prop error AGAIN, returning null preprocess hashmap", e.getMessage)
               Map.empty
+            case e: Throwable =>
+              logger.error("error getUpdateOrCreateVerticesConcrete AGAIN", e)
+              throw e
           }
+        case e: Throwable =>
+          logger.error("error getUpdateOrCreateVerticesConcrete", e)
+          throw e
       }
     }
 
@@ -244,11 +250,26 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
     */
   def getUpdateOrCreateSingleConcrete(vertexCore: VertexCore)(implicit propSet: Set[Property]): Vertex = {
 
-    val t0 = System.currentTimeMillis()
-    val res = gc.g.V().getUpdateOrCreateSingle(vertexCore).l().head
-    val t1 = System.currentTimeMillis()
-    logger.debug(s"getUpdateOrCreateSingleConcrete:[1,${t1 - t0},${t1 - t0}]")
-    res
+
+    try {
+      gc.g.V().getUpdateOrCreateSingle(vertexCore).l().head
+    } catch {
+      case e: java.util.concurrent.CompletionException =>
+        logger.info("Uniqueness prop error, trying again", e.getMessage)
+        try {
+          gc.g.V().getUpdateOrCreateSingle(vertexCore).l().head
+        } catch {
+          case e: java.util.concurrent.CompletionException =>
+            logger.warn("Uniqueness prop error AGAIN, returning null preprocess hashmap", e.getMessage)
+            null
+          case e: Throwable =>
+            logger.error("error getUpdateOrCreateVerticesConcrete AGAIN", e)
+            throw e
+        }
+      case e: Throwable =>
+        logger.error("error getUpdateOrCreateVerticesConcrete", e)
+        throw e
+    }
 
   }
 
