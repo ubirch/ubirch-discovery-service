@@ -56,7 +56,6 @@ object GremlinTraversalExtension {
     * Using the addNewVertex will add a or(_.has(), ..., _.has()).fold().coalesce(unfold(), addV(label)).aggregate(value).prop().[..].prop()
     * step to the current traversal constructor
     *
-    * @param verticeAndStep
     * @param traversal initialized traversal
     */
   case class VerticeAccu(verticeAndStep: Map[StepLabel[java.util.Set[Vertex]], VertexCore], traversal: Aux[Vertex, HNil])(implicit propSet: Set[Property]) {
@@ -178,9 +177,9 @@ object GremlinTraversalExtension {
 
     def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Aux[Edge, HNil] = {
       if (relation.edge.properties.isEmpty) {
-        previousConstructor.V(relation.vTo).addE(relation.edge.label).from(relation.vFrom)
+        previousConstructor.addE(relation.edge.label).from(relation.vFrom)
       } else {
-        var constructor = gc.g.V(relation.vTo).addE(relation.edge.label)
+        var constructor = previousConstructor.addE(relation.edge.label)
         for (prop <- relation.edge.properties) {
           constructor = constructor.property(prop.toKeyValue)
         }
@@ -193,7 +192,7 @@ object GremlinTraversalExtension {
 @Singleton
 class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec: ExecutionContext) extends Storer with LazyLogging {
 
-  implicit val gc = gremlinConnector
+  implicit val gc: GremlinConnector = gremlinConnector
 
   import GremlinTraversalExtension.RichTraversal
 
@@ -281,7 +280,7 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
         case e: CompletionException => recoverEdge(relation, e)
         case e: SchemaViolationException => recoverEdge(relation, e)
         case e: Exception =>
-          logger.error("error initialising vertex", e)
+          logger.error(s"error creation edge ${relation.toString}", e)
           throw e
       }
     }
