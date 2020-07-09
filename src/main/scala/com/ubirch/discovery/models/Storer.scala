@@ -219,10 +219,15 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
         verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
       } catch {
         case e: java.util.concurrent.CompletionException =>
-          logger.info(s"Uniqueness prop error multiple vertices ${verticesCore.map(v => v.toString).mkString(", ")}, trying again", e.getMessage)
+          logger.info(s"Uniqueness prop error multiple vertices ${verticesCore.map(v => v.toString).mkString(", ")}, trying again but one by one", e.getMessage)
           try {
-            val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
-            verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
+            Thread.sleep(100)
+            val res = for {
+              v <- verticesCore
+            } yield {
+              v -> lookThenCreate(v)
+            }
+            res.toMap
           } catch {
             case e: java.util.concurrent.CompletionException =>
               logger.warn(s"Uniqueness prop error AGAIN multiple vertices ${verticesCore.map(v => v.toString).mkString(", ")}, returning null preprocess hashmap", e.getMessage)
@@ -257,7 +262,8 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
       case e: java.util.concurrent.CompletionException =>
         logger.info(s"Uniqueness prop error single vertex ${vertexCore.toString}, trying again", e.getMessage)
         try {
-          gc.g.V().getUpdateOrCreateSingle(vertexCore).l().head
+          Thread.sleep(100)
+          lookThenCreate(vertexCore)
         } catch {
           case e: java.util.concurrent.CompletionException =>
             logger.warn(s"Uniqueness prop error AGAIN, returning null single vertex ${vertexCore.toString}", e.getMessage)
@@ -294,6 +300,38 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
     if (!error.getMessage.contains("An edge with the given label already exists between the pair of vertices and the label")) {
       createEdgeConcrete(relation)
     }
+  }
+
+  def lookThenCreate(vertexCore: VertexCore)(implicit propSet: Set[Property]): Vertex = {
+    def lookForAllProps(lProps: List[ElementProperty]): Option[Vertex] = {
+      lProps match {
+        case Nil => None
+        case ::(head, tl) =>
+          gc.g.V().has(head.toKeyValue).l().headOption match {
+            case Some(vertex) => Some(vertex)
+            case None => lookForAllProps(tl)
+          }
+      }
+    }
+
+    def createAllPropertiesTraversal(constructor: Aux[Vertex, HNil]): Aux[Vertex, HNil] = {
+
+      var newConstructor = constructor
+      for { props <- vertexCore.properties } {
+        newConstructor = newConstructor.property(props.toKeyValue)
+      }
+      newConstructor
+    }
+
+    lookForAllProps(vertexCore.getUniqueProperties) match {
+      case Some(vertex) =>
+        createAllPropertiesTraversal(gc.g.V(vertex)).l().head
+      case None =>
+        createAllPropertiesTraversal(gc.g.addV(vertexCore.label)).l().head
+
+    }
+
+
   }
 
 }

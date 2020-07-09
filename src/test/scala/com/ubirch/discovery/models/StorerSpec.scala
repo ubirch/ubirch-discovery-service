@@ -189,6 +189,21 @@ class StorerSpec extends TestBase {
       jgs.createRelation(dumbRelation)
 
     }
+
+    scenario("lookThenCreate") {
+      implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
+      val signature = giveMeRandomString
+      val hash = giveMeRandomString
+      val timestamp = "1593532578000"
+      val label = giveMeRandomVertexLabel
+      val vertex = VertexCore(Nil, label)
+        .addProperty(generateElementProperty("hash", hash))
+        .addProperty(generateElementProperty("signature", signature))
+        .addProperty(generateElementProperty("timestamp", timestamp))
+      cleanDb(gc)
+      jgs.lookThenCreate(vertex)
+      validateVertex(vertex, gc) shouldBe true
+    }
   }
 
   def validateVertex(vertexCore: VertexCore, gc: GremlinConnector)(implicit propSet: Set[Property]): Boolean = {
