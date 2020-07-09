@@ -216,7 +216,19 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
       val (traversal, verticeAccu) = gc.g.V().getUpdateOrCreateVertices(verticesCore)
       val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
 
-      verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
+      try {
+        verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
+      } catch {
+        case e: org.apache.tinkerpop.gremlin.driver.exception.ResponseException =>
+          logger.debug("Uniqueness prop error, trying again", e.getMessage)
+          try {
+            verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
+          } catch {
+            case e: org.apache.tinkerpop.gremlin.driver.exception.ResponseException =>
+              logger.debug("Uniqueness prop error AGAIN, returning null preprocess hashmap", e.getMessage)
+              Map.empty
+          }
+      }
     }
 
   }
