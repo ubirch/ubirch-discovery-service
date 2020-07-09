@@ -1,5 +1,6 @@
 package com.ubirch.discovery.models
 
+import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.models.PropertyType.PropertyType
 import com.ubirch.discovery.util.Util
@@ -38,7 +39,7 @@ object Elements {
 
 }
 
-abstract class ElementCore(val properties: List[ElementProperty], val label: String) {
+abstract class ElementCore(val properties: List[ElementProperty], val label: String) extends LazyLogging {
 
   def equals(that: ElementCore): Boolean
 
@@ -67,10 +68,19 @@ abstract class ElementCore(val properties: List[ElementProperty], val label: Str
 
   def mergeWith(that: ElementCore)(implicit propSet: Set[Property]): VertexCore = {
     if (!equalsUniqueProperty(that)) throw new Exception(s"can not merge this ${this.toString} with that ${that.toString}! not equal in term of unique props")
-    if( that.label != label) throw new Exception(s"can not merge this ${this.toString} with that ${that.toString}! not equal in term of label")
-    val mergedProps = this.properties.union(that.properties).distinct
-    VertexCore(mergedProps, this.label)
-
+    if (that.label != label) {
+      //TODO: dirty hack, fix
+      if (this.label == "MASTER_TREE" || that.label == "MASTER_TREE") {
+        logger.debug(s"merged ${this.toString} with ${that.toString} even though they had different label")
+        val mergedProps = this.properties.union(that.properties).distinct
+        VertexCore(mergedProps, "MASTER_TREE")
+      } else {
+        throw new Exception(s"can not merge this ${this.toString} with that ${that.toString}! not equal in term of label")
+      }
+    } else {
+      val mergedProps = this.properties.union(that.properties).distinct
+      VertexCore(mergedProps, this.label)
+    }
 
   }
 

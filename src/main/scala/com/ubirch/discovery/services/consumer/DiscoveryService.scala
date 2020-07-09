@@ -191,7 +191,6 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
         logger.info(s"processed {${relations.size},${timedResult.elapsed.toDouble / relations.size.toDouble},${timedResult.elapsed}}")
         success
       case Failure(exception) =>
-        logger.error("Error storing relations, out of executor", exception)
         throw StoreException("Error storing relations, out of executor", exception)
     }
   }
