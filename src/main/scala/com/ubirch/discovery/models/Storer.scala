@@ -333,7 +333,15 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
       case Some(vertex) =>
         createAllPropertiesTraversal(gc.g.V(vertex)).l().head
       case None =>
-        createAllPropertiesTraversal(gc.g.addV(vertexCore.label)).l().head
+        try {
+          createAllPropertiesTraversal(gc.g.addV(vertexCore.label)).l().head
+        } catch {
+          case _: java.util.concurrent.CompletionException =>
+            lookForAllProps(vertexCore.getUniqueProperties) match {
+              case Some(value) => createAllPropertiesTraversal(gc.g.V(value)).l().head
+              case None => createAllPropertiesTraversal(gc.g.addV(vertexCore.label)).l().head
+            }
+        }
 
     }
 
