@@ -14,10 +14,9 @@ trait VertexMap {
 case class DefaultVertexMap(map: Map[VertexCore, Vertex])(implicit val propSet: Set[Property]) extends VertexMap {
 
   override def get(vertexCore: VertexCore): Option[Vertex] = {
-    if (map.contains(vertexCore)) {
-      Some(map.filter(v => v._1.equalsUniqueProperty(vertexCore)).head._2)
-    } else {
-      None
+    map.find(v => v._1.equalsUniqueProperty(vertexCore)) match {
+      case Some(value) => Some(value._2)
+      case None => None
     }
   }
 

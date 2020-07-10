@@ -221,8 +221,8 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
           v -> lookThenCreate(v)
         }
         res.toMap
-//        val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
-//        verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
+        //        val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
+        //        verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
       } catch {
         case e: java.util.concurrent.CompletionException =>
           logger.info(s"Uniqueness prop error multiple vertices ${verticesCore.map(v => v.toString).mkString(", ")}, trying again but one by one", e.getMessage)
@@ -260,7 +260,6 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
     * @return The graph vertex.
     */
   def getUpdateOrCreateSingleConcrete(vertexCore: VertexCore)(implicit propSet: Set[Property]): Vertex = {
-
 
     try {
       gc.g.V().getUpdateOrCreateSingle(vertexCore).l().head
@@ -344,7 +343,6 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
         }
 
     }
-
 
   }
 
