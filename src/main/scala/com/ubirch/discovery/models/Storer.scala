@@ -215,12 +215,13 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
       //val (traversal, verticeAccu) = gc.g.V().getUpdateOrCreateVertices(verticesCore)
 
       try {
-        val res = for {
-          v <- verticesCore
-        } yield {
-          v -> lookThenCreate(v)
-        }
-        res.toMap
+        verticesCore.map(vc => vc -> getUpdateOrCreateSingleConcrete(vc)).toMap
+//        val res = for {
+//          v <- verticesCore
+//        } yield {
+//          v -> lookThenCreate(v)
+//        }
+//        res.toMap
         //        val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
         //        verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
       } catch {
