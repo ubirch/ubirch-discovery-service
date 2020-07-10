@@ -11,9 +11,9 @@ import com.ubirch.discovery.services.config.ConfigProvider
 import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.services.consumer.AbstractDiscoveryService
 import com.ubirch.discovery.util.RemoteJanusGraph
-import gremlin.scala.Vertex
+import gremlin.scala.{Key, KeyValue, Vertex}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class StorerSpec extends TestBase {
@@ -226,7 +226,6 @@ class StorerSpec extends TestBase {
       val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](lVertices, jgs.getUpdateOrCreateVerticesConcrete(_), 8)
       executor.startProcessing()
       executor.latch.await()
-      println(vertices.mkString(", "))
       for (vertex <- vertices) {
         validateVertex(vertex, gc) shouldBe true
       }
@@ -284,8 +283,6 @@ class StorerSpec extends TestBase {
       val allRelations = listST_ST.flatten ++ MT_ST_relations
       logger.info("all r size: " + allRelations.size)
 
-      val relationsSplitted = allRelations.splitAt(allRelations.size / 2)
-
       Future(ds.store(allRelations)).onComplete(_ => println("finished 1"))
       Future(ds.store(allRelations)).onComplete(_ => println("finished 2"))
 
@@ -307,6 +304,51 @@ class StorerSpec extends TestBase {
           fail()
         }
       }
+    }
+
+    scenario("try replicate bug") {
+      val Injector = FakeSimpleInjector("")
+      val gc = Injector.get[GremlinConnector]
+      import scala.concurrent.ExecutionContext.Implicits.global
+
+      gc.g.V().drop().iterate()
+
+      def test() = {
+        (1 to 10).toList.map { _ =>
+          Future {
+            try {
+              //println("Add vertex!!!")
+              gc.g.addV("UPP")
+                .property(KeyValue[String](Key[String]("hash"), "valueHash"))
+                .l()
+              true
+            } catch {
+              case ex: Exception =>
+                println(ex.getMessage)
+                false
+            }
+          }
+        }
+      }
+
+      (1 to 1000).foreach { i =>
+        println("test: " + i)
+
+        val fSeq = Future.sequence(test())
+        import scala.concurrent.duration._
+
+        println("Awaiting")
+        Await.result(fSeq, 1.minute)
+
+      }
+      val count = gc.g.V().has(KeyValue(Key[String]("hash"), "valueHash")).l().size
+      val v = gc.g.V().l()
+      println(v.size)
+      println(v.mkString(", "))
+      println("Count of vertices: " + count)
+      assert(count == 1, "Users > 1")
+
+
     }
   }
 

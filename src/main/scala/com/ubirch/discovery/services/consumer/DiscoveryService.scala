@@ -165,7 +165,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
           hashMapVertices.get(vertexCore) match {
             case Some(vDb) => vDb
             case None =>
-              logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}")
+              logger.info(s"getVertexFromHMap vertex not found in HMAP ${vertexCore.toString}. relations = ${relations.mkString(", ")}")
               storer.getUpdateOrCreateSingleConcrete(vertexCore)
           }
         }
