@@ -1,16 +1,18 @@
 package com.ubirch.discovery.models
 
 import java.util
-import java.util.concurrent.CompletionException
+import java.util.concurrent.{ CompletionException, TimeUnit }
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.models.Elements.Property
+import com.ubirch.discovery.models.lock.Lock
 import com.ubirch.discovery.services.connector.GremlinConnector
 import gremlin.scala.{ Edge, GremlinScala, KeyValue, StepLabel, Vertex }
 import gremlin.scala.GremlinScala.Aux
 import javax.inject.{ Inject, Singleton }
 import org.apache.tinkerpop.gremlin.process.traversal.step.util.BulkSet
 import org.janusgraph.core.SchemaViolationException
+import org.redisson.api.RLock
 import shapeless.HNil
 
 import scala.collection.mutable
@@ -190,7 +192,7 @@ object GremlinTraversalExtension {
 }
 
 @Singleton
-class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec: ExecutionContext) extends Storer with LazyLogging {
+class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec: ExecutionContext, locker: Lock) extends Storer with LazyLogging {
 
   implicit val gc: GremlinConnector = gremlinConnector
 
@@ -216,12 +218,12 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
 
       try {
         verticesCore.map(vc => vc -> getUpdateOrCreateSingleConcrete(vc)).toMap
-//        val res = for {
-//          v <- verticesCore
-//        } yield {
-//          v -> lookThenCreate(v)
-//        }
-//        res.toMap
+        //        val res = for {
+        //          v <- verticesCore
+        //        } yield {
+        //          v -> lookThenCreate(v)
+        //        }
+        //        res.toMap
         //        val finalTraversal: mutable.Map[String, Any] = traversal.l().head.asScala
         //        verticeAccu.verticeAndStep.map(sl => sl._2 -> finalTraversal(sl._1.name).asInstanceOf[BulkSet[Vertex]].iterator().next())
       } catch {
@@ -262,6 +264,8 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
     */
   def getUpdateOrCreateSingleConcrete(vertexCore: VertexCore)(implicit propSet: Set[Property]): Vertex = {
 
+    val maybeLock = acquireLockForVertex(vertexCore)
+
     try {
       gc.g.V().getUpdateOrCreateSingle(vertexCore).l().head
     } catch {
@@ -281,8 +285,23 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
       case e: Throwable =>
         logger.error("error getUpdateOrCreateVerticesConcrete", e)
         throw e
+    } finally {
+      maybeLock match {
+        case Some(lock) => lock.unlockAsync()
+        case None =>
+      }
     }
 
+  }
+
+  def acquireLockForVertex(vertex: VertexCore): Option[RLock] = {
+    vertex.containsPropertyValueFromName("hash") match {
+      case Some(value) =>
+        val vertexLock = locker.createLock(value.value.toString)
+        vertexLock.lock(100, TimeUnit.MILLISECONDS)
+        Some(vertexLock)
+      case None => None
+    }
   }
 
   def createRelation(relation: DumbRelation): Unit = {

@@ -3,26 +3,33 @@ package com.ubirch.discovery.models
 import java.util.Date
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.{ Config, ConfigValueFactory }
-import com.ubirch.discovery.{ Binder, InjectorHelper, TestBase }
+import com.typesafe.config.{Config, ConfigValueFactory}
+import com.ubirch.discovery.{Binder, InjectorHelper, TestBase}
 import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.process.Executor
 import com.ubirch.discovery.services.config.ConfigProvider
 import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.services.consumer.AbstractDiscoveryService
 import com.ubirch.discovery.util.RemoteJanusGraph
-import gremlin.scala.{ Key, KeyValue, Vertex }
+import gremlin.scala.{Key, KeyValue, Vertex}
 import io.prometheus.client.CollectorRegistry
+import redis.embedded.RedisServer
 
-import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 class StorerSpec extends TestBase {
 
-  RemoteJanusGraph.startJanusGraphServer()
+  //RemoteJanusGraph.startJanusGraphServer()
 
   def cleanDb(implicit gc: GremlinConnector): Unit = {
     gc.g.V().drop().iterate()
+  }
+
+  override def beforeAll() = {
+    val redis = new RedisServer(6379)
+    redis.start()
+    Thread.sleep(8000)
   }
 
   override protected def beforeEach(): Unit = {
@@ -454,7 +461,7 @@ class StorerSpec extends TestBase {
   /**
     * Simple injector that replaces the kafka bootstrap server and topics to the given ones
     */
-  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8182): InjectorHelper = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(bootstrapServers, port))
   })) {}
 

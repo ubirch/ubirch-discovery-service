@@ -82,6 +82,8 @@
 
         <json4s.version>3.5.2</json4s.version>
 
+        <redisson.version>3.10.5</redisson.version>
+
         <gremlinScala.version>3.4.4.5</gremlinScala.version>
         <janusGraph.version>0.5.2</janusGraph.version>
         <tinkerPopDriver.version>3.4.6</tinkerPopDriver.version>
@@ -259,6 +261,13 @@
             <version>${janusGraph.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>${redisson.version}</version>
+        </dependency>
+
+
         <!-- https://mvnrepository.com/artifact/org.janusgraph/janusgraph-cql -->
         <dependency>
             <groupId>org.janusgraph</groupId>
@@ -315,20 +324,20 @@
             <version>1.0.2</version>
         </dependency>
 
-
-        <dependency>
-            <groupId>org.scalatra</groupId>
-            <artifactId>scalatra_2.12</artifactId>
-            <version>${scalatra.version}</version>
-        </dependency>
-
-
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
             <version>${guice.version}</version>
         </dependency>
 
+
+        <!-- https://mvnrepository.com/artifact/com.github.sebruck/scalatest-embedded-redis -->
+        <dependency>
+            <groupId>com.github.sebruck</groupId>
+            <artifactId>scalatest-embedded-redis_2.12</artifactId>
+            <version>0.3.0</version>
+        </dependency>
+        
 <!--        <dependency>-->
 <!--            <groupId>com.ubirch</groupId>-->
 <!--            <artifactId>ubirch-janusgraph-express</artifactId>-->

@@ -25,4 +25,15 @@ object ConfPaths {
     final val FLUSH = "flush"
   }
 
+  trait RedisConfPaths {
+    final val REDIS_PORT = "redis.port"
+    final val REDIS_PASSWORD = "redis.password"
+    final val REDIS_USE_REPLICATED = "redis.useReplicated"
+    final val REDIS_CACHE_NAME = "redis.cacheName"
+    final val REDIS_CACHE_TTL = "redis.ttl"
+    final val REDIS_MAIN_HOST = "redis.mainHost"
+    final val REDIS_REPLICATED_HOST = "redis.replicatedHost"
+    final val REDIS_HOST = "redis.host"
+  }
+
 }

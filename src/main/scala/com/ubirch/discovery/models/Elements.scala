@@ -58,6 +58,10 @@ abstract class ElementCore(val properties: List[ElementProperty], val label: Str
     this.getUniqueProperties.exists(uniqueProp => that.getUniqueProperties.contains(uniqueProp))
   }
 
+  def containsPropertyValueFromName(nameOfProperty: String): Option[ElementProperty] = {
+    this.properties.find(p => p.keyName == nameOfProperty)
+  }
+
   def containsUniqueProperty(p: ElementProperty)(implicit propSet: Set[Property]): Boolean = {
     this.getUniqueProperties.exists(uniqueProp => uniqueProp.equals(p))
   }
