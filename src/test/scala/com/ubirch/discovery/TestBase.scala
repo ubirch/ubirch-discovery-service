@@ -54,7 +54,7 @@ trait TestBase
   def giveMeRandomVertexLabel: String = listLabelsVertex(random.nextInt(listLabelsVertex.length))
   def giveMeRandomEdgeLabel: String = listLabelsEdge(random.nextInt(listLabelsEdge.length))
 
-  val listLabelsEdge = List("transaction", "link", "associate", "father", "generate")
+  val listLabelsEdge = List("UPP->DEVICE", "CHAIN", "MASTER_TREE->SLAVE_TREE", "SLAVE_TREE->SLAVE_TREE", "PUBLIC_CHAIN->MASTER_TREE")
 
   val listLabelsVertex = List("DEVICE", "UPP", "MASTER_TREE", "SLAVE_TREE", "PUBLIC_CHAIN")
 

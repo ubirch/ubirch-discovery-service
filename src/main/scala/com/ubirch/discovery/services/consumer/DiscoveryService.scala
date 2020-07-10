@@ -157,8 +157,6 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
 
     implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
 
-
-
     preprocess(relations) match {
       case Some(hashMap) =>
         val hashMapVertices: VertexMap = hashMap
@@ -244,7 +242,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
       value: String,
       ex: Throwable
   ): Future[Any] = {
-    logger.error(errorMessage + "value: " + value, ex.getMessage, ex)
+    logger.error(errorMessage + " value: " + value, ex.getMessage, ex)
     val producerRecordToSend = new ProducerRecord[String, String](
       producerErrorTopic,
       DiscoveryError(errorMessage, ex.getClass.getSimpleName, value).toString

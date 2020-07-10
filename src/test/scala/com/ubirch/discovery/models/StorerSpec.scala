@@ -3,14 +3,18 @@ package com.ubirch.discovery.models
 import java.util.Date
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.{ Config, ConfigValueFactory }
-import com.ubirch.discovery.{ Binder, InjectorHelper, TestBase }
+import com.typesafe.config.{Config, ConfigValueFactory}
+import com.ubirch.discovery.{Binder, InjectorHelper, TestBase}
 import com.ubirch.discovery.models.Elements.Property
+import com.ubirch.discovery.process.Executor
 import com.ubirch.discovery.services.config.ConfigProvider
 import com.ubirch.discovery.services.connector.GremlinConnector
+import com.ubirch.discovery.services.consumer.AbstractDiscoveryService
 import com.ubirch.discovery.util.RemoteJanusGraph
+import gremlin.scala.Vertex
 
-import scala.collection.JavaConverters._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 class StorerSpec extends TestBase {
 
@@ -206,11 +210,146 @@ class StorerSpec extends TestBase {
     }
   }
 
-  def validateVertex(vertexCore: VertexCore, gc: GremlinConnector)(implicit propSet: Set[Property]): Boolean = {
-    val maybeVertex = vertexCore.properties.find(p => p.isUnique) match {
+  ignore("concurency") {
+    scenario("test creation vertices") {
+      val Injector = FakeSimpleInjector("")
+      val jgs = Injector.get[DefaultJanusgraphStorer]
+      val gc = Injector.get[GremlinConnector]
+      implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
+      implicit val ec: ExecutionContext = Injector.get[ExecutionContext]
+      var vertices: List[VertexCore] = Nil
+      val label = giveMeRandomVertexLabel
+      for (i <- 0 to 50) {
+        vertices = vertices :+ VertexCore(Nil, label).addProperty(generateElementProperty("hash", i.toString))
+      }
+      val lVertices = Seq(vertices, vertices, vertices, vertices, vertices, vertices, vertices)
+      val executor = new Executor[List[VertexCore], Map[VertexCore, Vertex]](lVertices, jgs.getUpdateOrCreateVerticesConcrete(_), 8)
+      executor.startProcessing()
+      executor.latch.await()
+      println(vertices.mkString(", "))
+      for (vertex <- vertices) {
+        validateVertex(vertex, gc) shouldBe true
+      }
+    }
+
+    scenario("create edge should work") {
+      val Injector = FakeSimpleInjector("")
+      val jgs = Injector.get[DefaultJanusgraphStorer]
+      val gc = Injector.get[GremlinConnector]
+      // MT connected to 10 ST, each ST connected to 50 ST
+      val ds = Injector.get[AbstractDiscoveryService]
+      implicit val ec: ExecutionContext = Injector.get[ExecutionContext]
+      implicit val propSet: Set[Property] = KafkaElements.propertiesToIterate
+      // create MT
+      val hashMT = generateElementProperty("hash")
+      val timestampMT = generateElementProperty("timestamp", giveMeATimestamp)
+      val master_tree = VertexCore(Nil, "MASTER_TREE")
+        .addProperty(hashMT)
+        .addProperty(timestampMT)
+      // create 10 ST linked to 50 ST each
+      var mapSlaveTrees = scala.collection.mutable.Map[VertexCore, List[VertexCore]]()
+      for (_ <- 1 to 100) {
+        val hashSTRoot = generateElementProperty("hash")
+        val timestampSTRoot = generateElementProperty("timestamp", giveMeATimestamp)
+        val slave_tree_root = VertexCore(Nil, "SLAVE_TREE")
+          .addProperty(hashSTRoot)
+          .addProperty(timestampSTRoot)
+        var lSTlow = List[VertexCore]()
+        for (_ <- 1 to 50 ) {
+          val hashSTLeaves = generateElementProperty("hash")
+          val timestampSTLeaves = generateElementProperty("timestamp", giveMeATimestamp)
+          val slave_tree_leave = VertexCore(Nil, "SLAVE_TREE")
+            .addProperty(hashSTLeaves)
+            .addProperty(timestampSTLeaves)
+          lSTlow = lSTlow :+ slave_tree_leave
+        }
+        mapSlaveTrees += (slave_tree_root -> lSTlow)
+      }
+
+      val listST_ST = for {
+        l <- mapSlaveTrees.toList
+      } yield {
+        val lRoot = l._1
+        for {
+          lLeave <- l._2
+        } yield {
+          Relation(lRoot, lLeave, EdgeCore(Nil, "SLAVE_TREE->SLAVE_TREE")
+            .addProperty(generateElementProperty("timestamp", giveMeATimestamp)))
+        }
+      }
+      logger.info("st_st size: " + listST_ST.flatten.size)
+      val MT_ST_relations = mapSlaveTrees.keys.toList.map(v => Relation(master_tree, v, EdgeCore(Nil, "MASTER_TREE->SLAVE_TREE")
+        .addProperty(generateElementProperty("timestamp", giveMeATimestamp))))
+      logger.info("mt_st size: " + MT_ST_relations.size)
+      val allRelations = listST_ST.flatten ++ MT_ST_relations
+      logger.info("all r size: " + allRelations.size)
+
+      val relationsSplitted = allRelations.splitAt(allRelations.size / 2)
+
+      Future(ds.store(allRelations)).onComplete(_ => println("finished 1"))
+      Future(ds.store(allRelations)).onComplete(_ => println("finished 2"))
+
+      val resDS = ds.store(allRelations)
+      logger.info("finished storing")
+      resDS match {
+        case Some(value) => value foreach { r =>
+          r._2 match {
+            case Failure(exception) =>
+              logger.error("error", exception)
+              fail()
+            case Success(_) =>
+          } }
+        case None => fail()
+      }
+      for (r <- allRelations) {
+        if (!validateRelation(r, gc)) {
+          logger.error(s"Failed for relation ${r.toString}")
+          fail()
+        }
+      }
+    }
+  }
+
+  def validateRelation(relation: Relation, gc: GremlinConnector)(implicit propSet: Set[Property]): Boolean = {
+    validateVertex(relation.vFrom, gc) && validateVertex(relation.vTo, gc) && validateEdge(relation, gc)
+  }
+
+  def validateEdge(relation: Relation, gc: GremlinConnector)(implicit propSet: Set[Property]): Boolean = {
+    val maybeVFrom = getVertexFromJg(relation.vFrom, gc)
+    val maybeVTo = getVertexFromJg(relation.vTo, gc)
+    maybeVFrom match {
+      case Some(vFrom) =>
+        maybeVTo match {
+          case Some(vTo) =>
+            var res = true
+            val edge = gc.g.V(vFrom).outE().filter(_.inV().is(vTo)).l().head
+            for (prop <- relation.edge.properties) {
+              val propOnGraphValue = gc.g.E(edge).value(prop.keyValue.key).l().head
+              if (prop.keyName == "timestamp") {
+                val actualProp = propOnGraphValue.asInstanceOf[Date]
+                val shouldBeDate = new Date(prop.value.toString.toLong)
+                if (actualProp != shouldBeDate) res = false else {}
+              } else {
+                if (propOnGraphValue != prop.value.toString) res = false
+              }
+            }
+            if (!res) logger.info("FALSE")
+            res
+          case None => false
+        }
+      case None => false
+    }
+  }
+
+  def getVertexFromJg(vertexCore: VertexCore, gc: GremlinConnector)(implicit propSet: Set[Property]): Option[Vertex] = {
+    vertexCore.properties.find(p => p.isUnique) match {
       case Some(uniqueProp) => gc.g.V().has(uniqueProp.toKeyValue).l().headOption
       case None => gc.g.V().has(vertexCore.properties.head.toKeyValue).l().headOption
     }
+  }
+
+  def validateVertex(vertexCore: VertexCore, gc: GremlinConnector)(implicit propSet: Set[Property]): Boolean = {
+    val maybeVertex = getVertexFromJg(vertexCore, gc)
     maybeVertex match {
       case Some(vertex) =>
         var res = true
