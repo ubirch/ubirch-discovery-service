@@ -8,5 +8,5 @@ case class NoCacheConnectionException(
 ) extends Exception(message, cause)
 
 trait Lock {
-  def createLock(hash: String): RLock
+  def createLock(hash: String): Option[RLock]
 }

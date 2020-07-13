@@ -296,10 +296,13 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
 
   def acquireLockForVertex(vertex: VertexCore): Option[RLock] = {
     vertex.containsPropertyValueFromName("hash") match {
-      case Some(value) =>
-        val vertexLock = locker.createLock(value.value.toString)
-        vertexLock.lock(100, TimeUnit.MILLISECONDS)
-        Some(vertexLock)
+      case Some(hash) =>
+        locker.createLock(hash.value.toString) match {
+          case Some(specificHashLock) =>
+            specificHashLock.lock(100, TimeUnit.MILLISECONDS)
+            Some(specificHashLock)
+          case None => None
+        }
       case None => None
     }
   }

@@ -79,8 +79,12 @@ class RedisLock @Inject() (lifecycle: Lifecycle, config: Config)(implicit schedu
     * @return lock of the hash
     */
   @throws[NoCacheConnectionException]
-  def createLock(hash: String): RLock = {
-    redisson.getLock("hash:" + hash)
+  def createLock(hash: String): Option[RLock] = {
+    try {
+      Option(redisson.getLock("DiscoveryServiceLockHash:" + hash))
+    } catch {
+      case _: NullPointerException => None
+    }
   }
 
   lifecycle.addStopHook { () =>
