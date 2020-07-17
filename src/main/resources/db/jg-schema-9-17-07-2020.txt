@@ -1,0 +1,94 @@
+// Added PUB_KEY->DEVICE as a label for edges as well as SLAVE_TREE->PUB_KEY
+
+:rem connect tinkerpop.server conf/remote.yaml session
+:rem console
+
+
+graph.tx().rollback()
+mgmt = graph.openManagement()
+
+mgmt.makeVertexLabel('UPP').make()
+mgmt.makeVertexLabel('DEVICE').make()
+mgmt.makeVertexLabel('SLAVE_TREE').make()
+mgmt.makeVertexLabel('MASTER_TREE').make()
+mgmt.makeVertexLabel('PUBLIC_CHAIN').make()
+mgmt.makeVertexLabel('PUB_KEY').make()
+
+mgmt.makeEdgeLabel('UPP->DEVICE').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('SLAVE_TREE->UPP').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('SLAVE_TREE->SLAVE_TREE').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('MASTER_TREE->SLAVE_TREE').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('MASTER_TREE->MASTER_TREE').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('MASTER_TREE_UPGRADE').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('PUBLIC_CHAIN->MASTER_TREE').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('CHAIN').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('PUB_KEY->DEVICE').multiplicity(SIMPLE).make()
+mgmt.makeEdgeLabel('SLAVE_TREE->PUB_KEY').multiplicity(SIMPLE).make()
+
+mgmt.makePropertyKey('signature').dataType(String.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('type').dataType(String.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('hash').dataType(String.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('device_id').dataType(String.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('blockchain_type').dataType(String.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('transaction_id').dataType(String.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('public_chain').dataType(String.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('timestamp').dataType(Date.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('last-hash').dataType(Date.class).cardinality(SINGLE).make()
+
+mgmt.commit()
+
+
+mgmt = graph.openManagement()
+idx_signature = mgmt.buildIndex('indexSignature', Vertex.class)
+idx_type = mgmt.buildIndex('indexType', Vertex.class)
+idx_hash = mgmt.buildIndex('indexHash', Vertex.class)
+idx_device_id = mgmt.buildIndex('indexDeviceId', Vertex.class)
+idx_blockchain = mgmt.buildIndex('indexBlockchain', Vertex.class)
+idx_transaction_id = mgmt.buildIndex('indexTransactionId', Vertex.class)
+idx_timestamp = mgmt.buildIndex('indexTimestamp', Vertex.class)
+
+timestamp = mgmt.getPropertyKey('timestamp')
+eLabelDeviceUpp = mgmt.getEdgeLabel('UPP->DEVICE')
+eLabelSlaveUpp = mgmt.getEdgeLabel('SLAVE_TREE->UPP')
+eLabelChain = mgmt.getEdgeLabel('CHAIN')
+eLabelSlaveSlave = mgmt.getEdgeLabel('SLAVE_TREE->SLAVE_TREE')
+eLabelMasterSlave = mgmt.getEdgeLabel('MASTER_TREE->SLAVE_TREE')
+eLabelMasterMaster = mgmt.getEdgeLabel('MASTER_TREE->MASTER_TREE')
+eLabelMasterUpgrade = mgmt.getEdgeLabel('MASTER_TREE_UPGRADE')
+eLabelBlockchainMaster = mgmt.getEdgeLabel('PUBLIC_CHAIN->MASTER_TREE')
+
+idx_signature.addKey(mgmt.getPropertyKey('signature')).buildCompositeIndex()
+idx_type.addKey(mgmt.getPropertyKey('type')).buildCompositeIndex()
+idx_blockchain.addKey(mgmt.getPropertyKey('blockchain_type')).buildCompositeIndex()
+idx_hash.addKey(mgmt.getPropertyKey('hash')).unique().buildCompositeIndex()
+idx_device_id.addKey(mgmt.getPropertyKey('device_id')).unique().buildCompositeIndex()
+idx_transaction_id.addKey(mgmt.getPropertyKey('transaction_id')).unique().buildCompositeIndex()
+idx_timestamp.addKey(mgmt.getPropertyKey('timestamp')).buildCompositeIndex()
+
+idx_edge_UPP_DEVICE=mgmt.buildEdgeIndex(eLabelDeviceUpp, 'indexEdgeUppDevice', Direction.IN, Order.decr, timestamp)
+
+mgmt.commit()
+
+
+ManagementSystem.awaitGraphIndexStatus(graph, 'indexSignature').call()
+ManagementSystem.awaitGraphIndexStatus(graph, 'indexType').call()
+ManagementSystem.awaitGraphIndexStatus(graph, 'indexHash').call()
+ManagementSystem.awaitGraphIndexStatus(graph, 'indexDeviceId').call()
+ManagementSystem.awaitGraphIndexStatus(graph, 'indexBlockchain').call()
+ManagementSystem.awaitGraphIndexStatus(graph, 'indexTransactionId').call()
+ManagementSystem.awaitGraphIndexStatus(graph, 'indexTimestamp').call()
+
+ManagementSystem.awaitRelationIndexStatus(graph, 'indexEdgeUppDevice', 'UPP->DEVICE').call()
+
+mgmt = graph.openManagement()
+mgmt.updateIndex(mgmt.getGraphIndex('indexSignature'), SchemaAction.REINDEX).get()
+mgmt.updateIndex(mgmt.getGraphIndex('indexType'), SchemaAction.REINDEX).get()
+mgmt.updateIndex(mgmt.getGraphIndex('indexHash'), SchemaAction.REINDEX).get()
+mgmt.updateIndex(mgmt.getGraphIndex('indexDeviceId'), SchemaAction.REINDEX).get()
+mgmt.updateIndex(mgmt.getGraphIndex('indexBlockchain'), SchemaAction.REINDEX).get()
+mgmt.updateIndex(mgmt.getGraphIndex('indexTransactionId'), SchemaAction.REINDEX).get()
+mgmt.updateIndex(mgmt.getGraphIndex('indexTimestamp'), SchemaAction.REINDEX).get()
+
+mgmt.updateIndex(mgmt.getRelationIndex(eLabelDeviceUpp, 'indexEdgeUppDevice'), SchemaAction.REINDEX).get()
+
+mgmt.commit()
