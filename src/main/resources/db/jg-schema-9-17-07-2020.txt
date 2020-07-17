@@ -33,7 +33,7 @@ mgmt.makePropertyKey('blockchain_type').dataType(String.class).cardinality(SINGL
 mgmt.makePropertyKey('transaction_id').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('public_chain').dataType(String.class).cardinality(SINGLE).make()
 mgmt.makePropertyKey('timestamp').dataType(Date.class).cardinality(SINGLE).make()
-mgmt.makePropertyKey('last-hash').dataType(Date.class).cardinality(SINGLE).make()
+mgmt.makePropertyKey('last-hash').dataType(String.class).cardinality(SINGLE).make()
 
 mgmt.commit()
 
