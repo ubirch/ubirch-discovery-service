@@ -12,9 +12,11 @@ import com.ubirch.discovery.services.metrics.{ Counter, DefaultConsumerRecordsEr
 import com.ubirch.discovery.util.{ HealthUtil, Timer }
 import com.ubirch.discovery.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.discovery.ConfPaths.{ ConsumerConfPaths, DiscoveryConfPath, ProducerConfPaths }
+import com.ubirch.discovery.models.lock.Lock
 import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.services.health.HealthChecks
 import com.ubirch.kafka.express.ExpressKafka
+import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import gremlin.scala.Vertex
 import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -54,7 +56,7 @@ trait DiscoveryApp {
 
 }
 
-abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycle: Lifecycle) extends DiscoveryApp
+abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycle: Lifecycle, locker: Lock) extends DiscoveryApp
   with ExpressKafka[String, String, Unit] with ConsumerConfPaths with ProducerConfPaths with DiscoveryConfPath {
 
   import AbstractDiscoveryService._
@@ -102,6 +104,12 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
   * Logic of process put as a separate method in order to test without invoking kafka
     */
   def letsProcess(crs: Vector[ConsumerRecord[String, String]]): Unit = {
+
+    if (!locker.isConnected) {
+      logger.warn("Redis connection could not be established, pausing for a while")
+      throw NeedForPauseException("RedisConnectionError", "Not yet connected to redis")
+    }
+
     if (!flush) {
       try {
 
@@ -122,6 +130,9 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
         }
 
       } catch {
+        case e: NeedForPauseException =>
+          publishErrorMessage("Need for pause exception on: crs Vector[ConsumerRecord[String, String]]", crs.mkString(", ").replace("\"", "\\\""), e)
+          throw e
         case e: Exception =>
           publishErrorMessage("General error when processing crs Vector[ConsumerRecord[String, String]]", crs.mkString(", ").replace("\"", "\\\""), e)
       }
@@ -173,7 +184,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
         logger.debug(s"after preprocess: hashmap size =  ${hashMapVertices.size}, relation size: ${relations.size}")
         val relationsAsRelationServer: Seq[DumbRelation] = relations.map(r => DumbRelation(getVertexFromHMap(r.vFrom), getVertexFromHMap(r.vTo), r.edge))
 
-        val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = storer.createRelation, processSize = maxParallelConnection, customResultFunction = Some(() => this.increasePrometheusRelationCount()))
+        val executor = new Executor[DumbRelation, Any](objects = relationsAsRelationServer, f = storer.createRelation, processSize = maxParallelConnection, customResultFunction = Some(_ => this.increasePrometheusRelationCount()))
         executor.startProcessing()
         executor.latch.await(100, java.util.concurrent.TimeUnit.SECONDS)
         Some(executor.getResults)
@@ -242,13 +253,13 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
       value: String,
       ex: Throwable
   ): Future[Any] = {
-    logger.error(errorMessage + " value: " + value, ex.getMessage, ex)
+    logger.error("SENDING TO KAFKA ERROR TOPIC: " + errorMessage + " value: " + value, ex.getMessage, ex)
     val producerRecordToSend = new ProducerRecord[String, String](
       producerErrorTopic,
       DiscoveryError(errorMessage, ex.getClass.getSimpleName, value).toString
     )
     send(producerRecordToSend)
-      .recover { case _ => logger.error(s"failure publishing to error topic: $errorMessage") }
+      .recover { case e => logger.error(s"failure publishing to error topic: $errorMessage", e) }
   }
 
   protected def send(producerRecord: ProducerRecord[String, String]): Future[RecordMetadata] = production.send(producerRecord)
@@ -336,4 +347,4 @@ object AbstractDiscoveryService {
 }
 
 @Singleton
-class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle)(implicit val ec: ExecutionContext) extends AbstractDiscoveryService(storer, config, lifecycle)
+class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle, locker: Lock)(implicit val ec: ExecutionContext) extends AbstractDiscoveryService(storer, config, lifecycle, locker)

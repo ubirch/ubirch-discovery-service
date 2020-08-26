@@ -1,24 +1,22 @@
 package com.ubirch.discovery.models
 
 import java.util
-import java.util.concurrent.{ CompletionException, TimeUnit }
+import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.models.lock.Lock
 import com.ubirch.discovery.services.connector.GremlinConnector
+import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import gremlin.scala.{ Edge, GremlinScala, KeyValue, StepLabel, Vertex }
 import gremlin.scala.GremlinScala.Aux
 import javax.inject.{ Inject, Singleton }
-import org.apache.tinkerpop.gremlin.process.traversal.step.util.BulkSet
-import org.janusgraph.core.SchemaViolationException
 import org.redisson.api.RLock
+import org.redisson.client.WriteRedisConnectionException
 import shapeless.HNil
 
-import scala.collection.mutable
-import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
-import scala.util.{ Failure, Success, Try }
+import scala.concurrent.duration.FiniteDuration
 
 trait Storer {
 
@@ -245,6 +243,12 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
               logger.error("error getUpdateOrCreateVerticesConcrete AGAIN", e)
               throw e
           }
+        case e: WriteRedisConnectionException =>
+          logger.error("Connection to redis failed, throwing needForPauseException", e)
+          throw NeedForPauseException(
+            "RedisConnectionError",
+            "Not able to acquire a redis lock"
+          )
         case e: Throwable =>
           logger.error("error getUpdateOrCreateVerticesConcrete", e)
           throw e
@@ -301,22 +305,23 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
           case Some(specificHashLock) =>
             specificHashLock.lock(100, TimeUnit.MILLISECONDS)
             Some(specificHashLock)
-          case None => None
+          case None =>
+            logger.error("Not able to get redis lock, pausing with NeedForPauseException")
+            throw NeedForPauseException(
+              "RedisConnectionError",
+              "Not able to acquire a redis lock"
+            )
         }
       case None => None
     }
   }
 
   def createRelation(relation: DumbRelation): Unit = {
-    Try(createEdgeConcrete(relation)) match {
-      case Success(edge) => edge
-      case Failure(fail) => fail match {
-        case e: CompletionException => recoverEdge(relation, e)
-        case e: SchemaViolationException => recoverEdge(relation, e)
-        case e: Exception =>
-          logger.error(s"error creation edge ${relation.toString}", e)
-          throw e
-      }
+    try {
+      createEdgeConcrete(relation)
+    } catch {
+      case e: Throwable =>
+        recoverEdge(relation, e)
     }
   }
 
@@ -326,6 +331,7 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
 
   private def recoverEdge(relation: DumbRelation, error: Throwable)(implicit gc: GremlinConnector) {
     if (!error.getMessage.contains("An edge with the given label already exists between the pair of vertices and the label")) {
+      logger.warn(s"Error creating edge $relation because of ${error.getMessage}, retrying")
       createEdgeConcrete(relation)
     }
   }

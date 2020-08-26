@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.util.{ Random, Try }
 
 /**
   * Class that will execute a function f on all the objects in objects asynchronously, but only processing processSize
@@ -21,13 +21,13 @@ import scala.util.Try
   * @tparam T Original type of the item in object
   * @tparam U What type of objects f() will transform the objects
   */
-class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customResultFunction: Option[() => Unit] = None)(implicit ec: ExecutionContext) extends LazyLogging {
+class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customResultFunction: Option[(Option[String]) => Unit] = None)(implicit ec: ExecutionContext) extends LazyLogging {
 
   /**
     * The original list of objects on which the f() function will be applied.
     * For ease of coding, they've been transformed into a HashMap
     */
-  private val toBeProcessedList: mutable.HashMap[Int, T] = scala.collection.mutable.HashMap.empty[Int, T]
+  private val toBeProcessedList: mutable.Queue[T] = scala.collection.mutable.Queue.empty[T]
 
   /**
     * The executionList is a mutable HashMap whose size can vary between 0 and processSize.
@@ -76,9 +76,7 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customRes
   def isOver: Boolean = executionList.isEmpty
 
   private def objectsToMap(): Unit = {
-    for (i <- objects.indices) {
-      toBeProcessedList += (i -> objects(i))
-    }
+    toBeProcessedList ++= objects
   }
 
   /**
@@ -91,7 +89,7 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customRes
 
     val ourFuture: Future[U] = Future(f(thingToAdd._2)) andThen {
       case resOfFunction: Try[U] =>
-        callCustomCallBackFunctionIfExist()
+        callCustomCallBackFunctionIfExist(Some(thingToAdd._2.toString))
         removeFromExecutionList(thingToAdd._1)
         addToResults(thingToAdd._2, resOfFunction)
         addNewItemToExecutionList()
@@ -104,9 +102,9 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customRes
   Execute the custom result function passed as argument (if any)
   Can be used to increase prometheus counter, for example
    */
-  private def callCustomCallBackFunctionIfExist(): Unit = {
+  private def callCustomCallBackFunctionIfExist(arg: Option[String] = None): Unit = {
     customResultFunction match {
-      case Some(function) => function()
+      case Some(function) => function(arg)
       case None =>
     }
   }
@@ -119,9 +117,8 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customRes
 
   private def addNewItemToExecutionList(): Unit = synchronized {
     if (toBeProcessedList.nonEmpty) {
-      val toProcess = toBeProcessedList.head
-      toBeProcessedList.remove(toProcess._1)
-      addToExecutionList(toProcess)
+      val toProcess = toBeProcessedList.dequeue()
+      addToExecutionList((randomHash, toProcess))
     }
   }
 
@@ -133,4 +130,5 @@ class Executor[T, U](objects: Seq[T], f: T => U, val processSize: Int, customRes
     results += finished
   }
 
+  private def randomHash: Int = Random.nextInt(1000000)
 }

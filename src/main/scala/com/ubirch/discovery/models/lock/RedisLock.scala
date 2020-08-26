@@ -1,7 +1,6 @@
 package com.ubirch.discovery.models.lock
 
 import java.net.UnknownHostException
-import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
@@ -10,7 +9,7 @@ import com.ubirch.discovery.Lifecycle
 import javax.inject.{ Inject, Singleton }
 import monix.execution.Scheduler
 import org.redisson.Redisson
-import org.redisson.api.{ RedissonClient, RLock, RMapCache }
+import org.redisson.api.{ RedissonClient, RLock }
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -27,8 +26,6 @@ class RedisLock @Inject() (lifecycle: Lifecycle, config: Config)(implicit schedu
   private val password: String = config.getString(REDIS_PASSWORD)
   private val evaluatedPW = if (password == "") null else password
   private val useReplicated: Boolean = config.getBoolean(REDIS_USE_REPLICATED)
-  private val cacheName: String = config.getString(REDIS_CACHE_NAME)
-  private val cacheTTL: Long = config.getLong(REDIS_CACHE_TTL)
   val redisConf = new org.redisson.config.Config()
   private val prefix = "redis://"
 
@@ -72,13 +69,6 @@ class RedisLock @Inject() (lifecycle: Lifecycle, config: Config)(implicit schedu
     c.cancel()
   }
 
-  /**
-    * Checks if the hash/payload already is stored in the cache.
-    *
-    * @param hash key
-    * @return lock of the hash
-    */
-  @throws[NoCacheConnectionException]
   def createLock(hash: String): Option[RLock] = {
     try {
       Option(redisson.getLock("DiscoveryServiceLockHash:" + hash))
@@ -87,8 +77,14 @@ class RedisLock @Inject() (lifecycle: Lifecycle, config: Config)(implicit schedu
     }
   }
 
+  def isConnected: Boolean = try {
+    redisson.getNodesGroup.pingAll()
+  } catch {
+    case _: Throwable => false
+  }
+
   lifecycle.addStopHook { () =>
-    logger.info("Shutting down Redis: " + cacheName)
+    logger.info("Shutting down Redis")
     Future.successful(redisson.shutdown())
   }
 
