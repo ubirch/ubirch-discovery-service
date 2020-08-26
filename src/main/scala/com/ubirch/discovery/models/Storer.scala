@@ -177,13 +177,13 @@ object GremlinTraversalExtension {
 
     def createEdge(relation: DumbRelation)(implicit gc: GremlinConnector): Aux[Edge, HNil] = {
       if (relation.edge.properties.isEmpty) {
-        previousConstructor.addE(relation.edge.label).from(gc.g.V(relation.vFrom.id()).l().head)
+        previousConstructor.addE(relation.edge.label).from(relation.vFrom)
       } else {
         var constructor = previousConstructor.addE(relation.edge.label)
         for (prop <- relation.edge.properties) {
           constructor = constructor.property(prop.toKeyValue)
         }
-        constructor.from(gc.g.V(relation.vFrom.id()).l().head)
+        constructor.from(relation.vFrom)
       }
     }
   }
