@@ -5,16 +5,16 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
 
 import com.google.inject.binder.ScopedBindingBuilder
-import com.typesafe.config.{Config, ConfigValueFactory}
-import com.ubirch.discovery.models.{EdgeCore, ElementProperty, Relation, VertexCore}
+import com.typesafe.config.{ Config, ConfigValueFactory }
+import com.ubirch.discovery.models.{ EdgeCore, ElementProperty, Relation, VertexCore }
 import com.ubirch.discovery.services.config.ConfigProvider
-import com.ubirch.discovery.services.consumer.{AbstractDiscoveryService, DiscoveryApp}
+import com.ubirch.discovery.services.consumer.{ AbstractDiscoveryService, DiscoveryApp }
 import com.ubirch.discovery.util.Util
 import com.ubirch.discovery.ExamplesUtil.FakeInjectorNoRedis
 import com.ubirch.discovery.models.lock.Lock
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 import monix.execution.Scheduler
-import org.redisson.api.{RFuture, RLock}
+import org.redisson.api.{ RFuture, RLock }
 
 import scala.util.Random
 
@@ -37,7 +37,6 @@ object Examples {
   val Injector = FakeInjectorNoRedis(8182)
   val dc: AbstractDiscoveryService = Injector.get[AbstractDiscoveryService]
   import ExamplesUtil._
-
 
   def generateSimpleGraph = {
     val numberSt = scala.util.Random.nextInt(5) + 1
@@ -95,7 +94,6 @@ object Examples {
     def mtsFunction(timestamp: String) = generateMasterTree(timestamp = timestamp)
     val mts = generateRelations(firstMt, counter = numberMtUp, accu = Nil, mtsFunction, relationMasterMaster)
 
-
     def addBc(bcLabel: String, mt: VertexCore) = {
       val ts = mt.properties.find(p => p.keyName == "timestamp").get.value.toString
       val bc = generateBlockchain(public_chain = bcLabel, timestamp = ts)
@@ -114,7 +112,6 @@ object Examples {
       (maybeSlow, maybeFast)
     }
     val bcsUp = maybeBcsUp.toList.flatMap(x => List(x._1, x._2)).flatten
-
 
     val lowerMts = generateRelations(firstMt, counter = numberMtlow, accu = Nil, mtsFunction, relationMasterMaster, normalOrder = false)
 
@@ -138,10 +135,8 @@ object Examples {
     storedRelations
 
     //    val st = generateSlaveTree()
-//    val mt = generateMasterTree()
-//    val blockchain = generateBlockchain()
-
-
+    //    val mt = generateMasterTree()
+    //    val blockchain = generateBlockchain()
 
   }
 
@@ -159,7 +154,7 @@ object Examples {
   }
 
   /**
-  * Just a simple test to verify that the system is working. Creates a relation between a upp and a device
+    * Just a simple test to verify that the system is working. Creates a relation between a upp and a device
     */
   def generateFirstRelation = {
     val relations = relationUppDevice()
@@ -284,7 +279,6 @@ object ExamplesUtil extends ExampleValues {
 
   def giveMeRandomString: String = Random.alphanumeric.take(64).mkString
 
-
   def FakeInjectorNoRedis(port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(port))
 
@@ -320,8 +314,6 @@ trait ExampleValues {
   val PUBLIC_CHAIN = "public_chain"
   val TRANSACTION_ID = "transaction_id"
 }
-
-
 
 @Singleton
 class FakeLock @Inject() (lifecycle: Lifecycle, config: Config)(implicit scheduler: Scheduler)
