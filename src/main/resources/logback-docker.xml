@@ -41,8 +41,8 @@
     <logger name="org.apache.zookeeper" level="WARN"/>
     <logger name="io.netty" level="WARN"/>
 
-    <logger name="org.janusgraph" level="INFO"/>
-    <logger name="com.ubirch" level="INFO"/>
+    <logger name="org.janusgraph" level="DEBUG"/>
+    <logger name="com.ubirch" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="JSONSTDOUT"/>
