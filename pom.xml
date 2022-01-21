@@ -85,9 +85,9 @@
 
         <redisson.version>3.10.5</redisson.version>
 
-        <gremlinScala.version>3.4.4.5</gremlinScala.version>
-        <janusGraph.version>0.5.2</janusGraph.version>
-        <tinkerPopDriver.version>3.4.6</tinkerPopDriver.version>
+        <gremlinScala.version>3.5.1.4</gremlinScala.version>
+        <janusGraph.version>0.6.0</janusGraph.version>
+        <tinkerPopDriver.version>3.5.2</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
 
         <jodaTime.version>2.10</jodaTime.version>
@@ -312,6 +312,13 @@
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-inmemory</artifactId>
             <version>${janusGraph.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.tinkerpop/gremlin-core -->
+        <dependency>
+            <groupId>org.apache.tinkerpop</groupId>
+            <artifactId>gremlin-core</artifactId>
+            <version>3.5.2</version>
         </dependency>
 
 

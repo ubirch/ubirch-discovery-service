@@ -138,7 +138,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
         publishStringMessageToKafka(topic, test)
         Thread.sleep(4000)
         val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
-        println(res)
+        logger.info(s"consumed discovery error message: $res")
         res.message shouldBe "General error when processing crs Vector[ConsumerRecord[String, String]]"
         res.exceptionName shouldBe "Exception"
         res.serviceName shouldBe "discovery-service"
@@ -148,7 +148,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
       }
     }
 
-    ignore("property does not conform to janusgraph schema") {
+    scenario("property does not conform to janusgraph schema") {
       val test = "[{\"v_from\":{\"properties\":{\"stuff\": \"truc\", \"hash\": \"truc\"}, \"label\":\"UPP\"},\"v_to\": {\"properties\": {\"hash\": \"aName\"}, \"label\": \"SLAVE_TREE\"},\"edge\": {\"properties\": {}, \"label\": \"SLAVE_TREE->UPP\"}}]"
 
       implicit val kafkaConfig: EmbeddedKafkaConfig =
@@ -167,7 +167,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
         publishStringMessageToKafka(topic, test)
         Thread.sleep(4000)
         val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
-        println(res)
+        logger.info(s"consumed discovery error message: $res")
         res.message shouldBe "General error when processing crs Vector[ConsumerRecord[String, String]]"
         res.exceptionName shouldBe "StoreException"
         res.serviceName shouldBe "discovery-service"
