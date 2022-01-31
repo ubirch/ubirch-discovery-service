@@ -8,7 +8,8 @@ import java.util.zip.ZipFile
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
-import scala.sys.process._
+//import scala.sys.process._
+import sys.process._
 
 object RemoteJanusGraph extends LazyLogging {
 
@@ -17,13 +18,14 @@ object RemoteJanusGraph extends LazyLogging {
     prepareJanusgraphFiles()
 
     if (!isJanusAlreadyStarted) {
-      val janusgraphShPath = "src/test/resources/embedded-jg/janusgraph-0.6.0/bin/janusgraph-server.sh"
+      val janusgraphShPath = "src/test/resources/embedded-jg/janusgraph-0.6.1/bin/janusgraph-server.sh"
       val janusgrapPropsPath = "../custom-gremlin-conf.yaml"
-      s"bash $janusgraphShPath $janusgrapPropsPath".run
+      //val janusgrapPropsPath = "conf/gremlin-server/gremlin-server.yaml"
+      s"sh $janusgraphShPath console $janusgrapPropsPath start".run()
 
       Thread.sleep(30000)
       logger.info("ah que coucou")
-      val janusgraphGremlinPath = "src/test/resources/embedded-jg/janusgraph-0.6.0/bin/gremlin.sh"
+      val janusgraphGremlinPath = "src/test/resources/embedded-jg/janusgraph-0.6.1/bin/gremlin.sh"
       val indexPath = "src/test/resources/embedded-jg/custom-index.txt"
       s"echo $indexPath".!
 
@@ -37,7 +39,7 @@ object RemoteJanusGraph extends LazyLogging {
   }
 
   def isJanusAlreadyStarted: Boolean = {
-    isPortInUse("127.0.0.1", 8183)
+    isPortInUse("127.0.0.1", 8182)
   }
 
   private def isPortInUse(host: String, port: Int) = {
@@ -53,10 +55,10 @@ object RemoteJanusGraph extends LazyLogging {
   }
 
   private def prepareJanusgraphFiles(): Unit = {
-    val url = "https://github.com/JanusGraph/janusgraph/releases/download/v0.6.0/janusgraph-0.6.0.zip"
+    val url = "https://github.com/JanusGraph/janusgraph/releases/download/v0.6.1/janusgraph-0.6.1.zip"
     val janusGraphZipFileName = "src/test/resources/embedded-jg/jgServer.zip"
     val janusGraphZipFilePath = Paths.get(janusGraphZipFileName)
-    val outputPath = Paths.get("src/test/resources/embedded-jg/janusgraph-0.6.0")
+    val outputPath = Paths.get("src/test/resources/embedded-jg/janusgraph-0.6.1")
     if (!Files.exists(outputPath)) {
       logger.info("janusgraph folder doesn't exist")
       if (!Files.exists(janusGraphZipFilePath)) {

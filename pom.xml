@@ -86,8 +86,8 @@
         <redisson.version>3.10.5</redisson.version>
 
         <gremlinScala.version>3.5.1.4</gremlinScala.version>
-        <janusGraph.version>0.6.0</janusGraph.version>
-        <tinkerPopDriver.version>3.5.2</tinkerPopDriver.version>
+        <janusGraph.version>0.6.1</janusGraph.version>
+        <tinkerPopDriver.version>3.5.1</tinkerPopDriver.version>
         <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
 
         <jodaTime.version>2.10</jodaTime.version>
@@ -271,17 +271,25 @@
             <groupId>org.apache.tinkerpop</groupId>
             <artifactId>gremlin-driver</artifactId>
             <version>${tinkerPopDriver.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.tinkerpop.gremlin</groupId>
-            <artifactId>gremlin-java</artifactId>
-            <version>${tinkerPopJava.version}</version>
+            <!--<classifier>shaded</classifier>-->
+            <!-- The shaded JAR uses the original POM, therefore conflicts may still need resolution -->
+            <!--<exclusions>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>-->
         </dependency>
 
         <dependency>
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-core</artifactId>
+            <version>${janusGraph.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-driver</artifactId>
             <version>${janusGraph.version}</version>
         </dependency>
 
@@ -318,10 +326,8 @@
         <dependency>
             <groupId>org.apache.tinkerpop</groupId>
             <artifactId>gremlin-core</artifactId>
-            <version>3.5.2</version>
+            <version>3.5.1</version>
         </dependency>
-
-
 
         <!-- /Gremlin -->
 

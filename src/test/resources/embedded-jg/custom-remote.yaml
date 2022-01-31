@@ -13,5 +13,5 @@
 # limitations under the License.
 
 hosts: [localhost]
-port: 8183
-serializer: { className: org.apache.tinkerpop.gremlin.driver.ser.GraphBinaryMessageSerializerV1, config: { serializeResultToString: true }}
+port: 8182
+serializer: { className: org.apache.tinkerpop.gremlin.driver.ser.GraphBinaryMessageSerializerV1, config: { bufferSize: 8192, serializeResultToString: true }}

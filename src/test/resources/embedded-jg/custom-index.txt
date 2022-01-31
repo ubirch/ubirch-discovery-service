@@ -62,7 +62,7 @@ idx_device_id.addKey(mgmt.getPropertyKey('device_id')).unique().buildCompositeIn
 idx_transaction_id.addKey(mgmt.getPropertyKey('transaction_id')).unique().buildCompositeIndex()
 idx_timestamp.addKey(mgmt.getPropertyKey('timestamp')).buildCompositeIndex()
 
-idx_edge_UPP_DEVICE=mgmt.buildEdgeIndex(eLabelDeviceUpp, 'indexEdgeUppDevice', Direction.IN, Order.decr, timestamp)
+idx_edge_UPP_DEVICE=mgmt.buildEdgeIndex(eLabelDeviceUpp, 'indexEdgeUppDevice', Direction.IN, Order.desc, timestamp)
 
 mgmt.commit()
 

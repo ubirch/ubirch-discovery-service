@@ -2,10 +2,10 @@ package com.ubirch.discovery.models
 
 import java.util.concurrent.{ CountDownLatch, ThreadFactory }
 import java.util.concurrent.atomic.AtomicInteger
-
 import com.ubirch.discovery.{ Binder, InjectorHelper, TestBase }
 import com.ubirch.discovery.process.Executor
 import com.ubirch.discovery.services.connector.GremlinConnector
+import com.ubirch.discovery.util.RemoteJanusGraph
 
 import scala.collection.immutable
 import scala.concurrent.{ ExecutionContext, Future }
@@ -35,6 +35,7 @@ class ExecutorSpec extends TestBase {
   }
 
   override def beforeAll(): Unit = {
+    RemoteJanusGraph.startJanusGraphServer()
     super.beforeAll()
     //cleanUpJanus
     warmUpJg()

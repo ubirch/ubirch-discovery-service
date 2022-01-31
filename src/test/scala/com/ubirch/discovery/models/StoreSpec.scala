@@ -8,13 +8,12 @@ import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.util.RemoteJanusGraph
 import org.scalatest.{ Assertion, Ignore }
 
-@Ignore
 class StoreSpec extends TestBase {
 
   /**
     * Simple injector that replaces the kafka bootstrap server and topics to the given ones
     */
-  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8182): InjectorHelper = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(bootstrapServers, port))
   })) {}
 
@@ -34,11 +33,14 @@ class StoreSpec extends TestBase {
         )
   }
 
-  RemoteJanusGraph.startJanusGraphServer()
-
   val Injector = FakeSimpleInjector("")
 
   implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
+
+  override def beforeAll(): Unit = {
+    RemoteJanusGraph.startJanusGraphServer()
+    super.beforeAll()
+  }
 
   override def beforeEach(): Unit = {
     super.beforeEach()

@@ -279,7 +279,7 @@ object ExamplesUtil extends ExampleValues {
 
   def giveMeRandomString: String = Random.alphanumeric.take(64).mkString
 
-  def FakeInjectorNoRedis(port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+  def FakeInjectorNoRedis(port: Int = 8182): InjectorHelper = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(port))
 
     override def Lock: ScopedBindingBuilder = bind(classOf[Lock]).to(classOf[FakeLock])

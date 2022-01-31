@@ -18,7 +18,6 @@ import org.scalatest.Ignore
 
 import scala.io.Source
 
-@Ignore
 class DiscoveryServiceIntegrationTest extends TestBase {
 
   val topic = "test"
@@ -29,7 +28,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
   /**
     * Simple injector that replaces the kafka bootstrap server and topics to the given ones
     */
-  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8182): InjectorHelper = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(bootstrapServers, port))
   })) {}
 
@@ -48,8 +47,6 @@ class DiscoveryServiceIntegrationTest extends TestBase {
           ConfigValueFactory.fromAnyRef(bootstrapServers)
         )
   }
-
-  RemoteJanusGraph.startJanusGraphServer()
 
   val Injector = FakeSimpleInjector("")
 
@@ -255,6 +252,11 @@ class DiscoveryServiceIntegrationTest extends TestBase {
     val nVertices = values.substring(0, values.indexOf(",")).toInt
     val nEdges = values.substring(values.indexOf(",") + 1).toInt
     (nVertices, nEdges)
+  }
+
+  override protected def beforeAll(): Unit = {
+    RemoteJanusGraph.startJanusGraphServer()
+    super.beforeAll()
   }
 
   override protected def beforeEach(): Unit = {

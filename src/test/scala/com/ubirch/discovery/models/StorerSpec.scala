@@ -20,8 +20,6 @@ import scala.util.{ Failure, Success }
 
 class StorerSpec extends TestBase {
 
-  //RemoteJanusGraph.startJanusGraphServer()
-
   def cleanDb(implicit gc: GremlinConnector): Unit = {
     gc.g.V().drop().iterate()
   }
@@ -32,6 +30,8 @@ class StorerSpec extends TestBase {
     redis = new RedisServer(6379)
     redis.start()
     Thread.sleep(8000)
+    RemoteJanusGraph.startJanusGraphServer()
+    super.beforeAll()
   }
 
   override protected def beforeEach(): Unit = {
