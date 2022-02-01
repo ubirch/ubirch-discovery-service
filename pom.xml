@@ -73,6 +73,7 @@
         <scala.version>2.12.8</scala.version>
         <scala.compat.version>2.12</scala.compat.version>
         <scalatest.version>2.6.5</scalatest.version>
+        <org.mockito.mockito-inline.version>3.6.28</org.mockito.mockito-inline.version>
 
         <scalatra.version>2.6.5</scalatra.version>
         <scalatra.version>2.6.5</scalatra.version>
@@ -271,14 +272,6 @@
             <groupId>org.apache.tinkerpop</groupId>
             <artifactId>gremlin-driver</artifactId>
             <version>${tinkerPopDriver.version}</version>
-            <!--<classifier>shaded</classifier>-->
-            <!-- The shaded JAR uses the original POM, therefore conflicts may still need resolution -->
-            <!--<exclusions>
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>-->
         </dependency>
 
         <dependency>
@@ -326,7 +319,7 @@
         <dependency>
             <groupId>org.apache.tinkerpop</groupId>
             <artifactId>gremlin-core</artifactId>
-            <version>3.5.1</version>
+            <version>${tinkerPopDriver.version}</version>
         </dependency>
 
         <!-- /Gremlin -->
@@ -374,8 +367,16 @@
             <artifactId>scalatest-embedded-redis_2.12</artifactId>
             <version>0.3.0</version>
         </dependency>
-        
-<!--        <dependency>-->
+
+        <!-- https://mvnrepository.com/artifact/io.monix/monix -->
+        <dependency>
+            <groupId>io.monix</groupId>
+            <artifactId>monix_${scala.compat.version}</artifactId>
+            <version>3.3.0</version>
+        </dependency>
+
+
+        <!--        <dependency>-->
 <!--            <groupId>com.ubirch</groupId>-->
 <!--            <artifactId>ubirch-janusgraph-express</artifactId>-->
 <!--            <version>1.0-SNAPSHOT</version>-->
@@ -391,7 +392,12 @@
         </dependency>
 
         <!-- /Test -->
-
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>${org.mockito.mockito-inline.version}</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 

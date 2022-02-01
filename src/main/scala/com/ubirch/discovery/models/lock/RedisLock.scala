@@ -1,15 +1,15 @@
 package com.ubirch.discovery.models.lock
 
 import java.net.UnknownHostException
-
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.ConfPaths.RedisConfPaths
 import com.ubirch.discovery.Lifecycle
+
 import javax.inject.{ Inject, Singleton }
 import monix.execution.Scheduler
 import org.redisson.Redisson
-import org.redisson.api.{ RedissonClient, RLock }
+import org.redisson.api.{ RLock, RedissonClient }
 
 import scala.concurrent.duration._
 import scala.concurrent.Future

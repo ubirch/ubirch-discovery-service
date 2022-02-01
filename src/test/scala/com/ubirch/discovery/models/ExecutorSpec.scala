@@ -13,9 +13,7 @@ import scala.util.{ Failure, Success }
 
 class ExecutorSpec extends TestBase {
 
-  def FakeSimpleInjector: InjectorHelper = new InjectorHelper(List(new Binder {
-    //override def Storer: ScopedBindingBuilder = bind(classOf[GremlinConnector]).to(classOf[JanusGraphForTests])
-  })) {}
+  def FakeSimpleInjector: InjectorHelper = new InjectorHelper(List(new Binder {})) {}
 
   val Injector: InjectorHelper = FakeSimpleInjector
 
@@ -42,7 +40,7 @@ class ExecutorSpec extends TestBase {
     Thread.sleep(4000)
   }
 
-  ignore("benchmark the executor on random time") {
+  feature("benchmark the executor on random time") {
     scenario("1") {
       executeAllTime(1)
     }
@@ -71,7 +69,8 @@ class ExecutorSpec extends TestBase {
       executeAllTime(200)
     }
 
-    scenario("500") {
+    // ignore is in general because it takes time
+    ignore("500") {
       executeAllTime(500)
     }
 

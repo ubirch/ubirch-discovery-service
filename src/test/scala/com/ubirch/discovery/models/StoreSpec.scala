@@ -8,6 +8,11 @@ import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.util.RemoteJanusGraph
 import org.scalatest.{ Assertion, Ignore }
 
+/*
+ * This store part is currently included in AbstractDiscoveryService.class, so can't be tested individually.
+ * @todo Think to make this part isolated or delete it
+ */
+@Ignore
 class StoreSpec extends TestBase {
 
   /**

@@ -33,7 +33,7 @@ object RemoteJanusGraph extends LazyLogging {
 
       logger.info("JanusGraph server started and index created")
     } else {
-      logger.info("janus is already running (or port 8183 is unavailable)")
+      logger.info("janus is already running (or port 8182 is unavailable)")
     }
 
   }

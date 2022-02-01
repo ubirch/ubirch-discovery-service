@@ -1,15 +1,18 @@
 package com.ubirch.discovery
 
 import com.typesafe.scalalogging.LazyLogging
+import com.ubirch.discovery.models.lock.Lock
 import com.ubirch.discovery.models.{ EdgeCore, Relation, VertexCore }
 import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.util.Util
+import monix.eval.Task
+import monix.execution.Scheduler
 import net.manub.embeddedkafka.EmbeddedKafka
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FeatureSpec, Matchers }
 import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.{ Await, ExecutionContext, Future }
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.Random
 
 trait TestBase
@@ -58,4 +61,21 @@ trait TestBase
 
   val listLabelsVertex = List("DEVICE", "UPP", "MASTER_TREE", "SLAVE_TREE", "PUBLIC_CHAIN")
 
+  def waitUntilRedisStart(lock: Lock, atMost: Duration = 5.seconds)(implicit scheduler: Scheduler): Unit = {
+    def wait(left: Duration): Task[Unit] = {
+      val connected = lock.isConnected
+      for {
+        _ <- if (connected) {
+          Task.unit
+        } else if (!connected && left.toMillis > 0) {
+          Task.sleep(100.millis).flatMap(_ => wait(left - 100.millis))
+        } else {
+          Task.raiseError(new RuntimeException(
+            s"Could not complete specified task due to timeout"
+          ))
+        }
+      } yield ()
+    }
+    wait(atMost).runSyncUnsafe(atMost)
+  }
 }

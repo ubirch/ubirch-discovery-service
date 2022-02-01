@@ -1,24 +1,18 @@
 package com.ubirch.discovery.services.connector
 
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import com.ubirch.discovery.Lifecycle
-import com.ubirch.discovery.services.connector.App.buildProperties
 import gremlin.scala._
-import org.apache.commons.configuration2.PropertiesConfiguration
 
 import javax.inject.{ Inject, Singleton }
-import org.apache.tinkerpop.gremlin.driver.{ Client, Cluster }
+import org.apache.tinkerpop.gremlin.driver.Cluster
 import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection
 import org.apache.tinkerpop.gremlin.driver.ser.GraphBinaryMessageSerializerV1
-import org.apache.tinkerpop.gremlin.process.traversal.AnonymousTraversalSource.traversal
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
-import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoMapper
 import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
-import org.janusgraph.graphdb.tinkerpop.JanusGraphIoRegistry
 
 import java.util
-import scala.collection.JavaConverters.asJavaIterableConverter
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
@@ -76,7 +70,7 @@ class JanusGraphConnector @Inject() (lifecycle: Lifecycle, config: Config) exten
     if (workerPoolSize > 0) cluster.workerPoolSize(workerPoolSize)
 
     val conf = new util.HashMap[String, AnyRef]()
-    conf.put("serializer.config.ioRegistries", config.getAnyRef("core.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
+    conf.put("ioRegistries", config.getAnyRef("core.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
     val serializer = new GraphBinaryMessageSerializerV1()
     serializer.configure(conf, null)
 
