@@ -8,7 +8,6 @@ import java.util.zip.ZipFile
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
-//import scala.sys.process._
 import sys.process._
 
 object RemoteJanusGraph extends LazyLogging {
@@ -20,8 +19,7 @@ object RemoteJanusGraph extends LazyLogging {
     if (!isJanusAlreadyStarted) {
       val janusgraphShPath = "src/test/resources/embedded-jg/janusgraph-0.6.1/bin/janusgraph-server.sh"
       val janusgrapPropsPath = "../custom-gremlin-conf.yaml"
-      //val janusgrapPropsPath = "conf/gremlin-server/gremlin-server.yaml"
-      s"sh $janusgraphShPath console $janusgrapPropsPath start".run()
+      s"bash $janusgraphShPath console $janusgrapPropsPath start".run()
 
       Thread.sleep(30000)
       logger.info("ah que coucou")

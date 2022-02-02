@@ -55,7 +55,6 @@ class DiscoveryServiceIntegrationTest extends TestBase {
     def runTest(test: TestStruct): Unit = {
       implicit val kafkaConfig: EmbeddedKafkaConfig =
         EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
-      val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
       implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
       cleanDb
       val consumer = Injector.get[AbstractDiscoveryService]
@@ -63,12 +62,8 @@ class DiscoveryServiceIntegrationTest extends TestBase {
       logger.debug("testing " + test.request)
       val crs = new ConsumerRecord[String, String](topic, 0, 79, null, test.request)
       consumer.letsProcess(Vector(crs))
-      //val r = consumeFirstStringMessageFrom(topic)
-      //println(s"r: $r")
       Thread.sleep(2000)
       howManyElementsInJG shouldBe howManyElementsShouldBeInJg(test.expectedResult)
-      //consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
-
     }
 
     val allTests = getAllTests("/valid/")
@@ -102,7 +97,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
         publishStringMessageToKafka(topic, test)
         Thread.sleep(4000)
         val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
-        println(res)
+        logger.debug(res.toString)
         res.message shouldBe "Error when parsing relations"
         res.exceptionName shouldBe "ParsingException"
         res.serviceName shouldBe "discovery-service"

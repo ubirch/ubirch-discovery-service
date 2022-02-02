@@ -8,7 +8,7 @@ import gremlin.scala._
 import javax.inject.{ Inject, Singleton }
 import org.apache.tinkerpop.gremlin.driver.Cluster
 import org.apache.tinkerpop.gremlin.driver.remote.DriverRemoteConnection
-import org.apache.tinkerpop.gremlin.driver.ser.GraphBinaryMessageSerializerV1
+import org.apache.tinkerpop.gremlin.driver.ser.Serializers
 import org.apache.tinkerpop.gremlin.process.traversal.Bindings
 import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyGraph
 
@@ -71,7 +71,7 @@ class JanusGraphConnector @Inject() (lifecycle: Lifecycle, config: Config) exten
 
     val conf = new util.HashMap[String, AnyRef]()
     conf.put("ioRegistries", config.getAnyRef("core.connector.serializer.config.ioRegistries").asInstanceOf[java.util.ArrayList[String]])
-    val serializer = new GraphBinaryMessageSerializerV1()
+    val serializer = Serializers.GRAPHBINARY_V1D0.simpleInstance()
     serializer.configure(conf, null)
 
     cluster.serializer(serializer).create()
