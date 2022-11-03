@@ -81,5 +81,4 @@ class JanusGraphConnector @Inject() (lifecycle: Lifecycle, config: Config) exten
     logger.info("Shutting down connection with Janus: " + cluster.toString)
     Future.successful(closeConnection())
   }
-
 }

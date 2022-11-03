@@ -9,7 +9,7 @@ import com.ubirch.discovery.models._
 import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.process.Executor
 import com.ubirch.discovery.services.metrics.{ Counter, DefaultConsumerRecordsErrorCounter, DefaultConsumerRecordsSuccessCounter }
-import com.ubirch.discovery.util.{ HealthUtil, Timer }
+import com.ubirch.discovery.util.HealthUtil
 import com.ubirch.discovery.util.Exceptions.{ ParsingException, StoreException }
 import com.ubirch.discovery.ConfPaths.{ ConsumerConfPaths, DiscoveryConfPath, ProducerConfPaths }
 import com.ubirch.discovery.models.lock.Lock
@@ -30,7 +30,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.language.postfixOps
-import scala.util.{ Failure, Success, Try }
+import scala.util.Try
 
 trait DiscoveryApp {
 
@@ -318,7 +318,7 @@ object AbstractDiscoveryService {
   private def getDistinctVertices(relations: Seq[Relation])(implicit propSet: Set[Property]): List[VertexCore] = {
     val firstCheck = relations.flatMap(r => List(r.vFrom, r.vTo)).distinct.toList
 
-    var mutableListOfProcessedVerticesUntilNow = new ListBuffer[VertexCore]()
+    val mutableListOfProcessedVerticesUntilNow = new ListBuffer[VertexCore]()
 
     for (newV <- firstCheck) {
       mutableListOfProcessedVerticesUntilNow.find(v => v.equalsUniqueProperty(newV)) match {

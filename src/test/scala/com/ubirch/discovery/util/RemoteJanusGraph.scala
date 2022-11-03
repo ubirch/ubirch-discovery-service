@@ -17,13 +17,12 @@ object RemoteJanusGraph extends LazyLogging {
     prepareJanusgraphFiles()
 
     if (!isJanusAlreadyStarted) {
-      val janusgraphShPath = "src/test/resources/embedded-jg/janusgraph-0.6.1/bin/janusgraph-server.sh"
+      val janusgraphShPath = "src/test/resources/embedded-jg/janusgraph-0.6.2/bin/janusgraph-server.sh"
       val janusgrapPropsPath = "../custom-gremlin-conf.yaml"
       s"bash $janusgraphShPath console $janusgrapPropsPath start".run()
 
       Thread.sleep(30000)
-      logger.info("ah que coucou")
-      val janusgraphGremlinPath = "src/test/resources/embedded-jg/janusgraph-0.6.1/bin/gremlin.sh"
+      val janusgraphGremlinPath = "src/test/resources/embedded-jg/janusgraph-0.6.2/bin/gremlin.sh"
       val indexPath = "src/test/resources/embedded-jg/custom-index.txt"
       s"echo $indexPath".!
 
@@ -53,10 +52,10 @@ object RemoteJanusGraph extends LazyLogging {
   }
 
   private def prepareJanusgraphFiles(): Unit = {
-    val url = "https://github.com/JanusGraph/janusgraph/releases/download/v0.6.1/janusgraph-0.6.1.zip"
+    val url = "https://github.com/JanusGraph/janusgraph/releases/download/v0.6.2/janusgraph-0.6.2.zip"
     val janusGraphZipFileName = "src/test/resources/embedded-jg/jgServer.zip"
     val janusGraphZipFilePath = Paths.get(janusGraphZipFileName)
-    val outputPath = Paths.get("src/test/resources/embedded-jg/janusgraph-0.6.1")
+    val outputPath = Paths.get("src/test/resources/embedded-jg/janusgraph-0.6.2")
     if (!Files.exists(outputPath)) {
       logger.info("janusgraph folder doesn't exist")
       if (!Files.exists(janusGraphZipFilePath)) {
@@ -66,6 +65,7 @@ object RemoteJanusGraph extends LazyLogging {
       }
       logger.info("unzipping")
       unzip(janusGraphZipFilePath, outputPath.getParent)
+      Files.delete(janusGraphZipFilePath)
     }
   }
 

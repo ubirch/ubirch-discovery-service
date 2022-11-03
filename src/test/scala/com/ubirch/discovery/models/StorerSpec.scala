@@ -30,8 +30,8 @@ class StorerSpec extends TestBase {
 
   override def beforeAll() = {
     redis = new RedisServer(6379)
-    Thread.sleep(1000)
     redis.start()
+    Thread.sleep(2000)
     RemoteJanusGraph.startJanusGraphServer()
     super.beforeAll()
   }

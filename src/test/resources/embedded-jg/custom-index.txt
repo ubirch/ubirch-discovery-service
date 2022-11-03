@@ -1,4 +1,4 @@
-// Upgrade from 0.5.3 to 0.6.1
+// Upgrade from 0.5.3 to 0.6.2
 // Order.decr => Order.desc
 
 :rem connect tinkerpop.server ../custom-remote.yaml session
