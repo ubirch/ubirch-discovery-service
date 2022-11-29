@@ -1,7 +1,7 @@
 // Upgrade from 0.5.3 to 0.6.2
 // Order.decr => Order.desc
 
-:rem connect tinkerpop.server ../custom-remote.yaml session
+:rem connect tinkerpop.server conf/remote.yaml session
 :rem console
 
 
@@ -93,5 +93,3 @@ mgmt.updateIndex(mgmt.getGraphIndex('indexTimestamp'), SchemaAction.REINDEX).get
 mgmt.updateIndex(mgmt.getRelationIndex(eLabelDeviceUpp, 'indexEdgeUppDevice'), SchemaAction.REINDEX).get()
 
 mgmt.commit()
-
-:exit

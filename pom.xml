@@ -73,6 +73,7 @@
         <scala.version>2.12.8</scala.version>
         <scala.compat.version>2.12</scala.compat.version>
         <scalatest.version>2.6.5</scalatest.version>
+        <org.mockito.mockito-inline.version>3.6.28</org.mockito.mockito-inline.version>
 
         <scalatra.version>2.6.5</scalatra.version>
         <scalatra.version>2.6.5</scalatra.version>
@@ -85,10 +86,9 @@
 
         <redisson.version>3.10.5</redisson.version>
 
-        <gremlinScala.version>3.4.4.5</gremlinScala.version>
-        <janusGraph.version>0.5.2</janusGraph.version>
-        <tinkerPopDriver.version>3.4.6</tinkerPopDriver.version>
-        <tinkerPopJava.version>2.6.0</tinkerPopJava.version>
+        <gremlinScala.version>3.5.3.2</gremlinScala.version>
+        <janusGraph.version>0.6.2</janusGraph.version>
+        <tinkerPopDriver.version>3.5.1</tinkerPopDriver.version>
 
         <jodaTime.version>2.10</jodaTime.version>
         <jodaConverter.version>2.1.1</jodaConverter.version>
@@ -274,14 +274,14 @@
         </dependency>
 
         <dependency>
-            <groupId>com.tinkerpop.gremlin</groupId>
-            <artifactId>gremlin-java</artifactId>
-            <version>${tinkerPopJava.version}</version>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-core</artifactId>
+            <version>${janusGraph.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-core</artifactId>
+            <artifactId>janusgraph-driver</artifactId>
             <version>${janusGraph.version}</version>
         </dependency>
 
@@ -314,7 +314,12 @@
             <version>${janusGraph.version}</version>
         </dependency>
 
-
+        <!-- https://mvnrepository.com/artifact/org.apache.tinkerpop/gremlin-core -->
+        <dependency>
+            <groupId>org.apache.tinkerpop</groupId>
+            <artifactId>gremlin-core</artifactId>
+            <version>${tinkerPopDriver.version}</version>
+        </dependency>
 
         <!-- /Gremlin -->
 
@@ -361,8 +366,15 @@
             <artifactId>scalatest-embedded-redis_2.12</artifactId>
             <version>0.3.0</version>
         </dependency>
-        
-<!--        <dependency>-->
+
+        <!-- https://mvnrepository.com/artifact/io.monix/monix -->
+        <dependency>
+            <groupId>io.monix</groupId>
+            <artifactId>monix_${scala.compat.version}</artifactId>
+            <version>3.3.0</version>
+        </dependency>
+
+        <!--        <dependency>-->
 <!--            <groupId>com.ubirch</groupId>-->
 <!--            <artifactId>ubirch-janusgraph-express</artifactId>-->
 <!--            <version>1.0-SNAPSHOT</version>-->
@@ -378,7 +390,12 @@
         </dependency>
 
         <!-- /Test -->
-
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>${org.mockito.mockito-inline.version}</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 

@@ -246,8 +246,8 @@ class DefaultJanusgraphStorer @Inject() (gremlinConnector: GremlinConnector, ec:
         case e: WriteRedisConnectionException =>
           logger.error("Connection to redis failed, throwing needForPauseException", e)
           throw NeedForPauseException(
-            "RedisConnectionError",
-            "Not able to acquire a redis lock"
+            "WriteRedisConnectionException",
+            "Not able to write into Redis"
           )
         case e: Throwable =>
           logger.error("error getUpdateOrCreateVerticesConcrete", e)

@@ -2,9 +2,9 @@ package com.ubirch.discovery
 
 import java.io.File
 import java.util.concurrent.TimeUnit
-
 import com.google.inject.binder.ScopedBindingBuilder
 import com.typesafe.config.{ Config, ConfigValueFactory }
+import com.ubirch.discovery.models.lock.Lock
 import com.ubirch.discovery.services.consumer.AbstractDiscoveryService
 import com.ubirch.discovery.services.config.ConfigProvider
 import com.ubirch.discovery.services.connector.GremlinConnector
@@ -14,11 +14,9 @@ import io.prometheus.client.CollectorRegistry
 import net.manub.embeddedkafka.EmbeddedKafkaConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer }
-import org.scalatest.Ignore
 
 import scala.io.Source
 
-@Ignore
 class DiscoveryServiceIntegrationTest extends TestBase {
 
   val topic = "test"
@@ -29,8 +27,9 @@ class DiscoveryServiceIntegrationTest extends TestBase {
   /**
     * Simple injector that replaces the kafka bootstrap server and topics to the given ones
     */
-  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8182): InjectorHelper = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(bootstrapServers, port))
+    override def Lock: ScopedBindingBuilder = bind(classOf[Lock]).to(classOf[FakeLock])
   })) {}
 
   /**
@@ -49,8 +48,6 @@ class DiscoveryServiceIntegrationTest extends TestBase {
         )
   }
 
-  RemoteJanusGraph.startJanusGraphServer()
-
   val Injector = FakeSimpleInjector("")
 
   feature("Verifying valid requests") {
@@ -58,7 +55,6 @@ class DiscoveryServiceIntegrationTest extends TestBase {
     def runTest(test: TestStruct): Unit = {
       implicit val kafkaConfig: EmbeddedKafkaConfig =
         EmbeddedKafkaConfig(kafkaPort = PortGiver.giveMeKafkaPort, zooKeeperPort = PortGiver.giveMeZookeeperPort)
-      val bootstrapServers = "localhost:" + kafkaConfig.kafkaPort
       implicit val gc: GremlinConnector = Injector.get[GremlinConnector]
       cleanDb
       val consumer = Injector.get[AbstractDiscoveryService]
@@ -66,23 +62,17 @@ class DiscoveryServiceIntegrationTest extends TestBase {
       logger.debug("testing " + test.request)
       val crs = new ConsumerRecord[String, String](topic, 0, 79, null, test.request)
       consumer.letsProcess(Vector(crs))
-      //val r = consumeFirstStringMessageFrom(topic)
-      //println(s"r: $r")
       Thread.sleep(2000)
       howManyElementsInJG shouldBe howManyElementsShouldBeInJg(test.expectedResult)
-      //consumer.consumption.shutdown(300, TimeUnit.MILLISECONDS)
-
     }
 
     val allTests = getAllTests("/valid/")
 
-    //ignore("NeedForJanus") {
-    allTests foreach { test =>
-      scenario(test.nameOfTest) {
+    scenario("Consume and store relations in JanusGraph") {
+      allTests foreach { test =>
         runTest(test)
       }
     }
-    //}
 
   }
 
@@ -107,7 +97,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
         publishStringMessageToKafka(topic, test)
         Thread.sleep(4000)
         val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
-        println(res)
+        logger.debug(res.toString)
         res.message shouldBe "Error when parsing relations"
         res.exceptionName shouldBe "ParsingException"
         res.serviceName shouldBe "discovery-service"
@@ -138,7 +128,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
         publishStringMessageToKafka(topic, test)
         Thread.sleep(4000)
         val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
-        println(res)
+        logger.info(s"consumed discovery error message: $res")
         res.message shouldBe "General error when processing crs Vector[ConsumerRecord[String, String]]"
         res.exceptionName shouldBe "Exception"
         res.serviceName shouldBe "discovery-service"
@@ -148,6 +138,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
       }
     }
 
+    // @todo doesn't fail
     ignore("property does not conform to janusgraph schema") {
       val test = "[{\"v_from\":{\"properties\":{\"stuff\": \"truc\", \"hash\": \"truc\"}, \"label\":\"UPP\"},\"v_to\": {\"properties\": {\"hash\": \"aName\"}, \"label\": \"SLAVE_TREE\"},\"edge\": {\"properties\": {}, \"label\": \"SLAVE_TREE->UPP\"}}]"
 
@@ -167,7 +158,7 @@ class DiscoveryServiceIntegrationTest extends TestBase {
         publishStringMessageToKafka(topic, test)
         Thread.sleep(4000)
         val res = consumeFirstMessageFrom[DiscoveryError](errorTopic)
-        println(res)
+        logger.info(s"consumed discovery error message: $res")
         res.message shouldBe "General error when processing crs Vector[ConsumerRecord[String, String]]"
         res.exceptionName shouldBe "StoreException"
         res.serviceName shouldBe "discovery-service"
@@ -255,6 +246,15 @@ class DiscoveryServiceIntegrationTest extends TestBase {
     val nVertices = values.substring(0, values.indexOf(",")).toInt
     val nEdges = values.substring(values.indexOf(",") + 1).toInt
     (nVertices, nEdges)
+  }
+
+  override def beforeAll(): Unit = {
+    RemoteJanusGraph.startJanusGraphServer()
+    super.beforeAll()
+  }
+
+  override def afterAll(): Unit = {
+    super.afterAll()
   }
 
   override protected def beforeEach(): Unit = {

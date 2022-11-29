@@ -2,10 +2,10 @@ package com.ubirch.discovery.models
 
 import java.util.concurrent.{ CountDownLatch, ThreadFactory }
 import java.util.concurrent.atomic.AtomicInteger
-
 import com.ubirch.discovery.{ Binder, InjectorHelper, TestBase }
 import com.ubirch.discovery.process.Executor
 import com.ubirch.discovery.services.connector.GremlinConnector
+import com.ubirch.discovery.util.RemoteJanusGraph
 
 import scala.collection.immutable
 import scala.concurrent.{ ExecutionContext, Future }
@@ -13,9 +13,7 @@ import scala.util.{ Failure, Success }
 
 class ExecutorSpec extends TestBase {
 
-  def FakeSimpleInjector: InjectorHelper = new InjectorHelper(List(new Binder {
-    //override def Storer: ScopedBindingBuilder = bind(classOf[GremlinConnector]).to(classOf[JanusGraphForTests])
-  })) {}
+  def FakeSimpleInjector: InjectorHelper = new InjectorHelper(List(new Binder {})) {}
 
   val Injector: InjectorHelper = FakeSimpleInjector
 
@@ -35,13 +33,14 @@ class ExecutorSpec extends TestBase {
   }
 
   override def beforeAll(): Unit = {
+    RemoteJanusGraph.startJanusGraphServer()
     super.beforeAll()
     //cleanUpJanus
     warmUpJg()
     Thread.sleep(4000)
   }
 
-  ignore("benchmark the executor on random time") {
+  feature("benchmark the executor on random time") {
     scenario("1") {
       executeAllTime(1)
     }
@@ -70,7 +69,8 @@ class ExecutorSpec extends TestBase {
       executeAllTime(200)
     }
 
-    scenario("500") {
+    // ignore is in general because it takes time
+    ignore("500") {
       executeAllTime(500)
     }
 

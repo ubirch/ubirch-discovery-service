@@ -6,10 +6,16 @@ import com.ubirch.discovery.models.{ EdgeCore, KafkaElements, Relation, VertexCo
 import com.ubirch.discovery.models.Elements.Property
 import com.ubirch.discovery.services.config.ConfigProvider
 import com.ubirch.discovery.services.consumer.{ AbstractDiscoveryService, DiscoveryServiceSendErrorOk }
+import com.ubirch.discovery.util.RemoteJanusGraph
 import io.prometheus.client.CollectorRegistry
 import org.scalatest.PrivateMethodTester
 
 class DiscoveryServiceUnitTests extends TestBase with PrivateMethodTester {
+
+  override protected def beforeAll(): Unit = {
+    RemoteJanusGraph.startJanusGraphServer()
+    super.beforeAll()
+  }
 
   override protected def beforeEach(): Unit = {
     CollectorRegistry.defaultRegistry.clear()
@@ -17,7 +23,7 @@ class DiscoveryServiceUnitTests extends TestBase with PrivateMethodTester {
 
   feature("parseRelations") {
     val Injector = FakeSimpleInjector("")
-    def FakeInjectorSendOK(bootstrapServers: String, port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+    def FakeInjectorSendOK(bootstrapServers: String, port: Int = 8182): InjectorHelper = new InjectorHelper(List(new Binder {
       override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(bootstrapServers, port))
       override def DiscoveryService: ScopedBindingBuilder = bind(classOf[AbstractDiscoveryService]).to(classOf[DiscoveryServiceSendErrorOk])
     })) {}
@@ -144,7 +150,7 @@ class DiscoveryServiceUnitTests extends TestBase with PrivateMethodTester {
   /**
     * Simple injector that replaces the kafka bootstrap server and topics to the given ones
     */
-  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8183): InjectorHelper = new InjectorHelper(List(new Binder {
+  def FakeSimpleInjector(bootstrapServers: String, port: Int = 8182): InjectorHelper = new InjectorHelper(List(new Binder {
     override def Config: ScopedBindingBuilder = bind(classOf[Config]).toProvider(customTestConfigProvider(bootstrapServers, port))
   })) {}
 
