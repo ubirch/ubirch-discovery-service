@@ -42,3 +42,13 @@ Requests should have the following format
 }]
 ```
 Such request will create two vertex and link them together
+
+## Quick gremlin console connection
+
+```
+gremlin> :rem connect tinkerpop.server conf/remote.yaml session
+gremlin> :rem console
+gremlin> graph = JanusGraphFactory.open('/etc/opt/janusgraph/janusgraph.properties')
+gremlin> mgmt = graph.openManagement()
+gremlin> mgmt
+```
