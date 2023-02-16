@@ -92,6 +92,8 @@ mgmt.updateIndex(mgmt.getGraphIndex('indexTimestamp'), SchemaAction.REINDEX).get
 
 mgmt.updateIndex(mgmt.getRelationIndex(eLabelDeviceUpp, 'indexEdgeUppDevice'), SchemaAction.REINDEX).get()
 
+g.addV().property('hash','1234')
+
 mgmt.commit()
 
 :exit
