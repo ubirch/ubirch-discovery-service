@@ -17,7 +17,7 @@ import com.ubirch.discovery.services.connector.GremlinConnector
 import com.ubirch.discovery.services.health.HealthChecks
 import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.util.Exceptions.NeedForPauseException
-import gremlin.scala.Vertex
+import gremlin.scala.{ Vertex, Key }
 import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
@@ -91,6 +91,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
   private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
 
   val maxParallelConnection: Int = config.getInt(GREMLIN_MAX_PARALLEL_CONN) // PUT AT 1 FOR TESTS
+  val jgHealthCheckHashValue: String = config.getString(JG_HEALTH_CHECK_HASH_VALUE)
 
   val batchSize: Int = config.getInt(BATCH_SIZE)
 
@@ -278,7 +279,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
       import scala.concurrent.duration._
       // will fail if the graph is empty
       val healthReportJG = try {
-        Await.result(gc.g.V().limit(1).promise(), 50.millis) match {
+        Await.result(gc.g.V().has(Key[String]("hash"), jgHealthCheckHashValue).limit(1).promise(), 50.millis) match {
           case Nil => HealthReport(HealthChecks.JANUSGRAPH, "fail", isUp = false, Calendar.getInstance().getTime)
           case ::(_, _) => HealthReport(HealthChecks.JANUSGRAPH, "ok", isUp = true, Calendar.getInstance().getTime)
         }
