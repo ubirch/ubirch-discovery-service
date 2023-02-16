@@ -91,7 +91,7 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
   private val storeCounter: Counter = new DefaultConsumerRecordsSuccessCounter
 
   val maxParallelConnection: Int = config.getInt(GREMLIN_MAX_PARALLEL_CONN) // PUT AT 1 FOR TESTS
-  val jgHealthCheckHashValue: String = config.getString("core.healthcheckHash")
+  val jgHealthCheckHashValue: String = config.getString(JG_HEALTH_CHECK_HASH_VALUE)
 
   val batchSize: Int = config.getInt(BATCH_SIZE)
 

@@ -23,6 +23,7 @@ object ConfPaths {
     final val GREMLIN_MAX_PARALLEL_CONN = "kafkaApi.gremlinConf.maxParallelConnection"
     final val BATCH_SIZE = "kafkaApi.batchSize"
     final val FLUSH = "flush"
+    final val JG_HEALTH_CHECK_HASH_VALUE = "core.healthCheckHash"
   }
 
   trait RedisConfPaths {
