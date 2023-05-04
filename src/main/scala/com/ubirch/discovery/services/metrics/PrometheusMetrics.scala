@@ -16,11 +16,11 @@ class PrometheusMetrics @Inject() (lifecycle: Lifecycle) extends LazyLogging wit
 
   logger.debug("Creating Prometheus Server on Port[{}]", port)
 
-  val server: HTTPServer = PrometheusMetricsHelper.create(port)
+  val server: HTTPServer = PrometheusMetricsHelper.defaultWithJXM(port)
 
   lifecycle.addStopHook { () =>
     logger.info("Shutting down Prometheus")
-    Future.successful(server.stop())
+    Future.successful(server.close())
   }
 
 }

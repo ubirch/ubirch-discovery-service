@@ -2,7 +2,6 @@ package com.ubirch.discovery.services.consumer
 
 import java.util.concurrent.{ ScheduledThreadPoolExecutor, TimeUnit }
 import java.util.Calendar
-
 import com.typesafe.config.Config
 import com.ubirch.discovery.{ DiscoveryError, Lifecycle, Service }
 import com.ubirch.discovery.models._
@@ -18,6 +17,9 @@ import com.ubirch.discovery.services.health.HealthChecks
 import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import gremlin.scala.{ Vertex, Key }
+import gremlin.scala.Vertex
+import monix.execution.Scheduler
+
 import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
@@ -263,8 +265,6 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
       .recover { case e => logger.error(s"failure publishing to error topic: $errorMessage", e) }
   }
 
-  protected def send(producerRecord: ProducerRecord[String, String]): Future[RecordMetadata] = production.send(producerRecord)
-
   lifecycle.addStopHook { () =>
     logger.info("Shutting down kafka")
     Future.successful(consumption.shutdown(consumerGracefulTimeout, java.util.concurrent.TimeUnit.SECONDS))
@@ -348,4 +348,6 @@ object AbstractDiscoveryService {
 }
 
 @Singleton
-class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle, locker: Lock)(implicit val ec: ExecutionContext) extends AbstractDiscoveryService(storer, config, lifecycle, locker)
+class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle, locker: Lock)(implicit val ec: ExecutionContext) extends AbstractDiscoveryService(storer, config, lifecycle, locker) {
+  implicit val scheduler: Scheduler = Scheduler(ec)
+}
