@@ -47,6 +47,10 @@
             <id>ossrh</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </repository>
+        <repository>
+            <id>gitlab-maven</id>
+            <url>https://gitlab.com/api/v4/projects/37429227/packages/maven</url>
+        </repository>
     </repositories>
 
     <properties>
@@ -104,11 +108,11 @@
         <dockerfile-maven-plugin.version>1.4.4</dockerfile-maven-plugin.version>
         <maven-jar-plugin.version>2.6</maven-jar-plugin.version>
         <maven-surefire-plugin.version>2.7</maven-surefire-plugin.version>
-        <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
+        <scalatest-maven-plugin.version>2.2.0</scalatest-maven-plugin.version>
         <scala-maven-plugin.version>3.3.2</scala-maven-plugin.version>
 
         <!-- /plugins -->
-        <ubirch-kafka-express.version>1.2.10-SNAPSHOT</ubirch-kafka-express.version>
+        <ubirch-kafka-express.version>1.3.0-SNAPSHOT</ubirch-kafka-express.version>
 
         <!-- /versions -->
 
@@ -475,7 +479,6 @@
                     <junitxml>.</junitxml>
                     <filereports>WDF TestSuite.txt</filereports>
                     <!-- Skip test because it fails on GOCD -->
-                    <skipTests>true</skipTests>
                 </configuration>
                 <executions>
                     <execution>

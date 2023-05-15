@@ -2,7 +2,6 @@ package com.ubirch.discovery.services.consumer
 
 import java.util.concurrent.{ ScheduledThreadPoolExecutor, TimeUnit }
 import java.util.Calendar
-
 import com.typesafe.config.Config
 import com.ubirch.discovery.{ DiscoveryError, Lifecycle, Service }
 import com.ubirch.discovery.models._
@@ -18,9 +17,11 @@ import com.ubirch.discovery.services.health.HealthChecks
 import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import gremlin.scala.{ Vertex, Key }
+import monix.execution.Scheduler
+
 import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
@@ -28,7 +29,7 @@ import org.json4s._
 import scala.collection.immutable
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.util.Try
 
@@ -263,8 +264,6 @@ abstract class AbstractDiscoveryService(storer: Storer, config: Config, lifecycl
       .recover { case e => logger.error(s"failure publishing to error topic: $errorMessage", e) }
   }
 
-  protected def send(producerRecord: ProducerRecord[String, String]): Future[RecordMetadata] = production.send(producerRecord)
-
   lifecycle.addStopHook { () =>
     logger.info("Shutting down kafka")
     Future.successful(consumption.shutdown(consumerGracefulTimeout, java.util.concurrent.TimeUnit.SECONDS))
@@ -348,4 +347,4 @@ object AbstractDiscoveryService {
 }
 
 @Singleton
-class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle, locker: Lock)(implicit val ec: ExecutionContext) extends AbstractDiscoveryService(storer, config, lifecycle, locker)
+class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle, locker: Lock)(implicit val scheduler: Scheduler) extends AbstractDiscoveryService(storer, config, lifecycle, locker)

@@ -4,6 +4,8 @@ import com.typesafe.config.Config
 import com.ubirch.discovery.Lifecycle
 import com.ubirch.discovery.models.Storer
 import com.ubirch.discovery.models.lock.Lock
+import monix.execution.Scheduler
+
 import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
 import org.scalatest.mockito.MockitoSugar
@@ -15,7 +17,9 @@ class DiscoveryServiceSendErrorOk @Inject() (storer: Storer, config: Config, lif
 
   var counter = 0
 
-  override protected def send(producerRecord: ProducerRecord[String, String]): Future[RecordMetadata] = {
+  override implicit val scheduler: Scheduler = Scheduler(ec)
+
+  override def send(producerRecord: ProducerRecord[String, String]): Future[RecordMetadata] = {
     counter = 1
     Future(mock[RecordMetadata])
   }
