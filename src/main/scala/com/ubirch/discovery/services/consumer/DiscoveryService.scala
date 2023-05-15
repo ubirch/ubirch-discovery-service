@@ -17,12 +17,11 @@ import com.ubirch.discovery.services.health.HealthChecks
 import com.ubirch.kafka.express.ExpressKafka
 import com.ubirch.kafka.util.Exceptions.NeedForPauseException
 import gremlin.scala.{ Vertex, Key }
-import gremlin.scala.Vertex
 import monix.execution.Scheduler
 
 import javax.inject.{ Inject, Singleton }
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization
 import org.apache.kafka.common.serialization.{ Deserializer, StringDeserializer, StringSerializer }
 import org.json4s._
@@ -30,7 +29,7 @@ import org.json4s._
 import scala.collection.immutable
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 import scala.util.Try
 
@@ -348,6 +347,4 @@ object AbstractDiscoveryService {
 }
 
 @Singleton
-class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle, locker: Lock)(implicit val ec: ExecutionContext) extends AbstractDiscoveryService(storer, config, lifecycle, locker) {
-  implicit val scheduler: Scheduler = Scheduler(ec)
-}
+class DefaultDiscoveryService @Inject() (storer: Storer, config: Config, lifecycle: Lifecycle, locker: Lock)(implicit val scheduler: Scheduler) extends AbstractDiscoveryService(storer, config, lifecycle, locker)
